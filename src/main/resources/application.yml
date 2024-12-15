@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: iot
+
+system:
+  env: dev
+
+iotdb:
+  ip: 127.0.0.1
+  port: 6667
+  username: root
+  password: root
+  storage:
+    root: root
+    ts_encoding: PLAIN
+    compression_type: UNCOMPRESSED
+  query:
+    timeout: 3000
