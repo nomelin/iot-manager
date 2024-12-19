@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 public class DeviceTable {
-    private final Map<Long, Record> records;
+    private Map<Long, Record> records;//时间戳和Record的映射
     private String devicePath;
     private List<String> types;
 
@@ -51,16 +51,27 @@ public class DeviceTable {
         return devicePath;
     }
 
+    public void setDevicePath(String devicePath) {
+        this.devicePath = devicePath;
+    }
+
     public List<String> getTypes() {
         return types;
+    }
+
+    public void setTypes(List<String> types) {
+        this.types = types;
     }
 
     public Map<Long, Record> getRecords() {
         return records;
     }
 
+    public void setRecords(Map<Long, Record> records) {
+        this.records = records;
+    }
+
     public Record getRecord(long timestamp) {
         return records.get(timestamp);
     }
-
 }

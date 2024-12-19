@@ -17,6 +17,10 @@ public enum CodeMessage {
     USER_NOT_LOGIN_ERROR("502", "用户未登录"),
     USER_ACCOUNT_ERROR("503", "账号或密码错误"),
     USER_NOT_EXIST_ERROR("504", "用户不存在"),
+    PARAM_PASSWORD_ERROR("505", "原密码输入错误"),
+    USER_NAME_NULL_ERROR("506", "用户名缺失"),
+    INVALID_USER_NAME_ERROR("507", "要操作的用户名不合法，无权限操作"),
+    EQUAL_PASSWORD_ERROR("508", "新密码不能与原密码相同"),
 
 
     SYSTEM_ERROR("800", "系统异常"),

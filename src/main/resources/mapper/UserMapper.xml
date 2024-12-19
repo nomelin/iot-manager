@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.nomelin.iot.dao.UserMapper">
+    <select id="selectAll" parameterType="User" resultType="User">
+        select id, name, password
+        from user
+        <where>
+            <if test="id != null">and id= #{id}</if>
+            <if test="password != null">and password= #{password}</if>
+            <if test="name!= null">and name LIKE '%${name}%'</if>
+        </where>
+    </select>
+
+    <select id="selectById" resultType="User">
+        select id, name, password
+        from user
+        where id = #{id}
+    </select>
+
+    <delete id="deleteById">
+        delete
+        from user
+        where id = #{id}
+    </delete>
+
+    <!--
+         useGeneratedKeys="true" 开启新增主键返回功能
+         keyProperty="id" user实体主键属性
+         keyColumn="id" user表中主键列
+   -->
+    <insert id="insert" parameterType="User" useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+        insert into user
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">id,</if>
+            <if test="password != null">password,</if>
+            <if test="name != null">name,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null">#{id},</if>
+            <if test="password != null">#{password},</if>
+            <if test="name != null">#{name},</if>
+        </trim>
+    </insert>
+
+    <update id="updateById" parameterType="User">
+        update user
+        <set>
+            <if test="password != null">
+                password = #{password},
+            </if>
+            <if test="name != null">
+                name = #{name},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+</mapper>

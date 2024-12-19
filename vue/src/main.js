@@ -7,6 +7,7 @@ import '@/assets/css/global.css'
 import '@/assets/css/theme/index.css'
 import request from "@/utils/request";
 
+
 Vue.config.productionTip = false
 
 Vue.prototype.$request = request

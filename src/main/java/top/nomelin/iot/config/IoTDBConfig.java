@@ -27,8 +27,7 @@ public class IoTDBConfig {
                 .password(password)
                 .version(Version.V_1_0)
                 .build();
-        // 开启Session RPC不压缩
-        session.open(false);
+//        session.open(false);
         return session;
     }
 }

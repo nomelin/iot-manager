@@ -43,13 +43,13 @@ public class Result {
     }
 
 
-    public static Result error(CodeMessage codeMessage, Object data) {
-        return new Result(codeMessage.code, codeMessage.msg, data);
-    }
-
-    public static Result error(CodeMessage codeMessage) {
-        return new Result(codeMessage.code, codeMessage.msg);
-    }
+//    public static Result error(CodeMessage codeMessage, Object data) {
+//        return new Result(codeMessage.code, codeMessage.msg, data);
+//    }
+//
+//    public static Result error(CodeMessage codeMessage) {
+//        return new Result(codeMessage.code, codeMessage.msg);
+//    }
 
     public String getCode() {
         return code;

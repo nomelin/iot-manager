@@ -1,6 +1,35 @@
 spring:
   application:
     name: iot
+  # 数据库配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+    url: jdbc:mysql://localhost:3306/iot_manager?useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true&useSSL=false&serverTimezone=GMT%2b8&allowPublicKeyRetrieval=true
+
+server:
+  port: 12345
+  tomcat:
+    threads:
+      max: 100
+  servlet:
+    session:
+      timeout: 600 #设置会话超时时间,单位是秒
+
+
+# 配置mybatis实体和xml映射
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: top.nomelin.iot.model
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+
+logging:
+  file:
+    path: /logs
+
 
 system:
   env: dev

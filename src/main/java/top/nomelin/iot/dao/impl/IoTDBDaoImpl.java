@@ -9,7 +9,6 @@ import org.apache.iotdb.session.template.MeasurementNode;
 import org.apache.tsfile.enums.TSDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import top.nomelin.iot.common.enums.CodeMessage;
@@ -25,19 +24,19 @@ import java.util.List;
 @Component
 public class IoTDBDaoImpl implements IoTDBDao {
     private static final Logger log = LoggerFactory.getLogger(IoTDBDaoImpl.class);
-
-    @Value("${iotdb.storage.ts_encoding}")
-    String iotdbStorageTsEncoding;
-
-    @Value("${iotdb.storage.compression_type}")
-    String iotdbStorageCompressionType;
-
+    private final Session session;
+    /*    @Value("${iotdb.storage.ts_encoding}")
+        String iotdbStorageTsEncoding;
+        @Value("${iotdb.storage.compression_type}")
+        String iotdbStorageCompressionType;*/
     @Value("${iotdb.query.timeout}")
     long queryTimeout;
 
-    @Autowired
-    private Session session;
+    public IoTDBDaoImpl(Session session) {
+        this.session = session;
+    }
 
+    //TODO aop实现方法执行前开启session，方法执行后关闭session。还可以实现这两个异常的统一处理。
     @Override
     public void createDatabase(String databasePath) {
         try {

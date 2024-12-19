@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 public class Record {
-    private final Map<String, Object> fields;
+    private Map<String, Object> fields;
 
     public Record() {
         fields = new HashMap<>();
@@ -38,5 +38,9 @@ public class Record {
 
     public Map<String, Object> getFields() {
         return fields;
+    }
+
+    public void setFields(Map<String, Object> fields) {
+        this.fields = fields;
     }
 }
