@@ -1,5 +1,6 @@
 package top.nomelin.iot.controller;
 
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import top.nomelin.iot.common.Result;
@@ -20,18 +21,21 @@ import java.util.Random;
 @RestController
 @RequestMapping("/data")
 public class DataController {
-    @RequestMapping("/test")
-    public Result test() {
+    @RequestMapping("/test/{deviceId}/{extraDataNum}")
+    public Result test(@PathVariable("deviceId") String deviceId, @PathVariable("extraDataNum") int extraDataNum) {
         // 配置生成数据的参数
         long startTimestamp = 1734529151000L; // 起始时间戳
-        int durationSeconds = 10; // 持续时间（秒）
+        int durationSeconds = 100; // 持续时间（秒）
         int intervalMillis = 1000; // 时间间隔（毫秒）
-        double tempMin = 20.0, tempMax = 30.0; // 温度范围
-        int humidityMin = 40, humidityMax = 60; // 湿度范围
+        double tempMin = -10.0, tempMax = 30.0; // 温度范围
+        int humidityMin = 20, humidityMax = 60; // 湿度范围
+
+        // 额外数据
+        int extraDataMin = 0, extraDataMax = 100; // 额外数据范围
 
         // 创建 DeviceTable 对象
         DeviceTable deviceTable = new DeviceTable();
-        deviceTable.setDevicePath("root.123.testdevice");
+        deviceTable.setDevicePath("root.123.testdevice" + deviceId);
         deviceTable.setTypes(Arrays.asList("DOUBLE", "INT32"));
 
         Map<Long, Record> records = new LinkedHashMap<>();
@@ -44,7 +48,9 @@ public class DataController {
             Record record = new Record();
             record.getFields().put("temperature", tempMin + (tempMax - tempMin) * random.nextDouble());
             record.getFields().put("humidity", humidityMin + random.nextInt(humidityMax - humidityMin + 1));
-
+            for (int j = 0; j < extraDataNum; j++) {
+                record.getFields().put("extraData" + j, extraDataMin + random.nextInt(extraDataMax - extraDataMin + 1));
+            }
             records.put(timestamp, record);
         }
 

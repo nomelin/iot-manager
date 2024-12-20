@@ -9,7 +9,7 @@
         <where>
             <if test="id != null">and id= #{id}</if>
             <if test="password != null">and password= #{password}</if>
-            <if test="name!= null">and name LIKE '%${name}%'</if>
+            <if test="name!= null">and name like concat('%', #{name}, '%')</if>
         </where>
     </select>
 

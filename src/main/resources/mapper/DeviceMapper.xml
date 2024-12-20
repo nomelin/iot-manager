@@ -1,0 +1,64 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="top.nomelin.iot.dao.DeviceMapper">
+
+    <resultMap id="deviceResultMap" type="top.nomelin.iot.model.Device">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="user_id" property="userId"/>
+        <result column="tags" property="tags" typeHandler="top.nomelin.iot.common.handler.JsonTypeHandler"/>
+    </resultMap>
+
+    <!-- 插入设备 -->
+    <insert id="insert" parameterType="top.nomelin.iot.model.Device"
+            useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+        INSERT INTO device (name, user_id, tags)
+        VALUES (#{name}, #{userId}, #{tags, typeHandler=top.nomelin.iot.common.handler.JsonTypeHandler})
+    </insert>
+
+    <!-- 更新设备 -->
+    <update id="update" parameterType="top.nomelin.iot.model.Device">
+        UPDATE device
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="tags != null">tags = #{tags, typeHandler=top.nomelin.iot.common.handler.JsonTypeHandler},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除设备 -->
+    <delete id="delete" parameterType="int">
+        DELETE
+        FROM device
+        WHERE id = #{id}
+    </delete>
+
+    <!-- 根据 ID 查询设备 -->
+    <select id="selectById" parameterType="int" resultMap="deviceResultMap">
+        SELECT id, name, user_id, tags
+        FROM device
+        WHERE id = #{id}
+    </select>
+
+    <!-- 条件查询设备 -->
+    <select id="selectAll" parameterType="top.nomelin.iot.model.Device" resultMap="deviceResultMap">
+        SELECT id, name, user_id, tags
+        FROM device
+        <where>
+            <if test="id != null">AND id = #{id}</if>
+            <if test="name != null">AND name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="userId != null">AND user_id = #{userId}</if>
+        </where>
+    </select>
+
+    <!-- 根据用户 ID 查询设备 -->
+    <select id="selectByUserId" parameterType="int" resultMap="deviceResultMap">
+        SELECT id, name, user_id, tags
+        FROM device
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>

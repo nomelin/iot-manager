@@ -10,6 +10,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 一个设备的查询结果
+ */
 public class DeviceTable {
     private Map<Long, Record> records;//时间戳和Record的映射
     private String devicePath;

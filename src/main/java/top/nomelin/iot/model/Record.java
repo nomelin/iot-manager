@@ -8,6 +8,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 一行查询结果。
+ */
 public class Record {
     private Map<String, Object> fields;
 

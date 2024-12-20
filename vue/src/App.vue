@@ -11,7 +11,7 @@ export default {
   name: 'App'
 }
 
-//全局注册自定义时间格式化过滤器，将ms时间戳转换为年-月-日 时:分的格式
+//全局注册自定义时间格式化过滤器，将ms时间戳转换为年-月-日 时:分:秒的格式
 Vue.filter('formatTime', function (timestamp) {
   let date = new Date(parseInt(timestamp));
   let year = date.getFullYear();
@@ -19,7 +19,8 @@ Vue.filter('formatTime', function (timestamp) {
   let day = date.getDate().toString().padStart(2, '0');
   let hour = date.getHours().toString().padStart(2, '0');
   let minute = date.getMinutes().toString().padStart(2, '0');
-  return `${year}-${month}-${day} ${hour}:${minute}`;
+  let second = date.getSeconds().toString().padStart(2, '0');
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 });
 
 

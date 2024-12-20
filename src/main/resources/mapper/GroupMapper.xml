@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.nomelin.iot.dao.GroupMapper">
+
+    <!-- 插入群组信息 -->
+    <insert id="insert" keyProperty="id" useGeneratedKeys="true">
+        INSERT INTO `group` (name, description, user_id)
+        VALUES (#{name}, #{description}, #{userId})
+    </insert>
+
+    <!-- 插入群组与设备关联信息（批量插入，假设一次插入群组关联的多个设备） -->
+    <insert id="insertGroupDeviceRelations">
+        INSERT INTO group_device (group_id, device_id)
+        VALUES
+        <foreach collection="deviceIds" item="deviceId" separator=",">
+            (#{groupId}, #{deviceId})
+        </foreach>
+    </insert>
+
+    <!-- 删除群组与设备关联信息（批量删除，假设一次删除群组关联的多个设备） -->
+    <delete id="deleteGroupDeviceRelations">
+        DELETE FROM group_device
+        WHERE group_id = #{groupId}
+        AND device_id IN
+        <foreach collection="deviceIds" item="deviceId" separator="," open="(" close=")">
+            #{deviceId}
+        </foreach>
+    </delete>
+
+    <!-- 删除群组（根据id），同时删除关联表中的相关记录 -->
+    <delete id="delete">
+        DELETE g, gd
+        FROM `group` g
+                 LEFT JOIN group_device gd ON g.id = gd.group_id
+        WHERE g.id = #{id}
+    </delete>
+
+    <!-- 更新群组信息 -->
+    <update id="update">
+        UPDATE `group`
+        SET name        = #{name},
+            description = #{description},
+            user_id     = #{userId}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据id查询群组信息，同时查询关联的设备id列表 -->
+    <select id="selectById" resultMap="GroupResultMap">
+        SELECT g.id,
+               g.name,
+               g.description,
+               g.user_id,
+               gd.device_id
+        FROM `group` g
+                 LEFT JOIN group_device gd ON g.id = gd.group_id
+        WHERE g.id = #{id}
+    </select>
+
+    <!-- 根据名称查询群组列表，同时查询关联的设备id列表 -->
+    <select id="selectByName" resultMap="GroupResultMap">
+        SELECT g.id,
+               g.name,
+               g.description,
+               g.user_id,
+               gd.device_id
+        FROM `group` g
+                 LEFT JOIN group_device gd ON g.id = gd.group_id
+        WHERE g.name LIKE CONCAT('%', #{name}, '%')
+    </select>
+
+    <!-- 查询所有群组信息，同时查询关联的设备id列表 -->
+    <select id="selectAll" resultMap="GroupResultMap">
+        SELECT g.id,
+               g.name,
+               g.description,
+               g.user_id,
+               gd.device_id
+        FROM `group` g
+                 LEFT JOIN group_device gd ON g.id = gd.group_id
+    </select>
+
+    <!-- 定义结果映射 -->
+    <resultMap id="GroupResultMap" type="top.nomelin.iot.model.Group">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="userId" column="user_id"/>
+        <collection property="deviceIds" ofType="java.lang.Integer">
+            <result column="device_id"/>
+        </collection>
+    </resultMap>
+
+</mapper>

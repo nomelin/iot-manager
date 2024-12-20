@@ -12,34 +12,19 @@ VueRouter.prototype.push = function push(location) {
 
 const routes = [
     {
-        path: '/',
+        path: '/front',
         name: '首页',
-        component: () => import('../views/Home.vue'),
-        redirect: '/view/group',
+        component: () => import('../views/Front.vue'),
+        redirect: '/front/view_platform',
         children: [
             {
-                path: 'view/group',
-                name: 'Group',
-                meta: {name: '组视图'},
-                component: () => import('../views/home/GroupView.vue')
+                path: 'view_platform',
+                name: 'viewPlatform',
+                meta: {name: '监测平台'},
+                component: () => import('../views/front/ViewPlatform.vue')
             }
         ]
 
-    },
-
-    {
-        path: '/front',
-        name: 'Front',
-        component: () => import('../views/Front.vue'),
-        children: [
-            {path: 'home', name: 'Home', meta: {name: '系统首页'}, component: () => import('../views/front/Home')},
-            {
-                path: 'person',
-                name: 'Person',
-                meta: {name: '个人信息'},
-                component: () => import('../views/front/Person')
-            },
-        ]
     },
     {path: '/login', name: 'Login', meta: {name: '登录'}, component: () => import('../views/Login.vue')},
     {path: '/register', name: 'Register', meta: {name: '注册'}, component: () => import('../views/Register.vue')},
@@ -63,7 +48,7 @@ router.beforeEach((to, from, next) => {
     console.log("get user", user)
     if (to.path === '/' || to.path === '') {
         if (user && !(Object.keys(user).length === 0)) {
-            next('/view/group')
+            next('/front')
         } else {
             next('/login')
         }

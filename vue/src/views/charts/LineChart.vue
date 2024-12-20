@@ -1,5 +1,14 @@
 <template>
-  <div :style="{ width: width, height: height }" ref="chart"></div>
+  <div class="chart-container">
+    <div class="setting">
+      <el-row>
+        <el-col :span="6" offset="18">
+          <el-button>配置</el-button>
+        </el-col>
+      </el-row>
+    </div>
+    <div ref="chart" :style="{ width: width, height: height }" class="chart"></div>
+  </div>
 </template>
 
 <script>
@@ -11,15 +20,11 @@ export default {
     data: {
       type: Array,
       required: true,
-      default: () => [
-        { name: "Jan", value: 820 },
-        { name: "Feb", value: 932 },
-        { name: "Mar", value: 901 },
-        { name: "Apr", value: 934 },
-        { name: "May", value: 1290 },
-        { name: "Jun", value: 1330 },
-        { name: "Jul", value: 1320 },
-      ],
+      default: () => [],
+    },
+    title: {
+      type: String,
+      default: "",
     },
     width: {
       type: String,
@@ -38,31 +43,33 @@ export default {
   methods: {
     initChart() {
       if (this.chartInstance) {
-        this.chartInstance.dispose(); // 避免重复初始化
+        this.chartInstance.dispose();
       }
       this.chartInstance = echarts.init(this.$refs.chart);
 
       const option = {
         title: {
-          text: "折线图示例",
+          text: this.title,
           left: "center",
         },
         tooltip: {
           trigger: "axis",
         },
+        legend: {
+          top: "10%",
+        },
         xAxis: {
           type: "category",
-          data: this.data.map((item) => item.name),
+          data: this.data.length ? this.data[0].timestamps : [],
         },
         yAxis: {
           type: "value",
         },
-        series: [
-          {
-            type: "line",
-            data: this.data.map((item) => item.value),
-          },
-        ],
+        series: this.data.map((line) => ({
+          name: line.deviceName,
+          type: "line",
+          data: line.values,
+        })),
       };
 
       this.chartInstance.setOption(option);
@@ -73,6 +80,7 @@ export default {
       handler: "initChart",
       deep: true,
     },
+    title: "initChart",
     width: "initChart",
     height: "initChart",
   },
@@ -90,5 +98,10 @@ export default {
 </script>
 
 <style scoped>
-/* 可根据需要添加样式 */
+/* 可自定义样式 */
+.chart-container {
+  background-color: #ffffff;
+  border-radius: 8px;
+}
+
 </style>
