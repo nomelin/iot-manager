@@ -24,5 +24,5 @@ public interface GroupMapper {
 
     List<Group> selectByName(String name);
 
-    List<Group> selectAll();
+    List<Group> selectAll(Group group);
 }

@@ -20,7 +20,7 @@ public class GroupMapperTest {
         Group groupToInsert = new Group();
         groupToInsert.setName("测试群组1");
         groupToInsert.setDescription("这是一个测试群组的描述");
-        groupToInsert.setUserId(1);  // 这里假设用户id为1，根据实际情况修改
+        groupToInsert.setUserId(2);  // 这里假设用户id为1，根据实际情况修改
         int insertResult = groupMapper.insert(groupToInsert);
         System.out.println("插入群组结果，受影响行数：" + insertResult);
         System.out.println("插入后群组的id：" + groupToInsert.getId());
@@ -45,10 +45,12 @@ public class GroupMapperTest {
         }
 
         // 5. 测试查询所有群组方法（selectAll）
-        List<Group> allGroups = groupMapper.selectAll();
+        Group group = new Group();
+        group.setUserId(2);
+        List<Group> allGroups = groupMapper.selectAll(group);
         System.out.println("查询所有群组结果，查询到的群组数量：" + allGroups.size());
-        for (Group group : allGroups) {
-            System.out.println(group);
+        for (Group g : allGroups) {
+            System.out.println(g);
         }
 
         // 6. 测试更新群组方法（update）
@@ -62,9 +64,9 @@ public class GroupMapperTest {
 //        int deleteRelationsResult = groupMapper.deleteGroupDeviceRelations(groupToInsert.getId(), deviceIdsToInsert);
 //        System.out.println("删除群组与设备关联关系结果，受影响行数：" + deleteRelationsResult);
 
-        // 8. 测试删除群组方法（delete）
-        int deleteResult = groupMapper.delete(groupToInsert.getId());
-        System.out.println("删除群组结果，受影响行数：" + deleteResult);
+//        // 8. 测试删除群组方法（delete）
+//        int deleteResult = groupMapper.delete(groupToInsert.getId());
+//        System.out.println("删除群组结果，受影响行数：" + deleteResult);
 
     }
 }

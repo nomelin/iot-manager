@@ -38,9 +38,11 @@
     <!-- 更新群组信息 -->
     <update id="update">
         UPDATE `group`
-        SET name        = #{name},
-            description = #{description},
-            user_id     = #{userId}
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="userId != null">user_id = #{userId}</if>
+        </set>
         WHERE id = #{id}
     </update>
 
@@ -71,12 +73,18 @@
     <!-- 查询所有群组信息，同时查询关联的设备id列表 -->
     <select id="selectAll" resultMap="GroupResultMap">
         SELECT g.id,
-               g.name,
-               g.description,
-               g.user_id,
-               gd.device_id
+        g.name,
+        g.description,
+        g.user_id,
+        gd.device_id
         FROM `group` g
-                 LEFT JOIN group_device gd ON g.id = gd.group_id
+        LEFT JOIN group_device gd ON g.id = gd.group_id
+        <where>
+            <if test="id != null">id = #{id}</if>
+            <if test="name != null">name = #{name}</if>
+            <if test="description != null">description = #{description}</if>
+            <if test="userId != null">user_id = #{userId}</if>
+        </where>
     </select>
 
     <!-- 定义结果映射 -->

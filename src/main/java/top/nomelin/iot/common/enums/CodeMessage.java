@@ -22,6 +22,8 @@ public enum CodeMessage {
     INVALID_USER_NAME_ERROR("507", "要操作的用户名不合法，无权限操作"),
     EQUAL_PASSWORD_ERROR("508", "新密码不能与原密码相同"),
 
+    NO_PERMISSION_ERROR("601", "无权限"),
+
 
     SYSTEM_ERROR("800", "系统异常"),
     DB_ERROR("801", "数据库异常"),

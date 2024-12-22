@@ -73,17 +73,20 @@ public class UserServiceImpl implements UserService {
         }
         dbUser.setPassword(newPassword);
         userMapper.updateById(dbUser);
+        log.info("更新密码成功：{}", user);
     }
 
     @Override
     public User updateById(User user) {
         userMapper.updateById(user);
+        log.info("更新用户成功：{}", user);
         return user;
     }
 
     @Override
     public void deleteById(Integer id) {
         userMapper.deleteById(id);
+        log.info("删除用户成功：{}", id);
     }
 
     @Override
