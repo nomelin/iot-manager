@@ -13,7 +13,7 @@ import java.util.List;
 public interface DeviceService {
     Device checkPermission(int deviceId);
 
-    Device addDevice(Device device);
+    Device addDevice(Device device, int templateId);
 
     void deleteDevice(int deviceId);
 

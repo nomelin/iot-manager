@@ -31,11 +31,11 @@ public interface IoTDBDao {
      * 挂载并激活元数据模板。激活同时会实例化设备和设备下的时间序列。
      *
      * @param schemaName   元数据模板名称
-     * @param databaseName 数据库名称
+     * @param databasePath 数据库名称
      * @param deviceName   设备名称
      */
 
-    void setAndActivateSchema(String schemaName, String databaseName, String deviceName);
+    void setAndActivateSchema(String schemaName, String databasePath, String deviceName);
 
     /**
      * @return 所有模板名称的列表

@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * 用于转换List<String>和JSON字符串。处理数据库的Json String类型到实体对象的List<String>类型转换。
  */
-public class JsonTypeHandler extends BaseTypeHandler<List<String>> {
+public class ListStringTypeHandler extends BaseTypeHandler<List<String>> {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override

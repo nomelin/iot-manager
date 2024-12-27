@@ -27,7 +27,7 @@ public class IoTDBConfig {
                 .password(password)
                 .version(Version.V_1_0)
                 .build();
-//        session.open(false);
+        session.open(false);
         return session;
     }
 }

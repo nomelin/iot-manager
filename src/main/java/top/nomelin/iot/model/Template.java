@@ -1,26 +1,22 @@
 package top.nomelin.iot.model;
 
-import java.util.List;
-
 /**
- * Device
+ * Template
  *
  * @author nomelin
- * @since 2024/12/20 20:16
+ * @since 2024/12/27 15:39
  **/
-public class Device {
+public class Template {
     private Integer id;
     private String name;
     private Integer userId;
-    private List<String> tags;
-
     private Config config;
 
     public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -36,17 +32,8 @@ public class Device {
         return userId;
     }
 
-    public void setUserId(int userId) {
+    public void setUserId(Integer userId) {
         this.userId = userId;
-    }
-
-
-    public List<String> getTags() {
-        return tags;
-    }
-
-    public void setTags(List<String> tags) {
-        this.tags = tags;
     }
 
     public Config getConfig() {
@@ -57,14 +44,12 @@ public class Device {
         this.config = config;
     }
 
-
     @Override
     public String toString() {
-        return "Device{" +
+        return "Template{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", userId=" + userId +
-                ", tags=" + tags +
                 ", config='" + config + '\'' +
                 '}';
     }

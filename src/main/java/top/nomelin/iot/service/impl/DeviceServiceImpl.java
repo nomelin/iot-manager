@@ -4,11 +4,15 @@ import cn.hutool.core.util.ObjectUtil;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 import top.nomelin.iot.cache.CurrentUserCache;
+import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.dao.DeviceMapper;
+import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.model.Device;
+import top.nomelin.iot.model.Template;
 import top.nomelin.iot.service.DeviceService;
+import top.nomelin.iot.service.TemplateService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,11 +27,16 @@ import java.util.List;
 public class DeviceServiceImpl implements DeviceService {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(DeviceServiceImpl.class);
     private final DeviceMapper deviceMapper;
+    private final TemplateService templateService;
     private final CurrentUserCache currentUserCache;
 
-    public DeviceServiceImpl(DeviceMapper deviceMapper, CurrentUserCache currentUserCache) {
+    private final IoTDBDao iotDBDao;
+
+    public DeviceServiceImpl(DeviceMapper deviceMapper, TemplateService templateService, CurrentUserCache currentUserCache, IoTDBDao iotDBDao) {
         this.deviceMapper = deviceMapper;
+        this.templateService = templateService;
         this.currentUserCache = currentUserCache;
+        this.iotDBDao = iotDBDao;
     }
 
     /**
@@ -48,10 +57,20 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    public Device addDevice(Device device) {
+    public Device addDevice(Device device, int templateId) {
         device.setUserId(currentUserCache.getCurrentUser().getId());
+        //使用模板的配置作为设备的配置
+        Template template = templateService.getTemplateById(templateId);
+        device.setConfig(template.getConfig());
+        //插入mysql
         deviceMapper.insert(device);
-        log.info("添加设备成功, device: {}", device);
+        log.info("添加设备到mysql成功, device: {}", device);
+        //创建iotdb设备
+        iotDBDao.setAndActivateSchema(
+                Constants.TEMPLATE_PREFIX + templateId,
+                Constants.DATABASE_PREFIX + device.getUserId(),
+                Constants.DEVICE_PREFIX + device.getId());
+        log.info("创建iotdb设备成功, templateId: {}, database: {}", templateId, Constants.DATABASE_PREFIX + device.getUserId());
         return device;
     }
 
@@ -59,6 +78,7 @@ public class DeviceServiceImpl implements DeviceService {
     public void deleteDevice(int deviceId) {
         checkPermission(deviceId);
         deviceMapper.delete(deviceId);
+        //TODO: 删除iotdb设备
         log.info("删除设备成功, deviceId: {}", deviceId);
     }
 

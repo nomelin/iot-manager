@@ -25,7 +25,7 @@ public class DataController {
     public Result test(@PathVariable("deviceId") String deviceId, @PathVariable("extraDataNum") int extraDataNum) {
         // 配置生成数据的参数
         long startTimestamp = 1734529151000L; // 起始时间戳
-        int durationSeconds = 100; // 持续时间（秒）
+        int durationSeconds = 15; // 持续时间（秒）
         int intervalMillis = 1000; // 时间间隔（毫秒）
         double tempMin = -10.0, tempMax = 30.0; // 温度范围
         int humidityMin = 20, humidityMax = 60; // 湿度范围

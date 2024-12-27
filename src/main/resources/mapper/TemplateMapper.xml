@@ -1,0 +1,64 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="top.nomelin.iot.dao.TemplateMapper">
+
+    <resultMap id="templateResultMap" type="top.nomelin.iot.model.Template">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="user_id" property="userId"/>
+        <result column="config" property="config" typeHandler="top.nomelin.iot.common.handler.ConfigTypeHandler"/>
+    </resultMap>
+
+    <!-- 插入模板 -->
+    <insert id="insert" parameterType="top.nomelin.iot.model.Template"
+            useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+        INSERT INTO template (name, user_id, config)
+        VALUES (#{name}, #{userId}, #{config, typeHandler=top.nomelin.iot.common.handler.ConfigTypeHandler})
+    </insert>
+
+    <!-- 更新模板 -->
+    <update id="update" parameterType="top.nomelin.iot.model.Template">
+        UPDATE template
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="config != null">config = #{config, typeHandler=top.nomelin.iot.common.handler.ConfigTypeHandler},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除模板 -->
+    <delete id="delete" parameterType="int">
+        DELETE
+        FROM template
+        WHERE id = #{id}
+    </delete>
+
+    <!-- 根据 ID 查询模板 -->
+    <select id="selectById" parameterType="int" resultMap="templateResultMap">
+        SELECT id, name, user_id, config
+        FROM template
+        WHERE id = #{id}
+    </select>
+
+    <!-- 条件查询模板 -->
+    <select id="selectAll" parameterType="top.nomelin.iot.model.Template" resultMap="templateResultMap">
+        SELECT id, name, user_id, config
+        FROM template
+        <where>
+            <if test="id != null">AND id = #{id}</if>
+            <if test="name != null">AND name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="userId != null">AND user_id = #{userId}</if>
+        </where>
+    </select>
+
+    <!-- 根据用户 ID 查询模板 -->
+    <select id="selectByUserId" parameterType="int" resultMap="templateResultMap">
+        SELECT id, name, user_id, config
+        FROM template
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>

@@ -20,37 +20,37 @@ class IoTDBDaoTest {
 
     @Test
     void test() {
-/*        // 1. 创建数据库 root.test
-        String databasePath = "root.test";
-        dao.createDatabase(databasePath);
-        System.out.println("Database 'root.test' created successfully.");
+        // 1. 创建数据库 root.test
+        String databasePath = "root.test1";
+//        dao.createDatabase(databasePath);
+//        System.out.println("Database 'root.test' created successfully.");
 
         // 2. 创建元数据模板
-        String schemaName = "testSchema";
+        String schemaName = "testSchema1";
 
-        MeasurementNode temperatureNode = new MeasurementNode("temperature", TSDataType.FLOAT,
-                TSEncoding.PLAIN, CompressionType.UNCOMPRESSED);
-        MeasurementNode humidityNode = new MeasurementNode("humidity", TSDataType.INT32, TSEncoding.PLAIN,
-                CompressionType.UNCOMPRESSED);
-        List<MeasurementNode> measurementNodes = Arrays.asList(temperatureNode, humidityNode);
-
-        dao.createSchema(schemaName, measurementNodes);
-        System.out.println("Schema 'testSchema' created successfully.");*/
-
-        // 3. 挂载并激活元数据模板到设备 root.test.testdevice
-        String devicePath = "root.test.testdevice";
-        String deviceName = "testdevice";
-/*        dao.setAndActivateSchema(schemaName, databasePath, deviceName);
-        System.out.println("Schema 'testSchema' activated on device 'root.test.testdevice'.");*/
-
-        // 4. 插入一行数据
-//        long timestamp = System.currentTimeMillis();
-//        List<String> measurements = Arrays.asList("temperature", "humidity");
-//        List<TSDataType> types = Arrays.asList(TSDataType.FLOAT, TSDataType.INT32);
-//        List<Object> values = Arrays.asList(23.5f, 60);
+//        MeasurementNode temperatureNode = new MeasurementNode("temperature1", TSDataType.FLOAT,
+//                TSEncoding.PLAIN, CompressionType.UNCOMPRESSED);
+//        MeasurementNode humidityNode = new MeasurementNode("humidity2", TSDataType.INT32, TSEncoding.PLAIN,
+//                CompressionType.UNCOMPRESSED);
+//        List<MeasurementNode> measurementNodes = Arrays.asList(temperatureNode, humidityNode);
 //
-//        dao.insertAlignedRecord(devicePath, timestamp, measurements, types, values);
-//        System.out.println("Inserted a record with timestamp " + timestamp);
+//        dao.createSchema(schemaName, measurementNodes);
+        System.out.println("Schema 'testSchema' created successfully.");
+
+        // 3. 挂载并激活元数据模板到设备
+        String devicePath = "root.test1.testdevice1";
+        String deviceName = "testdevice1";
+        dao.setAndActivateSchema(schemaName, databasePath, deviceName);
+        System.out.println("Schema 'testSchema' activated on device 'root.test.testdevice'.");
+
+         //4. 插入一行数据
+        long timestamp = System.currentTimeMillis();
+        List<String> measurements = Arrays.asList("temperature1", "humidity2");
+        List<TSDataType> types = Arrays.asList(TSDataType.FLOAT, TSDataType.INT32);
+        List<Object> values = Arrays.asList(23.5f, 80);
+
+        dao.insertAlignedRecord(devicePath, timestamp, measurements, types, values);
+        System.out.println("Inserted a record with timestamp " + timestamp);
 
         // 5. 查询插入的数据
         long startTime = 1734269655847L;  // 查询范围的起始时间

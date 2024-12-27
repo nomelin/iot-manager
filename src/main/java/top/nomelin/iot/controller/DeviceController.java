@@ -26,11 +26,11 @@ public class DeviceController {
     }
 
     @RequestMapping("/add")
-    public Result addDevice(@RequestBody Device device) {
+    public Result addDevice(@RequestBody Device device, @RequestParam Integer templateId) {
         if (ObjectUtil.isNull(device) || ObjectUtil.isEmpty(device.getName())) {
             throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
         }
-        return Result.success(deviceService.addDevice(device));
+        return Result.success(deviceService.addDevice(device, templateId));
     }
 
     @RequestMapping("/delete/{deviceId}")

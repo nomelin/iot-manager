@@ -35,6 +35,9 @@ public class GroupServiceImpl implements GroupService {
         this.currentUserCache = currentUserCache;
     }
 
+    /**
+     * 检查当前用户是否有权限访问该group，并返回group对象
+     */
     @Override
     public Group checkPermission(int groupId) {
         Group group = groupMapper.selectById(groupId);
@@ -49,6 +52,9 @@ public class GroupServiceImpl implements GroupService {
         return group;
     }
 
+    /**
+     * 检查当前用户是否有权限访问该group，同时检查是否有权限访问所有设备,并返回group对象
+     */
     private Group checkPermission(int groupId, List<Integer> deviceIds) {
         for (int deviceId : deviceIds) {
             deviceService.checkPermission(deviceId);
@@ -129,7 +135,6 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     public Group getGroupById(int groupId) {
-        checkPermission(groupId);
-        return groupMapper.selectById(groupId);
+        return checkPermission(groupId);
     }
 }

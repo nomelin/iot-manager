@@ -62,12 +62,28 @@ public class IoTDBDaoImpl implements IoTDBDao {
     }
 
     @Override
-    public void setAndActivateSchema(String schemaName, String databaseName, String deviceName) {
+    public void setAndActivateSchema(String schemaName, String databasePath, String deviceName) {
         try {
-            session.setSchemaTemplate(schemaName, databaseName + "." + deviceName);
-            log.info("挂载 元数据模板 {} 到路径 {}.{} 成功", schemaName, databaseName, deviceName);
-            executeNonQueryStatement("CREATE TIMESERIES OF SCHEMA TEMPLATE on " + databaseName + "." + deviceName);
-            log.info("激活 元数据模板 {} 到设备 {}.{} 成功, 并创建时间序列", schemaName, databaseName, deviceName);
+            List<String> paths = queryPathsSchemaSetOn(schemaName);
+            boolean isSchemaSetOn = false;
+            if (paths.contains(databasePath + "." + deviceName)) {
+                log.info("元数据模板 {} 已经挂载到路径 {}.{} 了", schemaName, databasePath, deviceName);
+                isSchemaSetOn = true;
+            }
+            if (!isSchemaSetOn) {
+                session.setSchemaTemplate(schemaName, databasePath + "." + deviceName);
+                log.info("挂载 元数据模板 {} 到路径 {}.{} 成功", schemaName, databasePath, deviceName);
+            }
+            boolean isSchemaUsingOn = false;
+            paths = queryPathsSchemaUsingOn(schemaName);
+            if (paths.contains(databasePath + "." + deviceName)) {
+                log.info("元数据模板 {} 已经在设备 {}.{} 上激活", schemaName, databasePath, deviceName);
+                isSchemaUsingOn = true;
+            }
+            if (!isSchemaUsingOn) {
+                executeNonQueryStatement("CREATE TIMESERIES OF SCHEMA TEMPLATE on " + databasePath + "." + deviceName);
+                log.info("激活 元数据模板 {} 到设备 {}.{} 成功, 并创建时间序列", schemaName, databasePath, deviceName);
+            }
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
