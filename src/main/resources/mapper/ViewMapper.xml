@@ -1,0 +1,56 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="top.nomelin.iot.dao.ViewMapper">
+
+    <resultMap id="viewResultMap" type="top.nomelin.iot.model.View">
+        <id column="id" property="id"/>
+        <result column="measurement" property="measurement"/>
+        <result column="group_id" property="groupId"/>
+        <result column="config" property="config" typeHandler="top.nomelin.iot.common.handler.ViewConfigTypeHandler"/>
+    </resultMap>
+
+    <!-- 插入视图 -->
+    <insert id="insert" parameterType="top.nomelin.iot.model.View"
+            useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+        INSERT INTO view (measurement, group_id, config)
+        VALUES (#{measurement}, #{groupId},
+                #{config, typeHandler=top.nomelin.iot.common.handler.ViewConfigTypeHandler})
+    </insert>
+
+    <!-- 更新视图 -->
+    <update id="update" parameterType="top.nomelin.iot.model.View">
+        UPDATE view
+        <set>
+            <if test="measurement != null">measurement = #{measurement},</if>
+            <if test="groupId != null">group_id = #{groupId},</if>
+            <if test="config != null">config =
+                #{config, typeHandler=top.nomelin.iot.common.handler.ViewConfigTypeHandler},
+            </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除视图 -->
+    <delete id="delete" parameterType="int">
+        DELETE
+        FROM view
+        WHERE id = #{id}
+    </delete>
+
+    <!-- 根据ID查询视图 -->
+    <select id="selectById" parameterType="int" resultMap="viewResultMap">
+        SELECT id, measurement, group_id, config
+        FROM view
+        WHERE id = #{id}
+    </select>
+
+    <!-- 根据组ID查询视图列表 -->
+    <select id="selectByGroupId" parameterType="int" resultMap="viewResultMap">
+        SELECT id, measurement, group_id, config
+        FROM view
+        WHERE group_id = #{groupId}
+    </select>
+
+</mapper>

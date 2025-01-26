@@ -31,4 +31,9 @@ public interface GroupService {
     Group getGroupById(int groupId);
 
     List<Device> getDevicesByGroupId(int groupId);
+
+    /**
+     * 获取某个群组的所有设备的物理量名称，取并集。
+     */
+    List<String> getAllMeasurement(int groupId);
 }

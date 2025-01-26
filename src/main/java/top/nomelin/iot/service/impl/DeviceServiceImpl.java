@@ -60,6 +60,7 @@ public class DeviceServiceImpl implements DeviceService {
     public Device addDevice(Device device, int templateId) {
         device.setUserId(currentUserCache.getCurrentUser().getId());
         //使用模板的配置作为设备的配置
+        //TODO 每个设备的配置也许可以不一样？
         Template template = templateService.getTemplateById(templateId);
         device.setConfig(template.getConfig());
         //插入mysql

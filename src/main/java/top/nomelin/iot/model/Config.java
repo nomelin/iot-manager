@@ -47,4 +47,17 @@ public class Config {
         }
         return measurementNodes;
     }
+
+    /**
+     * 获取所有物理量名称
+     *
+     * @return 所有物理量名称列表
+     */
+    public List<String> getMeasurements() {
+        List<String> measurements = new ArrayList<>();
+        for (Map.Entry<String, IotDataType> entry : this.getDataTypes().entrySet()) {
+            measurements.add(entry.getKey());
+        }
+        return measurements;
+    }
 }

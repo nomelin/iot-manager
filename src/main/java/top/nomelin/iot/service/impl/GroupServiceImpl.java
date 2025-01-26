@@ -12,8 +12,7 @@ import top.nomelin.iot.model.Group;
 import top.nomelin.iot.service.DeviceService;
 import top.nomelin.iot.service.GroupService;
 
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * GroupServiceImpl
@@ -143,5 +142,20 @@ public class GroupServiceImpl implements GroupService {
     public List<Device> getDevicesByGroupId(int groupId) {
         Group group = checkPermission(groupId);
         return deviceService.getDevicesByIds(group.getDeviceIds());
+    }
+
+    @Override
+    public List<String> getAllMeasurement(int groupId) {
+        List<Device> devices = getDevicesByGroupId(groupId);
+        // 使用Set去重
+        Set<String> measurements = new LinkedHashSet<>();
+        // 遍历设备获取物理量配置
+        devices.forEach(device -> {
+            if (device.getConfig() != null
+                    && device.getConfig().getMeasurements() != null) {
+                measurements.addAll(device.getConfig().getMeasurements());
+            }
+        });
+        return new ArrayList<>(measurements);
     }
 }

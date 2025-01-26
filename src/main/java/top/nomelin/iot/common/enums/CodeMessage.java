@@ -24,6 +24,8 @@ public enum CodeMessage {
 
     NO_PERMISSION_ERROR("601", "无权限"),
 
+    DUPLICATE_ERROR("602", "不运行重复操作"),
+
 
     SYSTEM_ERROR("800", "系统异常"),
     DB_ERROR("801", "数据库异常"),
