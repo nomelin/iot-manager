@@ -1,5 +1,6 @@
 package top.nomelin.iot.service;
 
+import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.Group;
 
 import java.util.List;
@@ -28,4 +29,6 @@ public interface GroupService {
     List<Group> getAllGroup();
 
     Group getGroupById(int groupId);
+
+    List<Device> getDevicesByGroupId(int groupId);
 }

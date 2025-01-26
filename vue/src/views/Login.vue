@@ -95,7 +95,7 @@ export default {
             // if (redirect) {
             //   window.location.href = decodeURIComponent(redirect);
             // }
-            this.$router.push({path: '/home'});
+            this.$router.push({path: '/front'});
           }, 100);
         } else {
           this.$message.error(res.code + ": " + res.msg);

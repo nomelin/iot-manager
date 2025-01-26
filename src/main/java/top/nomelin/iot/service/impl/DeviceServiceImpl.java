@@ -139,6 +139,15 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    public List<Device> getDevicesByIds(List<Integer> deviceIds) {
+        List<Device> devices = new ArrayList<>();
+        for (int deviceId : deviceIds) {
+            devices.add(checkPermission(deviceId));
+        }
+        return devices;
+    }
+
+    @Override
     public List<Device> getAllDevice() {
         Device device = new Device();
         device.setUserId(currentUserCache.getCurrentUser().getId());

@@ -25,7 +25,7 @@ public class DataController {
     public Result test(@PathVariable("deviceId") String deviceId, @PathVariable("extraDataNum") int extraDataNum) {
         // 配置生成数据的参数
         long startTimestamp = 1734529151000L; // 起始时间戳
-        int durationSeconds = 15; // 持续时间（秒）
+        int durationSeconds = 100; // 持续时间（秒）
         int intervalMillis = 1000; // 时间间隔（毫秒）
         double tempMin = -10.0, tempMax = 30.0; // 温度范围
         int humidityMin = 20, humidityMax = 60; // 湿度范围
@@ -46,10 +46,16 @@ public class DataController {
 
             // 创建 Record 对象并填充字段数据
             Record record = new Record();
-            record.getFields().put("temperature", tempMin + (tempMax - tempMin) * random.nextDouble());
-            record.getFields().put("humidity", humidityMin + random.nextInt(humidityMax - humidityMin + 1));
-            for (int j = 0; j < extraDataNum; j++) {
-                record.getFields().put("extraData" + j, extraDataMin + random.nextInt(extraDataMax - extraDataMin + 1));
+            //小概率给null值
+            if (random.nextInt(100) < 10) {
+                record.getFields().put("temperature", null);
+                record.getFields().put("humidity", null);
+            } else {
+                record.getFields().put("temperature", tempMin + (tempMax - tempMin) * random.nextDouble());
+                record.getFields().put("humidity", humidityMin + random.nextInt(humidityMax - humidityMin + 1));
+                for (int j = 0; j < extraDataNum; j++) {
+                    record.getFields().put("extraData" + j, extraDataMin + random.nextInt(extraDataMax - extraDataMin + 1));
+                }
             }
             records.put(timestamp, record);
         }

@@ -7,6 +7,7 @@ import top.nomelin.iot.cache.CurrentUserCache;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.dao.GroupMapper;
+import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.Group;
 import top.nomelin.iot.service.DeviceService;
 import top.nomelin.iot.service.GroupService;
@@ -136,5 +137,11 @@ public class GroupServiceImpl implements GroupService {
     @Override
     public Group getGroupById(int groupId) {
         return checkPermission(groupId);
+    }
+
+    @Override
+    public List<Device> getDevicesByGroupId(int groupId) {
+        Group group = checkPermission(groupId);
+        return deviceService.getDevicesByIds(group.getDeviceIds());
     }
 }

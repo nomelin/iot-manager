@@ -65,10 +65,23 @@ export default {
         yAxis: {
           type: "value",
         },
+        dataZoom: [
+          {
+            type: "slider",
+            xAxisIndex: 0,
+            filterMode: "none",
+          },
+          {
+            type: "slider",
+            yAxisIndex: 0,
+            filterMode: "none",
+          },
+        ],
         series: this.data.map((line) => ({
           name: line.deviceName,
           type: "line",
           data: line.values,
+          smooth: true,
         })),
       };
 
@@ -103,5 +116,4 @@ export default {
   background-color: #ffffff;
   border-radius: 8px;
 }
-
 </style>

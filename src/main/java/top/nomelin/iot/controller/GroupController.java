@@ -90,4 +90,12 @@ public class GroupController {
     public Result getAllGroups() {
         return Result.success(groupService.getAllGroup());
     }
+
+    @RequestMapping("/getDevices/{groupId}")
+    public Result getDevicesByGroupId(@PathVariable Integer groupId) {
+        if (ObjectUtil.isNull(groupId)) {
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        return Result.success(groupService.getDevicesByGroupId(groupId));
+    }
 }

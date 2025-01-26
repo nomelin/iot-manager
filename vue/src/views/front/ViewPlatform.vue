@@ -1,36 +1,34 @@
 <template>
   <div class="view-platform">
     <!-- 上侧控制区域 -->
-    <el-row :gutter="10" class="control-panel">
-      <!-- 组选择 -->
+    <el-row :gutter="20" class="control-panel">
+      <!-- 左上：组选择 -->
       <el-col :span="6">
         <el-form>
-          <div class="group-select">
-            <el-form-item label="组选择">
-              <el-select v-model="selectedGroup" placeholder="选择组">
-                <el-option v-for="group in groups" :key="group" :label="group" :value="group"/>
-              </el-select>
-            </el-form-item>
-          </div>
+          <el-form-item label="组选择">
+            <el-select v-model="selectedGroup" placeholder="选择组" @change="fetchDevices">
+              <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id"/>
+            </el-select>
+          </el-form-item>
         </el-form>
       </el-col>
 
-      <!-- 设备选择 -->
+      <!-- 左下：设备选择 -->
       <el-col :span="6">
         <el-form>
           <el-form-item label="设备选择">
             <el-select
                 v-model="selectedDevices"
                 :clearable="true"
-                filterable
+                collapse-tags
                 multiple
                 placeholder="选择设备"
             >
               <el-option
                   v-for="device in devices"
-                  :key="device"
-                  :label="device"
-                  :value="device"
+                  :key="device.id"
+                  :label="device.name"
+                  :value="device.id"
               />
             </el-select>
           </el-form-item>
@@ -45,7 +43,7 @@
                 v-model="dateRange"
                 :clearable="true"
                 end-placeholder="结束日期"
-                range-separator="至"
+                range-separator="-"
                 start-placeholder="开始日期"
                 type="daterange"
             />
@@ -60,7 +58,7 @@
 
     <!-- 下侧数据展示 -->
     <div class="data-view">
-      <GroupView :selectedGroup="selectedGroup" :selectedDevices="selectedDevices"/>
+      <GroupView :selected-devices="selectedDevices"/>
     </div>
   </div>
 </template>
@@ -73,14 +71,48 @@ export default {
   components: {GroupView},
   data() {
     return {
-      groups: ["组1", "组2", "组3"], // 模拟组数据
-      devices: ["设备1", "设备2", "设备3", "设备4", "设备5"], // 模拟设备数据
-      selectedGroup: null, // 当前选择的组
-      selectedDevices: [], // 当前选择的设备
+      groups: [], // 全部组信息
+      devices: [], // 当前组设备
+      selectedGroup: null, // 当前选择的组ID
+      selectedDevices: [], // 当前选择的设备ID
       dateRange: null, // 时间段选择
     };
   },
   methods: {
+    fetchGroups() {
+      this.$request
+          .get("/group/all")
+          .then((res) => {
+            if (res.code === "200") {
+              this.groups = res.data;
+            } else {
+              this.$message.error("加载组信息失败：" + res.msg);
+            }
+          })
+          .catch((error) => {
+            this.$message.error("请求组信息失败：" + error.message);
+          });
+    },
+    fetchDevices() {
+      if (!this.selectedGroup) {
+        this.devices = [];
+        this.selectedDevices = [];
+        return;
+      }
+      this.$request
+          .get(`/group/getDevices/${this.selectedGroup}`)
+          .then((res) => {
+            if (res.code === "200") {
+              this.devices = res.data;
+              this.selectedDevices = []; // 重置设备选择
+            } else {
+              this.$message.error("加载设备信息失败：" + res.msg);
+            }
+          })
+          .catch((error) => {
+            this.$message.error("请求设备信息失败：" + error.message);
+          });
+    },
     selectQuickRange(type) {
       const now = new Date();
       let start, end;
@@ -95,6 +127,9 @@ export default {
       this.dateRange = [start, end];
     },
   },
+  created() {
+    this.fetchGroups(); // 初始化加载组信息
+  },
 };
 </script>
 
@@ -104,9 +139,8 @@ export default {
   flex-direction: column;
   height: 100%; /* 填满父容器 */
   box-sizing: border-box;
-  font-weight: bold;
+  font-weight:bold;
 }
-
 
 .control-panel {
   padding: 15px 15px 0;
@@ -119,5 +153,4 @@ export default {
   overflow-y: auto;
   padding: 10px;
 }
-
 </style>

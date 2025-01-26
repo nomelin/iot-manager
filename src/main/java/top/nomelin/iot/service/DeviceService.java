@@ -25,5 +25,7 @@ public interface DeviceService {
 
     Device getDeviceById(int deviceId);
 
+    List<Device> getDevicesByIds(List<Integer> deviceIds);
+
     List<Device> getAllDevice();
 }
