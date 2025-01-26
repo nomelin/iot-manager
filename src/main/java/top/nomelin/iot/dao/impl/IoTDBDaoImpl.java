@@ -15,6 +15,7 @@ import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.model.DeviceTable;
+import top.nomelin.iot.util.SessionContext;
 import top.nomelin.iot.util.TimeUtil;
 
 import java.io.IOException;
@@ -24,23 +25,17 @@ import java.util.List;
 @Component
 public class IoTDBDaoImpl implements IoTDBDao {
     private static final Logger log = LoggerFactory.getLogger(IoTDBDaoImpl.class);
-    private final Session session;
-    /*    @Value("${iotdb.storage.ts_encoding}")
-        String iotdbStorageTsEncoding;
-        @Value("${iotdb.storage.compression_type}")
-        String iotdbStorageCompressionType;*/
     @Value("${iotdb.query.timeout}")
     long queryTimeout;
 
-    public IoTDBDaoImpl(Session session) {
-        this.session = session;
+    private Session getSession() {
+        return SessionContext.getCurrentSession();
     }
 
-    //TODO aop实现方法执行前开启session，方法执行后关闭session。还可以实现这两个异常的统一处理。
     @Override
     public void createDatabase(String databasePath) {
         try {
-            session.createDatabase(databasePath);
+            getSession().createDatabase(databasePath);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
@@ -54,7 +49,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
             for (MeasurementNode measurementNode : measurementNodes) {
                 template.addToTemplate(measurementNode);
             }
-            session.createSchemaTemplate(template);
+            getSession().createSchemaTemplate(template);
         } catch (StatementExecutionException | IoTDBConnectionException | IOException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
@@ -71,7 +66,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
                 isSchemaSetOn = true;
             }
             if (!isSchemaSetOn) {
-                session.setSchemaTemplate(schemaName, databasePath + "." + deviceName);
+                getSession().setSchemaTemplate(schemaName, databasePath + "." + deviceName);
                 log.info("挂载 元数据模板 {} 到路径 {}.{} 成功", schemaName, databasePath, deviceName);
             }
             boolean isSchemaUsingOn = false;
@@ -93,7 +88,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
     public List<String> queryAllSchemas() {
         List<String> schemaNames;
         try {
-            schemaNames = session.showAllTemplates();
+            schemaNames = getSession().showAllTemplates();
         } catch (StatementExecutionException | IoTDBConnectionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
@@ -105,7 +100,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
     public List<String> queryPathsSchemaSetOn(String schemaName) {
         List<String> paths;
         try {
-            paths = session.showPathsTemplateSetOn(schemaName);
+            paths = getSession().showPathsTemplateSetOn(schemaName);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
@@ -117,7 +112,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
     public List<String> queryPathsSchemaUsingOn(String schemaName) {
         List<String> paths;
         try {
-            paths = session.showPathsTemplateUsingOn(schemaName);
+            paths = getSession().showPathsTemplateUsingOn(schemaName);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
@@ -129,7 +124,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
     public List<String> showMeasurementsInSchema(String schemaName) {
         List<String> measurements;
         try {
-            measurements = session.showMeasurementsInTemplate(schemaName);
+            measurements = getSession().showMeasurementsInTemplate(schemaName);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
@@ -140,7 +135,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
     @Override
     public void insertAlignedRecord(String devicePath, long time, List<String> measurements, List<TSDataType> types, List<Object> values) {
         try {
-            session.insertAlignedRecord(devicePath, time, measurements, types, values);
+            getSession().insertAlignedRecord(devicePath, time, measurements, types, values);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
@@ -150,7 +145,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
     @Override
     public void insertBatchAlignedRecordsOfOneDevice(String devicePath, List<Long> times, List<List<String>> measurementsList, List<List<TSDataType>> typesList, List<List<Object>> valuesList) {
         try {
-            session.insertAlignedRecordsOfOneDevice(devicePath, times, measurementsList, typesList, valuesList);
+            getSession().insertAlignedRecordsOfOneDevice(devicePath, times, measurementsList, typesList, valuesList);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
@@ -177,7 +172,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
     @Override
     public void deleteDatabase(String databasePath) {
         try {
-            session.deleteDatabase(databasePath);
+            getSession().deleteDatabase(databasePath);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
@@ -189,7 +184,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
         SessionDataSet sessionDataSet;
         DeviceTable deviceTable;
         try {
-            sessionDataSet = session.executeRawDataQuery(paths, startTime, endTime, queryTimeout);
+            sessionDataSet = getSession().executeRawDataQuery(paths, startTime, endTime, queryTimeout);
             deviceTable = DeviceTable.convertToDeviceTable(sessionDataSet, devicePath);
         } catch (StatementExecutionException | IoTDBConnectionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
@@ -202,7 +197,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
 
     private void executeNonQueryStatement(String sql) {
         try {
-            session.executeNonQueryStatement(sql);
+            getSession().executeNonQueryStatement(sql);
             log.info("执行非查询 SQL 语句 {} 成功", sql);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
@@ -212,7 +207,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
     private SessionDataSet executeQueryStatement(String sql) {
         SessionDataSet sessionDataSet;
         try {
-            sessionDataSet = session.executeQueryStatement(sql);
+            sessionDataSet = getSession().executeQueryStatement(sql);
             log.info("执行查询 SQL 语句 {} 成功", sql);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);

@@ -1,11 +1,12 @@
 package top.nomelin.iot.aspect;
 
+import org.apache.iotdb.isession.util.Version;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
-import org.apache.iotdb.rpc.StatementExecutionException;
 import org.apache.iotdb.session.Session;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,11 +24,11 @@ import top.nomelin.iot.util.SessionContext;
 public class SessionManagementAspect {
     private static final Logger log = LoggerFactory.getLogger(SessionManagementAspect.class);
 
-    @Value("${iotdb.host}")
-    private String host;
+    @Value("${iotdb.ip}")
+    private String ip;
 
     @Value("${iotdb.port}")
-    private String port;
+    private int port;
 
     @Value("${iotdb.username}")
     private String username;
@@ -35,44 +36,58 @@ public class SessionManagementAspect {
     @Value("${iotdb.password}")
     private String password;
 
-    @Around("execution(* top.nomelin.iot.dao.impl.IoTDBDaoImpl.*(..))")
-    public Object manageSession(ProceedingJoinPoint joinPoint) {
+    @Before("execution(* top.nomelin.iot.dao.impl.IoTDBDaoImpl.*(..))")
+    public void beforeMethod(JoinPoint joinPoint) {
+        //如果当前线程没有Session，则创建Session
+        if (SessionContext.getCurrentSession() == null) {
+            createSession();
+        }
+        Session session = SessionContext.getCurrentSession();
+        openSession(session);//打开Session
+    }
+
+    @After("execution(* top.nomelin.iot.dao.impl.IoTDBDaoImpl.*(..))")
+    public void afterMethod(JoinPoint joinPoint) {
+        Session session = SessionContext.getCurrentSession();
+        closeSession(session);//关闭Session
+    }
+
+    private void createSession() {
         Session session = new Session.Builder()
-                .host(host)
-                .port(Integer.parseInt(port))
+                .host(ip)
+                .port(port)
                 .username(username)
                 .password(password)
+                .version(Version.V_1_0)
                 .build();
         try {
-            session.open();
-            SessionContext.setCurrentSession(session);
-            return joinPoint.proceed();
-        } catch (Throwable e) {
-            handleException(e); // 统一异常处理
-            return null;
-        } finally {
-            cleanUpSession(session);
-        }
-    }
-
-    private void handleException(Throwable e) {
-        if (e instanceof IoTDBConnectionException || e instanceof StatementExecutionException) {
-            log.error("IoTDB操作失败: {}", e.getMessage());
+            session.open(false);
+        } catch (IoTDBConnectionException e) {
+            log.error("创建Session失败: {}", e.getMessage());
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
-        } else {
-            log.error("未知错误: {}", e.getMessage(), e);
-            throw new SystemException(CodeMessage.UNKNOWN_ERROR, e);
+        }
+        SessionContext.setCurrentSession(session);
+    }
+
+    private void openSession(Session session) {
+        if (session != null) {
+            try {
+                session.open(false);
+            } catch (IoTDBConnectionException e) {
+                log.error("打开Session失败: {}", e.getMessage());
+                throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
+            }
         }
     }
 
-    private void cleanUpSession(Session session) {
-        SessionContext.clear();
+    private void closeSession(Session session) {
         try {
             if (session != null) {
                 session.close();
             }
         } catch (IoTDBConnectionException e) {
             log.error("关闭Session失败: {}", e.getMessage());
+            throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
     }
 }
