@@ -66,7 +66,7 @@ public class DeviceServiceImpl implements DeviceService {
         //插入mysql
         deviceMapper.insert(device);
         log.info("添加设备到mysql成功, device: {}", device);
-        //创建iotdb设备
+        //创建iotdb设备。实际上databasePath不是数据库。
         iotDBDao.setAndActivateSchema(
                 Constants.TEMPLATE_PREFIX + templateId,
                 Constants.DATABASE_PREFIX + device.getUserId(),

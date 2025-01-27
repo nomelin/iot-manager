@@ -17,6 +17,7 @@ public class Constants {
 
     public static final CompressionType COMPRESSION_TYPE = CompressionType.UNCOMPRESSED;
 
+    //实际上数据库是root.data。加上user_是为了区分用户数据，只是普通路径
     public static final String DATABASE_PREFIX = "root.data.user_";
 
     public static final String TEMPLATE_PREFIX = "template_";
