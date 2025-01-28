@@ -9,6 +9,7 @@ import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.model.DeviceTable;
 import top.nomelin.iot.model.Record;
 import top.nomelin.iot.service.storage.StorageStrategy;
+import top.nomelin.iot.util.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,23 +30,21 @@ public class CompatibleStorageStrategy implements StorageStrategy {
     public void storeData(String devicePath, List<Long> timestamps,
                           List<List<String>> measurementsList, List<List<TSDataType>> typesList,
                           List<List<Object>> valuesList, int aggregationTime) {
+        int storageGranularity = util.adjustStorageGranularity(aggregationTime);
         Map<Long, Map<String, List<Object>>> aggregatedData = new HashMap<>();
 
-        // 聚合数据到时间窗口
+        // 聚合数据到调整后的时间窗口
         for (int i = 0; i < timestamps.size(); i++) {
-            long timestamp = timestamps.get(i);
-            long windowStart = timestamp / aggregationTime * aggregationTime;
+            long ts = timestamps.get(i);
+            long window = ts / storageGranularity * storageGranularity;
 
-            Map<String, List<Object>> windowData = aggregatedData.computeIfAbsent(
-                    windowStart, k -> new HashMap<>());
+            Map<String, List<Object>> measurements = aggregatedData.computeIfAbsent(window, k -> new HashMap<>());
+            List<String> ms = measurementsList.get(i);
+            List<Object> vs = valuesList.get(i);
 
-            List<String> measurements = measurementsList.get(i);
-            List<Object> values = valuesList.get(i);
-
-            for (int j = 0; j < measurements.size(); j++) {
-                String measurement = measurements.get(j);
-                Object value = values.get(j);
-                windowData.computeIfAbsent(measurement, k -> new ArrayList<>()).add(value);
+            for (int j = 0; j < ms.size(); j++) {
+                measurements.computeIfAbsent(ms.get(j), k -> new ArrayList<>())
+                        .add(vs.get(j));
             }
         }
 

@@ -25,6 +25,9 @@ public enum CodeMessage {
     NO_PERMISSION_ERROR("601", "无权限"),
 
     DUPLICATE_ERROR("602", "不运行重复操作"),
+    ILLEGAL_AGGREGATION_ERROR("603", "查询时应用的聚合函数不正确"),
+    ILLEGAL_FILTER_ERROR("604", "查询时应用的过滤条件不正确"),
+    STORAGE_OUT_OF_BOUND_ERROR("605", "性能模式存储，超出粒度容量限制，无法写入数据.(1s不超过1000条数据)"),
 
 
     SYSTEM_ERROR("800", "系统异常"),
