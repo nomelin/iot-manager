@@ -7,10 +7,7 @@ import top.nomelin.iot.common.Result;
 import top.nomelin.iot.model.DeviceTable;
 import top.nomelin.iot.model.Record;
 
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 /**
  * DataController
@@ -38,7 +35,7 @@ public class DataController {
         deviceTable.setDevicePath("root.123.testdevice" + deviceId);
         deviceTable.setTypes(Arrays.asList("DOUBLE", "INT32"));
 
-        Map<Long, Record> records = new LinkedHashMap<>();
+        Map<Long, List<Record>> records = new LinkedHashMap<>();
         Random random = new Random();
 
         for (int i = 0; i < durationSeconds; i++) {
@@ -57,7 +54,7 @@ public class DataController {
                     record.getFields().put("extraData" + j, extraDataMin + random.nextInt(extraDataMax - extraDataMin + 1));
                 }
             }
-            records.put(timestamp, record);
+            records.put(timestamp, List.of(record));
         }
 
         deviceTable.setRecords(records);

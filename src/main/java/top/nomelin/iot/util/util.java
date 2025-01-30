@@ -19,7 +19,7 @@ public class util {
 
     // 存储粒度处理（向下取10的幂次）
     public static int adjustStorageGranularity(int milliseconds) {
-        if (milliseconds < 1) {
+        if (milliseconds <= 1) {
             return 1;
         }
         int exponent = (int) Math.floor(Math.log10(milliseconds));
@@ -51,5 +51,10 @@ public class util {
                 throw new IllegalArgumentException("不支持的查询粒度: " + granularity);
         }
         return zdt.toInstant().toEpochMilli();
+    }
+
+    // 对齐到存储时间窗口（向下取整）
+    public static long alignToStorageWindow(long timestamp, int granularity) {
+        return timestamp / granularity * granularity;
     }
 }

@@ -32,7 +32,8 @@ public class ExceptionHandler {
             if (ObjectUtil.isEmpty(cause)) {
                 cause = e.getCause() == null ? "" : e.getCause().toString();
             }
-            log.warn("业务异常->" + e.codeMessage.code + ":" + e.codeMessage.msg + ", cause:" + cause);
+            log.warn("业务异常->" + e.codeMessage.code + ":" + e.codeMessage.msg +
+                    ", cause:" + cause + ", extraMsg:" + e.extraMessage);
             e.printStackTrace();
             System.out.println("---test---");
             if (e.cause != null) {
@@ -54,7 +55,8 @@ public class ExceptionHandler {
         if (ObjectUtil.isEmpty(cause)) {
             cause = e.getCause() == null ? "" : e.getCause().toString();
         }
-        log.warn("系统异常->" + e.codeMessage.code + ":" + e.codeMessage.msg + ", cause:" + cause);
+        log.warn("系统异常->" + e.codeMessage.code + ":" + e.codeMessage.msg +
+                ", cause:" + cause + ", extraMsg:" + e.extraMessage);
         e.printStackTrace();
         System.out.println("---test---");
         if (e.cause != null) {

@@ -15,7 +15,7 @@ public class CoverStorageStrategy implements StorageStrategy {
     public CoverStorageStrategy(IoTDBDao iotDBDao) {
         this.iotDBDao = iotDBDao;
     }
-
+    //TODO 覆盖模式暂不支持聚合粒度
     @Override
     public void storeData(String devicePath, List<Long> timestamps,
                           List<List<String>> measurementsList, List<List<TSDataType>> typesList,

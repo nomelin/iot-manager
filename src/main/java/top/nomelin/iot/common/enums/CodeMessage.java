@@ -28,6 +28,9 @@ public enum CodeMessage {
     ILLEGAL_AGGREGATION_ERROR("603", "查询时应用的聚合函数不正确"),
     ILLEGAL_FILTER_ERROR("604", "查询时应用的过滤条件不正确"),
     STORAGE_OUT_OF_BOUND_ERROR("605", "性能模式存储，超出粒度容量限制，无法写入数据.(1s不超过1000条数据)"),
+    JSON_WRITE_ERROR("606", "写入数据库时，JSON序列化异常"),
+    JSON_READ_ERROR("607", "读取数据库时，JSON反序列化异常"),
+    DUPLICATE_TIME_ERROR("608", "兼容模式下，存在时间戳重复行。"),
 
 
     SYSTEM_ERROR("800", "系统异常"),

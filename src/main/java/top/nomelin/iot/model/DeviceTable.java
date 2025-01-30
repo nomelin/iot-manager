@@ -6,6 +6,7 @@ import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.rpc.StatementExecutionException;
 import org.apache.tsfile.read.common.RowRecord;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +15,7 @@ import java.util.Map;
  * 一个设备的查询结果
  */
 public class DeviceTable {
-    private Map<Long, Record> records;//时间戳和Record的映射
+    private Map<Long, List<Record>> records;//时间戳和Record的映射
     private String devicePath;
     private List<String> types;
 
@@ -45,9 +46,14 @@ public class DeviceTable {
         while (dataSet.hasNext()) {
             RowRecord rowRecord = dataSet.next();
             Record record = Record.convertToRowRecord(rowRecord, columnNames);
-            deviceTable.records.put(rowRecord.getTimestamp(), record);
+            deviceTable.addRecord(rowRecord.getTimestamp(), record);
         }
         return deviceTable;
+    }
+
+    // 添加记录到指定时间戳
+    public void addRecord(long timestamp, Record record) {
+        records.computeIfAbsent(timestamp, k -> new ArrayList<>()).add(record);
     }
 
     public String getDevicePath() {
@@ -66,15 +72,15 @@ public class DeviceTable {
         this.types = types;
     }
 
-    public Map<Long, Record> getRecords() {
+    public Map<Long, List<Record>> getRecords() {
         return records;
     }
 
-    public void setRecords(Map<Long, Record> records) {
+    public void setRecords(Map<Long, List<Record>> records) {
         this.records = records;
     }
 
-    public Record getRecord(long timestamp) {
+    public List<Record> getRecords(long timestamp) {
         return records.get(timestamp);
     }
 }

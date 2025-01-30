@@ -67,52 +67,53 @@ public class DataServiceImpl implements DataService {
     public DeviceTable queryRecord(int deviceId, long startTime, long endTime,
                                    List<String> selectMeasurements, int aggregationTime,
                                    QueryMode queryMode, List<List<Double>> thresholds) {
-        Device device = deviceService.getDeviceById(deviceId);
-        Config config = device.getConfig();
-        StorageStrategy strategy = storageStrategies.get(config.getInsertMode());
-        String devicePath = util.getDevicePath(device.getUserId(), deviceId);
-
-        // 对齐查询时间范围到东八区
-        long alignedStart = util.alignToEast8Zone(startTime, aggregationTime);
-        long alignedEnd = util.alignToEast8Zone(endTime, aggregationTime);
-
-        // 获取原始数据
-        DeviceTable rawTable = strategy.retrieveData(
-                devicePath, alignedStart, alignedEnd, selectMeasurements, aggregationTime);
-
-        //聚合到东八区时间窗口
-        DeviceTable resultTable = new DeviceTable();
-        Map<Long, Map<String, List<Object>>> aggregatedData = new TreeMap<>();
-
-        rawTable.getRecords().forEach((timestamp, record) -> {
-            // 对齐到东八区窗口
-            long window = util.alignToEast8Zone(timestamp, aggregationTime);
-
-            record.getFields().forEach((measurement, value) -> {
-                aggregatedData
-                        .computeIfAbsent(window, k -> new HashMap<>())
-                        .computeIfAbsent(measurement, k -> new ArrayList<>())
-                        .add(value);
-            });
-        });
-
-        // 生成聚合结果
-        aggregatedData.forEach((window, measurements) -> {
-            Record resultRecord = new Record();
-            measurements.forEach((measurement, values) -> {
-                Object aggregated = Aggregator.aggregate(values, queryMode);
-                resultRecord.getFields().put(measurement, aggregated);
-            });
-            resultTable.getRecords().put(window, resultRecord);
-        });
-
-        // 应用阈值过滤
-        if (thresholds != null) {
-            resultTable.getRecords().entrySet().removeIf(entry ->
-                    !passThreshold(entry.getValue(), selectMeasurements, thresholds));
-        }
-
-        return resultTable;
+//        Device device = deviceService.getDeviceById(deviceId);
+//        Config config = device.getConfig();
+//        StorageStrategy strategy = storageStrategies.get(config.getInsertMode());
+//        String devicePath = util.getDevicePath(device.getUserId(), deviceId);
+//
+//        // 对齐查询时间范围到东八区
+//        long alignedStart = util.alignToEast8Zone(startTime, aggregationTime);
+//        long alignedEnd = util.alignToEast8Zone(endTime, aggregationTime);
+//
+//        // 获取原始数据
+//        DeviceTable rawTable = strategy.retrieveData(
+//                devicePath, alignedStart, alignedEnd, selectMeasurements, aggregationTime);
+//
+//        //聚合到东八区时间窗口
+//        DeviceTable resultTable = new DeviceTable();
+//        Map<Long, Map<String, List<Object>>> aggregatedData = new TreeMap<>();
+//
+//        rawTable.getRecords().forEach((timestamp, record) -> {
+//            // 对齐到东八区窗口
+//            long window = util.alignToEast8Zone(timestamp, aggregationTime);
+//
+//            record.getFields().forEach((measurement, value) -> {
+//                aggregatedData
+//                        .computeIfAbsent(window, k -> new HashMap<>())
+//                        .computeIfAbsent(measurement, k -> new ArrayList<>())
+//                        .add(value);
+//            });
+//        });
+//
+//        // 生成聚合结果
+//        aggregatedData.forEach((window, measurements) -> {
+//            Record resultRecord = new Record();
+//            measurements.forEach((measurement, values) -> {
+//                Object aggregated = Aggregator.aggregate(values, queryMode);
+//                resultRecord.getFields().put(measurement, aggregated);
+//            });
+//            resultTable.getRecords().put(window, resultRecord);
+//        });
+//
+//        // 应用阈值过滤
+//        if (thresholds != null) {
+//            resultTable.getRecords().entrySet().removeIf(entry ->
+//                    !passThreshold(entry.getValue(), selectMeasurements, thresholds));
+//        }
+//
+//        return resultTable;
+        return null;
     }
 
     private boolean passThreshold(Record record, List<String> measurements,

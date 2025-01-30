@@ -1,10 +1,11 @@
 package top.nomelin.iot.service.storage.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.tsfile.enums.TSDataType;
 import org.springframework.stereotype.Component;
+import top.nomelin.iot.common.enums.CodeMessage;
+import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.model.DeviceTable;
 import top.nomelin.iot.model.Record;
@@ -26,47 +27,55 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         this.iotDBDao = iotDBDao;
     }
 
+    public static void main(String[] args) {
+        CompatibleStorageStrategy compatibleStorageStrategy = new CompatibleStorageStrategy(null);
+        compatibleStorageStrategy.testProcessStoredRecord();
+    }
+
     @Override
     public void storeData(String devicePath, List<Long> timestamps,
                           List<List<String>> measurementsList, List<List<TSDataType>> typesList,
                           List<List<Object>> valuesList, int aggregationTime) {
+        // 调整存储粒度
         int storageGranularity = util.adjustStorageGranularity(aggregationTime);
-        Map<Long, Map<String, List<Object>>> aggregatedData = new HashMap<>();
+        Map<Long, Map<String, List<Object>>> windowData = new HashMap<>();
 
         // 聚合数据到调整后的时间窗口
         for (int i = 0; i < timestamps.size(); i++) {
-            long ts = timestamps.get(i);
-            long window = ts / storageGranularity * storageGranularity;
-
-            Map<String, List<Object>> measurements = aggregatedData.computeIfAbsent(window, k -> new HashMap<>());
+            long originalTs = timestamps.get(i);//原始时间戳
+            //调整后的时间戳,也就是一个聚合粒度的开始时间戳
+            long windowTs = util.alignToStorageWindow(originalTs, storageGranularity);
+            //measurements是一个时间粒度内聚合后的数据行
+            Map<String, List<Object>> measurements = windowData.computeIfAbsent(windowTs, k -> new HashMap<>());
             List<String> ms = measurementsList.get(i);
             List<Object> vs = valuesList.get(i);
 
+            // 合并同窗口数据
             for (int j = 0; j < ms.size(); j++) {
-                measurements.computeIfAbsent(ms.get(j), k -> new ArrayList<>())
-                        .add(vs.get(j));
+                measurements.computeIfAbsent(ms.get(j), k -> new ArrayList<>()).add(vs.get(j));
             }
         }
 
-        // 转换为JSON存储
+        // 转换为单条记录存储（JSON数组）
+        //TODO 为什么需要重新创建？除了时间戳和value，不能直接用吗？
         List<Long> storedTimestamps = new ArrayList<>();
         List<List<String>> storedMeasurements = new ArrayList<>();
         List<List<TSDataType>> storedTypes = new ArrayList<>();
         List<List<Object>> storedValues = new ArrayList<>();
 
-        aggregatedData.forEach((windowStart, measurementsMap) -> {
-            storedTimestamps.add(windowStart);
+        windowData.forEach((windowTs, measurements) -> {
+            storedTimestamps.add(windowTs);
             List<String> ms = new ArrayList<>();
             List<TSDataType> ts = new ArrayList<>();
             List<Object> vs = new ArrayList<>();
 
-            measurementsMap.forEach((measurement, values) -> {
+            measurements.forEach((measurement, values) -> {
                 ms.add(measurement);
                 ts.add(TSDataType.TEXT);
                 try {
                     vs.add(objectMapper.writeValueAsString(values));
                 } catch (JsonProcessingException e) {
-                    throw new RuntimeException("JSON序列化失败", e);
+                    throw new SystemException(CodeMessage.JSON_WRITE_ERROR);
                 }
             });
 
@@ -82,28 +91,79 @@ public class CompatibleStorageStrategy implements StorageStrategy {
     @Override
     public DeviceTable retrieveData(String devicePath, long startTime, long endTime,
                                     List<String> selectedMeasurements, int aggregationTime) {
-        DeviceTable rawTable = iotDBDao.queryRecords(devicePath, startTime, endTime, selectedMeasurements);
         DeviceTable resultTable = new DeviceTable();
+        DeviceTable rawTable = iotDBDao.queryRecords(devicePath, startTime, endTime, selectedMeasurements);
 
-        rawTable.getRecords().forEach((timestamp, record) -> {
-            record.getFields().forEach((measurement, value) -> {
-                try {
-                    List<Object> values = objectMapper.readValue((String)value, new TypeReference<>() {});
-                    // 将数据展开到原始时间粒度
-                    values.forEach((v, index) -> {
-                        long originalTs = timestamp + index * (aggregationTime / values.size());
-                        resultTable.getRecords()
-                                .computeIfAbsent(originalTs, k -> new Record())
-                                .getFields().put(measurement, v);
-                    });
-                } catch (IOException e) {
-                    throw new RuntimeException("JSON解析失败", e);
-                }
-            });
-        });
+        for (Map.Entry<Long, List<Record>> entry : rawTable.getRecords().entrySet()) {
+            long storedTimestamp = entry.getKey();
+            //兼容模式下，同一个时间戳只会有一个记录。
+            if (entry.getValue().size() != 1) {
+                throw new SystemException(CodeMessage.DUPLICATE_TIME_ERROR);
+            }
+            Record storedRecord = entry.getValue().get(0);
+            processStoredRecord(storedTimestamp, storedRecord, resultTable);
+        }
 
         return resultTable;
     }
+
+    private void processStoredRecord(long storedTimestamp, Record storedRecord, DeviceTable resultTable) {
+        List<Record> records = new ArrayList<>();
+        storedRecord.getFields().forEach((measurement, jsonValue) -> {
+            try {
+                List<?> values = objectMapper.readValue((String) jsonValue, List.class);
+                //第一次得到values，创建对应数量的 Record
+                if (records.isEmpty()) {
+                    for (int i = 0; i < values.size(); i++) {
+                        records.add(new Record());
+                    }
+                }
+                //将一个压缩的属性List还原到多个Record中
+                for (int i = 0; i < values.size(); i++) {
+                    records.get(i).getFields().put(measurement, values.get(i));
+                }
+            } catch (IOException e) {
+                throw new SystemException(CodeMessage.JSON_READ_ERROR, "Failed to deserialize measurement: " + measurement, e);
+            }
+        });
+        //将这些 Record 放入 DeviceTable 中
+        for (Record record : records) {
+            resultTable.addRecord(storedTimestamp, record);
+        }
+    }
+
+    public void testProcessStoredRecord() {
+        // 临时创建一个模拟的 DeviceTable 和 Record
+        DeviceTable resultTable = new DeviceTable();
+        long storedTimestamp = 1623245678000L; // 模拟时间戳
+
+        // 模拟一个 Record（包含温度和湿度的压缩存储数据）
+        Record storedRecord = new Record();
+
+        // 模拟温度和湿度的 JSON 列表值
+        List<Object> temperatureValues = List.of(16.0, 17.5, 15.0); // 模拟温度的值
+        List<Object> humidityValues = List.of(65.0, 65.0, 70.0);    // 模拟湿度的值
+
+        // 将这些值作为 JSON 存储到 Record 的 fields 中
+        try {
+            storedRecord.getFields().put("温度", new ObjectMapper().writeValueAsString(temperatureValues));
+            storedRecord.getFields().put("湿度", new ObjectMapper().writeValueAsString(humidityValues));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace(); // 处理 JSON 序列化异常
+        }
+
+        // 调用 processStoredRecord 方法来处理这些记录
+        processStoredRecord(storedTimestamp, storedRecord, resultTable);
+
+        // 输出结果以检查是否正确
+        resultTable.getRecords().forEach((timestamp, records) -> {
+            System.out.println("时间戳: " + timestamp);
+            records.forEach(record -> {
+                record.getFields().forEach((measurement, value) -> {
+                    System.out.println("测量项: " + measurement + ", 值: " + value);
+                });
+                System.out.println("----------");
+            });
+        });
+    }
 }
-
-
