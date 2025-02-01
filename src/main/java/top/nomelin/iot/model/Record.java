@@ -46,4 +46,8 @@ public class Record {
     public void setFields(Map<String, Object> fields) {
         this.fields = fields;
     }
+
+    public void addField(String measurement, Object value) {
+        fields.put(measurement, value);
+    }
 }

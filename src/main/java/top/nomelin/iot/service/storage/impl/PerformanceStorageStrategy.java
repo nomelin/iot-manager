@@ -22,7 +22,7 @@ public class PerformanceStorageStrategy implements StorageStrategy {
         this.iotDBDao = iotDBDao;
     }
 
-    //TODO
+    // TODO 待完成
     @Override
     public void storeData(String devicePath, List<Long> timestamps,
                           List<List<String>> measurementsList, List<List<TSDataType>> typesList,
