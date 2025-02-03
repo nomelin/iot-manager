@@ -1,23 +1,23 @@
-package top.nomelin.iot.service;
+package top.nomelin.iot.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import org.apache.tsfile.enums.TSDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.enums.IotDataType;
+import top.nomelin.iot.common.enums.QueryAggregateFunc;
 import top.nomelin.iot.common.exception.SystemException;
-import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.model.Config;
 import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.DeviceTable;
 import top.nomelin.iot.model.Record;
-import top.nomelin.iot.service.aggregation.InsertMode;
-import top.nomelin.iot.service.aggregation.QueryMode;
+import top.nomelin.iot.service.DataService;
+import top.nomelin.iot.service.DeviceService;
 import top.nomelin.iot.service.storage.StorageStrategy;
-import top.nomelin.iot.service.storage.impl.CompatibleStorageStrategy;
-import top.nomelin.iot.service.storage.impl.CoverStorageStrategy;
-import top.nomelin.iot.service.storage.impl.PerformanceStorageStrategy;
+import top.nomelin.iot.service.storage.StorageStrategyManager;
 import top.nomelin.iot.util.util;
 
 import java.util.*;
@@ -27,28 +27,21 @@ import java.util.stream.Collectors;
 public class DataServiceImpl implements DataService {
     private static final Logger log = LoggerFactory.getLogger(DataServiceImpl.class);
     private final DeviceService deviceService;
-    private final IoTDBDao iotDBDao;
-    private final Map<InsertMode, StorageStrategy> storageStrategies;
 
-    public DataServiceImpl(DeviceService deviceService, IoTDBDao iotDBDao,
-                           CoverStorageStrategy coverStrategy,
-                           CompatibleStorageStrategy compatibleStrategy,
-                           PerformanceStorageStrategy performanceStrategy) {
+    private final StorageStrategyManager storageStrategyManager;
+
+    public DataServiceImpl(DeviceService deviceService, StorageStrategyManager storageStrategyManager) {
         this.deviceService = deviceService;
-        this.iotDBDao = iotDBDao;
-        this.storageStrategies = Map.of(
-                InsertMode.COVER, coverStrategy,
-                InsertMode.COMPATIBLE, compatibleStrategy,
-                InsertMode.PERFORMANCE, performanceStrategy
-        );
+        this.storageStrategyManager = storageStrategyManager;
     }
 
+    @LogExecutionTime
     @Override
     public void insertBatchRecord(int deviceId, List<Long> timestamps,
                                   List<String> measurements, List<List<Object>> values) {
         Device device = deviceService.getDeviceById(deviceId);
         Config config = device.getConfig();
-        StorageStrategy strategy = storageStrategies.get(config.getInsertMode());        // 获取存储策略
+        StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
 
         // 把config中的物理量的类型转换为TSDataType
@@ -66,12 +59,13 @@ public class DataServiceImpl implements DataService {
                 deviceId, timestamps, measurements, types, values);
     }
 
+    @LogExecutionTime
     @Override
     public DeviceTable queryRecord(int deviceId, long startTime, long endTime,
                                    List<String> selectMeasurements, int aggregationTime,
-                                   QueryMode queryMode, List<List<Double>> thresholds) {
+                                   QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds) {
         Device device = deviceService.getDeviceById(deviceId);
-        StorageStrategy strategy = storageStrategies.get(device.getConfig().getInsertMode());
+        StorageStrategy strategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
 
         // 对齐时间窗口
@@ -84,17 +78,20 @@ public class DataServiceImpl implements DataService {
         );
 
         // 阈值过滤（COUNT模式不处理）
-        if (shouldApplyThreshold(queryMode, thresholds)) {
+        if (shouldApplyThreshold(queryAggregateFunc, thresholds)) {
             applyThresholdFilter(rawTable, selectMeasurements, thresholds);
         }
 
         // 聚合处理
-        DeviceTable aggregatedTable = aggregateRawData(rawTable, aggregationTime, queryMode);
+        if (ObjectUtil.isNull(aggregationTime) || aggregationTime < 1 || ObjectUtil.isNull(queryAggregateFunc)) {
+            return rawTable;//不聚合直接返回原始数据
+        }
+        DeviceTable aggregatedTable = aggregateRawData(rawTable, aggregationTime, queryAggregateFunc);
 
         log.info("queryRecord: deviceId={}, startTime={}, endTime={}, selectMeasurements={}, aggregationTime={}, " +
-                        "queryMode={}, thresholds={}, result={}",
+                        "QueryAggregateFunc={}, thresholds={}, result={}",
                 deviceId, startTime, endTime, selectMeasurements, aggregationTime,
-                queryMode, thresholds, aggregatedTable);
+                queryAggregateFunc, thresholds, aggregatedTable);
 
         return aggregatedTable;
     }
@@ -107,7 +104,7 @@ public class DataServiceImpl implements DataService {
     }
 
     //按窗口聚合原始数据
-    private DeviceTable aggregateRawData(DeviceTable rawTable, int aggregationTime, QueryMode mode) {
+    private DeviceTable aggregateRawData(DeviceTable rawTable, int aggregationTime, QueryAggregateFunc mode) {
         Map<Long, List<Record>> windowRecords = new TreeMap<>();
 
         // 按查询的时间窗口分组原始记录
@@ -128,7 +125,7 @@ public class DataServiceImpl implements DataService {
     }
 
     //按聚合模式，将一组Record聚合成一个Record
-    private Record createAggregatedRecord(List<Record> records, QueryMode mode) {
+    private Record createAggregatedRecord(List<Record> records, QueryAggregateFunc mode) {
         Record aggregated = new Record();
 
         // 收集所有测量值的映射
@@ -148,7 +145,7 @@ public class DataServiceImpl implements DataService {
     }
 
     //对一个属性对应的一组值应用聚合操作
-    private Object performAggregation(List<Object> values, QueryMode mode) {
+    private Object performAggregation(List<Object> values, QueryAggregateFunc mode) {
         if (values == null || values.isEmpty()) {
             return null;
         }
@@ -176,8 +173,8 @@ public class DataServiceImpl implements DataService {
         };
     }
 
-    private boolean shouldApplyThreshold(QueryMode mode, List<List<Double>> thresholds) {
-        return thresholds != null && mode != QueryMode.COUNT;
+    private boolean shouldApplyThreshold(QueryAggregateFunc mode, List<List<Double>> thresholds) {
+        return thresholds != null && mode != QueryAggregateFunc.COUNT;
     }
 
     // 应用阈值过滤, 过滤掉不满足阈值条件的记录, 并清除空的时间窗口
@@ -187,9 +184,22 @@ public class DataServiceImpl implements DataService {
                         .filter(record -> meetsThresholdCriteria(record, measurements, thresholds))
                         .collect(Collectors.toList())
         );
-
         // 清除空的时间窗口
-        table.getRecords().entrySet().removeIf(entry -> entry.getValue().isEmpty());
+        table.purgeEmptyTimestamps();
+    }
+
+    //和applyThresholdFilter一样，只是使用并行流处理提升性能
+    private void applyThresholdFilterParallel(DeviceTable table, List<String> measurements, List<List<Double>> thresholds) {
+        // 并行流处理提升性能
+        Map<Long, List<Record>> filtered = table.getRecords().entrySet().parallelStream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().stream()
+                                .filter(record -> meetsThresholdCriteria(record, measurements, thresholds))
+                                .collect(Collectors.toList())
+                ));
+        table.setRecords(filtered);
+        table.purgeEmptyTimestamps();
     }
 
     // 判断一个Record是否满足阈值条件

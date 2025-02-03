@@ -1,12 +1,12 @@
-package top.nomelin.iot.service.aggregation;
+package top.nomelin.iot.common.enums;
 
 /**
- * QueryMode//TODO 改成QueryAggregateFunc，也就是查询应用的聚合函数
+ * QueryAggregateFunc
  *
  * @author nomelin
  * @since 2025/01/27 17:23
  **/
-public enum QueryMode {
+public enum QueryAggregateFunc {
     AVG("平均", "对聚合时间粒度内的数值取平均值"),
     MAX("最大值", "对聚合时间粒度内的数值取最大值"),
     MIN("最小值", "对聚合时间粒度内的数值取最小值"),
@@ -17,7 +17,7 @@ public enum QueryMode {
     private final String name;
     private final String desc;
 
-    QueryMode(String name, String desc) {
+    QueryAggregateFunc(String name, String desc) {
         this.name = name;
         this.desc = desc;
     }

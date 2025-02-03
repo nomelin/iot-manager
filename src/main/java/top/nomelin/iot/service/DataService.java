@@ -1,7 +1,7 @@
 package top.nomelin.iot.service;
 
 import top.nomelin.iot.model.DeviceTable;
-import top.nomelin.iot.service.aggregation.QueryMode;
+import top.nomelin.iot.common.enums.QueryAggregateFunc;
 
 import java.util.List;
 
@@ -35,8 +35,8 @@ public interface DataService {
      * @param startTime          开始时间戳
      * @param endTime            结束时间戳
      * @param selectMeasurements 选择的属性名列表。如果为null，则查询所有属性。
-     * @param aggregationTime    聚合时间,单位：ms。不能小于1。读取粒度不能小于存储粒度。
-     * @param queryMode          查询聚合模式。
+     * @param aggregationTime    聚合时间,单位：ms。不能小于1。读取粒度不能小于存储粒度。为null时，不聚合。
+     * @param queryAggregateFunc          查询聚合模式。为null时，不聚合。
      * @param thresholds         阈值列表。如果为null，则不进行阈值过滤。按照属性名顺序排列。如果查询模式为COUNT，则该参数无效。
      *                           如果selectMeasurements为null，则该参数列表数量应为全部属性数量。
      *                           如果selectMeasurements不为null，则该参数列表数量等于selectMeasurements的数量。
@@ -49,7 +49,7 @@ public interface DataService {
      */
     //TODO 每次查询都需要先查询设备配置表来获取写入时的配置，是否有更好的方式？比如缓存? 前端传入？前端传入可以重载一个方法。
     DeviceTable queryRecord(int deviceId, long startTime, long endTime, List<String> selectMeasurements,
-                            int aggregationTime, QueryMode queryMode, List<List<Double>> thresholds);
+                            int aggregationTime, QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds);
 
 
 }

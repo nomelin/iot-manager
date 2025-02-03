@@ -9,10 +9,13 @@ import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.dao.DeviceMapper;
 import top.nomelin.iot.dao.IoTDBDao;
+import top.nomelin.iot.model.Config;
 import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.Template;
 import top.nomelin.iot.service.DeviceService;
 import top.nomelin.iot.service.TemplateService;
+import top.nomelin.iot.service.storage.StorageStrategy;
+import top.nomelin.iot.service.storage.StorageStrategyManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,13 +32,15 @@ public class DeviceServiceImpl implements DeviceService {
     private final DeviceMapper deviceMapper;
     private final TemplateService templateService;
     private final CurrentUserCache currentUserCache;
+    private final StorageStrategyManager storageStrategyManager;
 
     private final IoTDBDao iotDBDao;
 
-    public DeviceServiceImpl(DeviceMapper deviceMapper, TemplateService templateService, CurrentUserCache currentUserCache, IoTDBDao iotDBDao) {
+    public DeviceServiceImpl(DeviceMapper deviceMapper, TemplateService templateService, CurrentUserCache currentUserCache, StorageStrategyManager storageStrategyManager, IoTDBDao iotDBDao) {
         this.deviceMapper = deviceMapper;
         this.templateService = templateService;
         this.currentUserCache = currentUserCache;
+        this.storageStrategyManager = storageStrategyManager;
         this.iotDBDao = iotDBDao;
     }
 
@@ -59,20 +64,43 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     public Device addDevice(Device device, int templateId) {
         device.setUserId(currentUserCache.getCurrentUser().getId());
-        //使用模板的配置作为设备的配置
-        //TODO 每个设备的配置也许可以不一样？
+        //使用模板的配置作为设备的基本配置
         Template template = templateService.getTemplateById(templateId);
-        device.setConfig(template.getConfig());
+        Config config = mergeConfig(template, device);//合并模板和设备的配置
+        device.setConfig(config);
+        StorageStrategy storageStrategy = storageStrategyManager.getStrategy(config.getStorageMode());
         //插入mysql
         deviceMapper.insert(device);
         log.info("添加设备到mysql成功, device: {}", device);
         //创建iotdb设备。实际上databasePath不是数据库。
+        //使用存储策略对应的模板
         iotDBDao.setAndActivateSchema(
-                Constants.TEMPLATE_PREFIX + templateId,
+                Constants.TEMPLATE_PREFIX + templateId + storageStrategy.getTemplateSuffix(),
                 Constants.DATABASE_PREFIX + device.getUserId(),
                 Constants.DEVICE_PREFIX + device.getId());
-        log.info("创建iotdb设备成功, templateId: {}, database: {}", templateId, Constants.DATABASE_PREFIX + device.getUserId());
+        log.info("创建iotdb设备成功, templateName: {}, database: {}",
+                Constants.TEMPLATE_PREFIX + templateId + storageStrategy.getTemplateSuffix(),
+                Constants.DATABASE_PREFIX + device.getUserId());
         return device;
+    }
+
+    //把模板的配置和接口传入的设备配置合并。只处理部分配置项。
+    private Config mergeConfig(Template template, Device device) {
+        if (ObjectUtil.isNull(template.getConfig())) {
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR, "模板config为空,模板id:" + template.getId());
+        }
+        Config newConfig = template.getConfig();
+        newConfig.setTemplateName(template.getName());//设备的配置包含创建使用的模板的名称
+        if (ObjectUtil.isNull(device.getConfig())) {
+            log.info("设备config为空,使用模板config作为设备config，templateId: {}", template.getId());
+            return newConfig;
+        }
+        Config deviceConfig = device.getConfig();
+        if (ObjectUtil.isNotNull(deviceConfig.getStorageMode())) {
+            newConfig.setStorageMode(deviceConfig.getStorageMode());
+            log.info("设备config包含storageMode,覆盖模板config的storageMode，templateId: {}", template.getId());
+        }
+        return newConfig;
     }
 
     @Override

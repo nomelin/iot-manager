@@ -22,6 +22,11 @@ public class PerformanceStorageStrategy implements StorageStrategy {
         this.iotDBDao = iotDBDao;
     }
 
+    @Override
+    public String getTemplateSuffix() {
+        return "_PERFORMANCE";
+    }
+
     // TODO 待完成
     @Override
     public void storeData(String devicePath, List<Long> timestamps,

@@ -2,8 +2,13 @@ package top.nomelin.iot.service.storage.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.iotdb.session.template.MeasurementNode;
 import org.apache.tsfile.enums.TSDataType;
+import org.apache.tsfile.file.metadata.enums.TSEncoding;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
@@ -17,9 +22,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class CompatibleStorageStrategy implements StorageStrategy {
+    private static final Logger log = LoggerFactory.getLogger(CompatibleStorageStrategy.class);
     private final IoTDBDao iotDBDao;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -27,9 +34,20 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         this.iotDBDao = iotDBDao;
     }
 
-    public static void main(String[] args) {
-        CompatibleStorageStrategy compatibleStorageStrategy = new CompatibleStorageStrategy(null);
-        compatibleStorageStrategy.testProcessStoredRecord();
+    @Override
+    public List<MeasurementNode> preprocessTemplateNodes(List<MeasurementNode> originalNodes) {
+        return originalNodes.stream()
+                .map(node -> new MeasurementNode(
+                        node.getName(),
+                        TSDataType.TEXT,  // 强制转为TEXT
+                        TSEncoding.PLAIN,// 强制转为PLAIN
+                        Constants.COMPRESSION_TYPE))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public String getTemplateSuffix() {
+        return "_COMPATIBLE";
     }
 
     @Override
@@ -38,6 +56,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
                           List<List<Object>> valuesList, int aggregationTime) {
         // 调整存储粒度
         int storageGranularity = util.adjustStorageGranularity(aggregationTime);
+        log.info("调整存储粒度，从{}调整到{}", aggregationTime, storageGranularity);
         Map<Long, Map<String, List<Object>>> windowData = new HashMap<>();
 
         // 聚合数据到调整后的时间窗口
@@ -55,6 +74,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
                 measurements.computeIfAbsent(ms.get(j), k -> new ArrayList<>()).add(vs.get(j));
             }
         }
+        log.info("对齐时间戳，从{}调整到{}", timestamps, windowData.keySet());
 
         // 转换为单条记录存储（JSON数组）
         //TODO 为什么需要重新创建？除了时间戳和value，不能直接用吗？
@@ -132,7 +152,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         }
     }
 
-    public void testProcessStoredRecord() {
+/*    public void testProcessStoredRecord() {
         // 临时创建一个模拟的 DeviceTable 和 Record
         DeviceTable resultTable = new DeviceTable();
         long storedTimestamp = 1623245678000L; // 模拟时间戳
@@ -166,4 +186,8 @@ public class CompatibleStorageStrategy implements StorageStrategy {
             });
         });
     }
+    public static void main(String[] args) {
+        CompatibleStorageStrategy compatibleStorageStrategy = new CompatibleStorageStrategy(null);
+        compatibleStorageStrategy.testProcessStoredRecord();
+    }*/
 }

@@ -1,5 +1,6 @@
 package top.nomelin.iot.service.storage;
 
+import org.apache.iotdb.session.template.MeasurementNode;
 import org.apache.tsfile.enums.TSDataType;
 import top.nomelin.iot.model.DeviceTable;
 
@@ -31,5 +32,21 @@ public interface StorageStrategy {
      */
     DeviceTable retrieveData(String devicePath, long startTime, long endTime, List<String> selectedMeasurements,
                              int aggregationTime);
+
+    /**
+     * 对模板定义的物理量类型进行转换，以支持不同存储策略的需求。
+     * 创建模板时会创建不同策略的专属模板，使用的名字后缀为 {@link #getTemplateSuffix()}。
+     *
+     * @param originalNodes 原始的物理量定义
+     * @return 转换后的物理量定义
+     */
+    default List<MeasurementNode> preprocessTemplateNodes(List<MeasurementNode> originalNodes) {
+        return originalNodes; // 默认不修改
+    }
+
+    /**
+     * @return 模板唯一标识的后缀名，用以区分不同存储策略的模板
+     */
+    String getTemplateSuffix();
 }
 

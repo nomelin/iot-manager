@@ -56,6 +56,11 @@ public class DeviceTable {
         records.computeIfAbsent(timestamp, k -> new ArrayList<>()).add(record);
     }
 
+    // 清除没有Record的时间戳
+    public void purgeEmptyTimestamps() {
+        records.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+    }
+
     public String getDevicePath() {
         return devicePath;
     }

@@ -1,9 +1,10 @@
 package top.nomelin.iot.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.iotdb.session.template.MeasurementNode;
 import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.enums.IotDataType;
-import top.nomelin.iot.service.aggregation.InsertMode;
+import top.nomelin.iot.common.enums.StorageMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,16 +18,16 @@ import java.util.Map;
  **/
 public class Config {
     private Map<String, IotDataType> dataTypes;// 物理量名称和数据类型映射
-    private String templateName;// 创建时使用的模板名称
+    private String templateName;// 创建时使用的模板名称。模板config此项是null。
     private int aggregationTime;// 插入时聚合时间粒度
-    private InsertMode insertMode;// 插入时聚合模式
+    private StorageMode storageMode;// 存储聚合模式。设备config和模板config此项有可能不同
 
     /**
      * 从配置信息解析出iotdb的MeasurementNode列表
      *
      * @return MeasurementNode列表
      */
-    public List<MeasurementNode> convertMeasurementNodes() {
+    public List<MeasurementNode> convertToMeasurementNodes() {
         List<MeasurementNode> measurementNodes = new ArrayList<>();
         for (Map.Entry<String, IotDataType> entry : this.getDataTypes().entrySet()) {
             MeasurementNode measurementNode = new MeasurementNode(
@@ -42,6 +43,7 @@ public class Config {
      *
      * @return 所有物理量名称列表
      */
+    @JsonIgnore
     public List<String> getMeasurements() {
         List<String> measurements = new ArrayList<>();
         for (Map.Entry<String, IotDataType> entry : this.getDataTypes().entrySet()) {
@@ -76,12 +78,12 @@ public class Config {
         this.aggregationTime = aggregationTime;
     }
 
-    public InsertMode getInsertMode() {
-        return insertMode;
+    public StorageMode getStorageMode() {
+        return storageMode;
     }
 
-    public void setInsertMode(InsertMode insertMode) {
-        this.insertMode = insertMode;
+    public void setStorageMode(StorageMode storageMode) {
+        this.storageMode = storageMode;
     }
 
     @Override
@@ -90,7 +92,7 @@ public class Config {
                 "dataTypes=" + dataTypes +
                 ", templateName='" + templateName + '\'' +
                 ", aggregationTime=" + aggregationTime +
-                ", insertMode=" + insertMode +
+                ", StorageMode=" + storageMode +
                 '}';
     }
 }

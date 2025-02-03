@@ -1,6 +1,6 @@
 package top.nomelin.iot.model;
 
-import top.nomelin.iot.service.aggregation.QueryMode;
+import top.nomelin.iot.common.enums.QueryAggregateFunc;
 
 /**
  * ViewConfig
@@ -11,7 +11,7 @@ import top.nomelin.iot.service.aggregation.QueryMode;
 public class ViewConfig {
     private String name;
     private int aggregationTime;// 查询时聚合时间粒度
-    private QueryMode queryMode;// 查询模式
+    private QueryAggregateFunc queryAggregateFunc;// 查询模式
 
 
     public String getName() {
@@ -30,12 +30,12 @@ public class ViewConfig {
         this.aggregationTime = aggregationTime;
     }
 
-    public QueryMode getQueryMode() {
-        return queryMode;
+    public QueryAggregateFunc getQueryAggregateFunc() {
+        return queryAggregateFunc;
     }
 
-    public void setQueryMode(QueryMode queryMode) {
-        this.queryMode = queryMode;
+    public void setQueryAggregateFunc(QueryAggregateFunc queryAggregateFunc) {
+        this.queryAggregateFunc = queryAggregateFunc;
     }
 
     @Override
@@ -43,7 +43,7 @@ public class ViewConfig {
         return "ViewConfig{" +
                 "name='" + name + '\'' +
                 ", aggregationTime=" + aggregationTime +
-                ", queryMode=" + queryMode +
+                ", QueryAggregateFunc=" + queryAggregateFunc +
                 '}';
     }
 }
