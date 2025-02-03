@@ -62,8 +62,11 @@ public class DataServiceImpl implements DataService {
     @LogExecutionTime
     @Override
     public DeviceTable queryRecord(int deviceId, long startTime, long endTime,
-                                   List<String> selectMeasurements, int aggregationTime,
+                                   List<String> selectMeasurements, Integer aggregationTime,
                                    QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds) {
+        if (aggregationTime == null || aggregationTime < 0) {
+            aggregationTime = 0;
+        }
         Device device = deviceService.getDeviceById(deviceId);
         StorageStrategy strategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
@@ -82,11 +85,13 @@ public class DataServiceImpl implements DataService {
             applyThresholdFilter(rawTable, selectMeasurements, thresholds);
         }
 
+        DeviceTable aggregatedTable;
         // 聚合处理
-        if (ObjectUtil.isNull(aggregationTime) || aggregationTime < 1 || ObjectUtil.isNull(queryAggregateFunc)) {
-            return rawTable;//不聚合直接返回原始数据
+        if (aggregationTime == 0 || ObjectUtil.isNull(queryAggregateFunc)) {
+            aggregatedTable = rawTable;//不聚合直接返回原始数据
+        } else {
+            aggregatedTable = aggregateRawData(rawTable, aggregationTime, queryAggregateFunc);
         }
-        DeviceTable aggregatedTable = aggregateRawData(rawTable, aggregationTime, queryAggregateFunc);
 
         log.info("queryRecord: deviceId={}, startTime={}, endTime={}, selectMeasurements={}, aggregationTime={}, " +
                         "QueryAggregateFunc={}, thresholds={}, result={}",

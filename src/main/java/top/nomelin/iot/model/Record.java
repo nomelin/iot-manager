@@ -50,4 +50,11 @@ public class Record {
     public void addField(String measurement, Object value) {
         fields.put(measurement, value);
     }
+
+    @Override
+    public String toString() {
+        return "Record{" +
+                "fields=" + fields +
+                '}';
+    }
 }

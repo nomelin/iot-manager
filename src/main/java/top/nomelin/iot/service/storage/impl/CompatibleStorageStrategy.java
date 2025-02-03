@@ -2,6 +2,7 @@ package top.nomelin.iot.service.storage.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.iotdb.pipe.api.type.Binary;
 import org.apache.iotdb.session.template.MeasurementNode;
 import org.apache.tsfile.enums.TSDataType;
 import org.apache.tsfile.file.metadata.enums.TSEncoding;
@@ -112,8 +113,9 @@ public class CompatibleStorageStrategy implements StorageStrategy {
     public DeviceTable retrieveData(String devicePath, long startTime, long endTime,
                                     List<String> selectedMeasurements, int aggregationTime) {
         DeviceTable resultTable = new DeviceTable();
-        DeviceTable rawTable = iotDBDao.queryRecords(devicePath, startTime, endTime, selectedMeasurements);
-
+        DeviceTable rawTable = selectedMeasurements == null ?
+                iotDBDao.queryRecords(devicePath, startTime, endTime) :
+                iotDBDao.queryRecords(devicePath, startTime, endTime, selectedMeasurements);
         for (Map.Entry<Long, List<Record>> entry : rawTable.getRecords().entrySet()) {
             long storedTimestamp = entry.getKey();
             //兼容模式下，同一个时间戳只会有一个记录。
@@ -131,7 +133,10 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         List<Record> records = new ArrayList<>();
         storedRecord.getFields().forEach((measurement, jsonValue) -> {
             try {
-                List<?> values = objectMapper.readValue((String) jsonValue, List.class);
+                String jsonString = (jsonValue instanceof Binary) ?
+                        ((Binary) jsonValue).getStringValue() : // Tsfile 1.x 的获取方式
+                        jsonValue.toString(); // 兼容处理其他类型
+                List<?> values = objectMapper.readValue(jsonString, List.class);
                 //第一次得到values，创建对应数量的 Record
                 if (records.isEmpty()) {
                     for (int i = 0; i < values.size(); i++) {

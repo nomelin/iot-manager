@@ -33,8 +33,8 @@ public class util {
 
     // 对齐到东八区时间窗口
     public static long alignToEast8Zone(long timestamp, int granularity) {
-        if (granularity == 1) {
-            return timestamp;// 1ms提前返回，以便提高性能
+        if (granularity == 1 || granularity == 0) {
+            return timestamp;// 1ms或者不聚合，提前返回，以便提高性能
         }
 
         ZoneId zone = ZoneId.of("Asia/Shanghai");// 东八区
@@ -43,7 +43,7 @@ public class util {
 
         switch (granularity) {
             case 1000 -> // 1s
-                    zdt = zdt.withNano(0);
+                    zdt = zdt.withNano(0);//毫秒是纳秒（0-999,999,999）的前三位
             case 60_000 -> // 1min
                     zdt = zdt.withSecond(0).withNano(0);
             case 3_600_000 -> // 1h
@@ -55,6 +55,7 @@ public class util {
                 throw new IllegalArgumentException("不支持的查询粒度: " + granularity);
             }
         }
+        log.info("对齐到东八区时间窗口: {}->{},granularity: {}", timestamp, zdt.toInstant().toEpochMilli(), granularity);
         return zdt.toInstant().toEpochMilli();
     }
 

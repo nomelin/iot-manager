@@ -37,6 +37,7 @@ public enum CodeMessage {
     DB_ERROR("801", "数据库异常"),
     IOT_DB_ERROR("802", "IOT数据库异常"),
     BEAN_ERROR("803", "Bean加载异常"),
+    JSON_HANDEL_ERROR("804", "JSON处理异常"),
 
     UNKNOWN_ERROR("900", "未知异常"),
     ;

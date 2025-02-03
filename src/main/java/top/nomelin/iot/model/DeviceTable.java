@@ -88,4 +88,13 @@ public class DeviceTable {
     public List<Record> getRecords(long timestamp) {
         return records.get(timestamp);
     }
+
+    @Override
+    public String toString() {
+        return "DeviceTable{" +
+                "records=" + records +
+                ", devicePath='" + devicePath + '\'' +
+                ", types=" + types +
+                '}';
+    }
 }
