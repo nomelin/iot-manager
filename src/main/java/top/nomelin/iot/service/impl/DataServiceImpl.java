@@ -7,8 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CodeMessage;
-import top.nomelin.iot.common.enums.IotDataType;
-import top.nomelin.iot.common.enums.QueryAggregateFunc;
+import top.nomelin.iot.model.enums.IotDataType;
+import top.nomelin.iot.model.enums.QueryAggregateFunc;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.model.Config;
 import top.nomelin.iot.model.Device;
@@ -67,6 +67,7 @@ public class DataServiceImpl implements DataService {
         if (aggregationTime == null || aggregationTime < 0) {
             aggregationTime = 0;
         }
+        //TODO 查询聚合粒度应该不小于插入聚合粒度。小于也许可以也表示不聚合？0是不聚合。
         Device device = deviceService.getDeviceById(deviceId);
         StorageStrategy strategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);

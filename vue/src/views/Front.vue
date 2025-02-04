@@ -21,13 +21,13 @@
         </div>
 
         <el-menu text-color="#565757" active-text-color="#0d53ff" router class="el-menu" :default-active="$route.path">
-          <el-menu-item class="el-menu-item" index="/view_platform">
+          <el-menu-item class="el-menu-item" index="/front/view_platform">
             <i class="el-icon-folder-opened"></i>
             <span class="words" slot="title">监测平台</span>
           </el-menu-item>
-          <el-menu-item class="el-menu-item" index="/view_platform">
+          <el-menu-item class="el-menu-item" index="/front/upload">
             <i class="el-icon-folder-opened"></i>
-            <span class="words" slot="title">监测平台</span>
+            <span class="words" slot="title">文件上传</span>
           </el-menu-item>
 
           <el-menu-item class="el-menu-item" index="/view_platform">

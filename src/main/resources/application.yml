@@ -45,3 +45,7 @@ iotdb:
     compression_type: UNCOMPRESSED
   query:
     timeout: 3000
+file:
+  processor:
+    csv:
+      batch-size: 1000

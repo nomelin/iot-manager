@@ -1,9 +1,15 @@
 package top.nomelin.iot.util;
 
+import top.nomelin.iot.common.enums.CodeMessage;
+import top.nomelin.iot.common.exception.BusinessException;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 /**
  * TimeUtil
@@ -52,6 +58,36 @@ public class TimeUtil {
         // 将 LocalDateTime 转换为时间戳（毫秒）
         return localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 
+    }
+
+    /**
+     * 自动处理各种时间格式，将其转换为毫秒时间戳
+     */
+    public static long convertToMillis(Object timestamp) {
+        if (timestamp instanceof Long) {
+            // 如果是 long 类型，直接返回
+            return (Long) timestamp;
+        } else if (timestamp instanceof Date) {
+            // 如果是 Date 类型，返回毫秒时间戳
+            return ((Date) timestamp).getTime();
+        } else if (timestamp instanceof String timeStr) {
+            // 如果是 String 类型，尝试解析为日期时间
+            try {
+                // 先尝试 ISO 格式的日期时间
+                SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+                return isoFormat.parse(timeStr).getTime();
+            } catch (ParseException e) {
+                // 如果 ISO 格式失败，再尝试常见的日期格式
+                SimpleDateFormat standardFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                try {
+                    return standardFormat.parse(timeStr).getTime();
+                } catch (ParseException ex) {
+                    throw new BusinessException(CodeMessage.TIME_FORMAT_ERROR, "时间格式错误：timestamp=" + timestamp);
+                }
+            }
+        } else {
+            throw new BusinessException(CodeMessage.TIME_FORMAT_ERROR, "时间格式错误：timestamp=" + timestamp);
+        }
     }
 
 }

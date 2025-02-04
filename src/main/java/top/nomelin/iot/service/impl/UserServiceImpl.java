@@ -59,7 +59,9 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(CodeMessage.USER_NOT_EXIST_ERROR);//用户不存在
         }
         if (!user.getPassword().equals(dbUser.getPassword())) {
-            throw new BusinessException(CodeMessage.USER_ACCOUNT_ERROR);//用户名或密码错误
+            throw new BusinessException(CodeMessage.USER_ACCOUNT_ERROR,
+                    String.format("用户名：%s，密码：%s，数据库密码：%s",
+                            user.getName(), user.getPassword(), dbUser.getPassword()));//用户名或密码错误
         }
         // 生成token
         String tokenData = dbUser.getId() + "-" + dbUser.getName();

@@ -1,4 +1,4 @@
-package top.nomelin.iot.common.enums;
+package top.nomelin.iot.model.enums;
 
 import org.apache.tsfile.enums.TSDataType;
 

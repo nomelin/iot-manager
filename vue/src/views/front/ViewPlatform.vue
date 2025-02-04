@@ -58,7 +58,7 @@
 
     <!-- 下侧数据展示 -->
     <div class="data-view">
-      <GroupView :selected-devices="selectedDevices"/>
+      <GroupView :devices="devices" :selected-devices="selectedDevices"/>
     </div>
   </div>
 </template>
@@ -84,6 +84,7 @@ export default {
           .get("/group/all")
           .then((res) => {
             if (res.code === "200") {
+              console.log("加载组信息成功：" + JSON.stringify(res.data));
               this.groups = res.data;
             } else {
               this.$message.error("加载组信息失败：" + res.msg);
@@ -139,7 +140,7 @@ export default {
   flex-direction: column;
   height: 100%; /* 填满父容器 */
   box-sizing: border-box;
-  font-weight:bold;
+  font-weight: bold;
 }
 
 .control-panel {

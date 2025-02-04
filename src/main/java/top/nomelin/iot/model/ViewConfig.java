@@ -1,6 +1,6 @@
 package top.nomelin.iot.model;
 
-import top.nomelin.iot.common.enums.QueryAggregateFunc;
+import top.nomelin.iot.model.enums.QueryAggregateFunc;
 
 /**
  * ViewConfig

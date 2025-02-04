@@ -3,8 +3,8 @@ package top.nomelin.iot.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.iotdb.session.template.MeasurementNode;
 import top.nomelin.iot.common.Constants;
-import top.nomelin.iot.common.enums.IotDataType;
-import top.nomelin.iot.common.enums.StorageMode;
+import top.nomelin.iot.model.enums.IotDataType;
+import top.nomelin.iot.model.enums.StorageMode;
 
 import java.util.ArrayList;
 import java.util.List;

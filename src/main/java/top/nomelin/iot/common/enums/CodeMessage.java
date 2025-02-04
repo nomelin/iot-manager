@@ -21,6 +21,7 @@ public enum CodeMessage {
     USER_NAME_NULL_ERROR("506", "用户名缺失"),
     INVALID_USER_NAME_ERROR("507", "要操作的用户名不合法，无权限操作"),
     EQUAL_PASSWORD_ERROR("508", "新密码不能与原密码相同"),
+    TASK_NOT_EXIST_ERROR("509", "任务不存在"),
 
     NO_PERMISSION_ERROR("601", "无权限"),
 
@@ -40,9 +41,16 @@ public enum CodeMessage {
     IOT_DB_ERROR("802", "IOT数据库异常"),
     BEAN_ERROR("803", "Bean加载异常"),
     JSON_HANDEL_ERROR("804", "JSON处理异常"),
+    STATE_MACHINE_ERROR("805", "状态机异常"),
+    INSERT_DATA_ERROR("806", "插入数据异常"),
 
-    UNKNOWN_ERROR("900", "未知异常"),
-    ;
+    FILE_HANDLER_ERROR("806", "文件处理异常"),
+    DATA_FORMAT_ERROR("807", "数据格式异常"),
+    TIME_FORMAT_ERROR("808", "时间格式处理异常, 或者不支持的时间格式"),
+    TASK_CANCELLED("809", "任务已取消"),
+
+
+    UNKNOWN_ERROR("900", "未知异常");
 
     public final String code;
     public final String msg;

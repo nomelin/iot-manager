@@ -22,6 +22,12 @@ const routes = [
                 name: 'viewPlatform',
                 meta: {name: '监测平台'},
                 component: () => import('../views/front/ViewPlatform.vue')
+            },
+            {
+                path:'upload',
+                name: 'upload',
+                meta: {name: '文件上传'},
+                component: () => import('../views/front/Upload.vue')
             }
         ]
 

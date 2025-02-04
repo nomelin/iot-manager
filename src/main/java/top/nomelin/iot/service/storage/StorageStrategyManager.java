@@ -1,7 +1,7 @@
 package top.nomelin.iot.service.storage;
 
 import org.springframework.stereotype.Component;
-import top.nomelin.iot.common.enums.StorageMode;
+import top.nomelin.iot.model.enums.StorageMode;
 import top.nomelin.iot.service.storage.impl.CompatibleStorageStrategy;
 import top.nomelin.iot.service.storage.impl.CoverStorageStrategy;
 import top.nomelin.iot.service.storage.impl.PerformanceStorageStrategy;

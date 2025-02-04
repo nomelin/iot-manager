@@ -65,12 +65,13 @@ public class DataController {
         );
         return Result.success(result);
     }
+    //TODO 同一个时间戳多个值，在前端怎么处理？
 
     @RequestMapping("/test/{deviceId}/{extraDataNum}")
     public Result test(@PathVariable("deviceId") String deviceId, @PathVariable("extraDataNum") int extraDataNum) {
         // 配置生成数据的参数
         long startTimestamp = 1734529151000L; // 起始时间戳
-        int durationSeconds = 100; // 持续时间（秒）
+        int durationSeconds = 10; // 持续时间（秒）
         int intervalMillis = 1000; // 时间间隔（毫秒）
         double tempMin = -10.0, tempMax = 30.0; // 温度范围
         int humidityMin = 20, humidityMax = 60; // 湿度范围
@@ -86,23 +87,35 @@ public class DataController {
         Map<Long, List<Record>> records = new LinkedHashMap<>();
         Random random = new Random();
 
-        for (int i = 0; i < durationSeconds; i++) {
-            long timestamp = startTimestamp + i * intervalMillis;
+        // 随机选择几个时间戳
+        Set<Long> selectedTimestamps = new HashSet<>();
+        while (selectedTimestamps.size() < 3) {  // 假设我们随机选择3个时间戳
+            long timestamp = startTimestamp + random.nextInt(durationSeconds) * intervalMillis;
+            selectedTimestamps.add(timestamp);
+        }
 
-            // 创建 Record 对象并填充字段数据
-            Record record = new Record();
-            //小概率给null值
-            if (random.nextInt(100) < 10) {
-                record.getFields().put("temperature", null);
-                record.getFields().put("humidity", null);
-            } else {
-                record.getFields().put("temperature", tempMin + (tempMax - tempMin) * random.nextDouble());
-                record.getFields().put("humidity", humidityMin + random.nextInt(humidityMax - humidityMin + 1));
-                for (int j = 0; j < extraDataNum; j++) {
-                    record.getFields().put("extraData" + j, extraDataMin + random.nextInt(extraDataMax - extraDataMin + 1));
+        // 为每个选中的时间戳生成多个数据行
+        for (long timestamp : selectedTimestamps) {
+            int dataRowsCount = 1 + random.nextInt(3);  // 每个时间戳随机生成1-3个数据行
+            List<Record> recordList = new ArrayList<>();
+
+            for (int i = 0; i < dataRowsCount; i++) {
+                Record record = new Record();
+                // 小概率给null值
+                if (random.nextInt(100) < 0) {
+                    record.getFields().put("temperature", null);
+                    record.getFields().put("humidity", null);
+                } else {
+                    record.getFields().put("temperature", tempMin + (tempMax - tempMin) * random.nextDouble());
+                    record.getFields().put("humidity", humidityMin + random.nextInt(humidityMax - humidityMin + 1));
+                    for (int j = 0; j < extraDataNum; j++) {
+                        record.getFields().put("extraData" + j, extraDataMin + random.nextInt(extraDataMax - extraDataMin + 1));
+                    }
                 }
+                recordList.add(record);
             }
-            records.put(timestamp, List.of(record));
+
+            records.put(timestamp, recordList);
         }
 
         deviceTable.setRecords(records);
@@ -110,5 +123,6 @@ public class DataController {
         // 返回数据
         return Result.success(deviceTable);
     }
+
 
 }

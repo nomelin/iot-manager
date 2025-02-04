@@ -1,6 +1,6 @@
 package top.nomelin.iot.controller.request;
 
-import top.nomelin.iot.common.enums.QueryAggregateFunc;
+import top.nomelin.iot.model.enums.QueryAggregateFunc;
 
 import java.util.List;
 

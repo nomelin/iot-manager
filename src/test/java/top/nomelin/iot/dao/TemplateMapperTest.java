@@ -4,7 +4,7 @@ package top.nomelin.iot.dao;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import top.nomelin.iot.common.enums.IotDataType;
+import top.nomelin.iot.model.enums.IotDataType;
 import top.nomelin.iot.model.Config;
 import top.nomelin.iot.model.Template;
 

@@ -41,7 +41,7 @@ export default {
     async fetchData() {
       try {
         const promises = [1, 2, 3].map((deviceId) =>
-            this.$request.get(`/data/test/${deviceId}/5`)
+            this.$request.get(`/data/test/${deviceId}/3`)
         );
         const responses = await Promise.all(promises);
         const rawData = responses.map((res) => res.data);
@@ -55,33 +55,41 @@ export default {
       const fieldsMap = {};
       console.log("rawData: " + JSON.stringify(rawData));
       rawData.forEach((deviceData) => {
-        const {devicePath, records} = deviceData;
+        const { devicePath, records } = deviceData;
         const deviceName = devicePath.split(".").pop();
 
-        Object.entries(records).forEach(([timestamp, {fields}]) => {
-          const formattedTime = this.$options.filters.formatTime(timestamp);
+        // 遍历每个时间戳及其对应的Record列表
+        Object.entries(records).forEach(([timestamp, recordList]) => {
+          // 遍历每个时间戳下的所有Record对象
+          recordList.forEach(record => {
+            const { fields } = record;
+            const formattedTime = this.$options.filters.formatTime(timestamp);
 
-          Object.entries(fields).forEach(([fieldName, value]) => {
-            if (!fieldsMap[fieldName]) {
-              fieldsMap[fieldName] = [];
-            }
+            // 处理每个字段
+            Object.entries(fields).forEach(([fieldName, value]) => {
+              if (!fieldsMap[fieldName]) {
+                fieldsMap[fieldName] = [];
+              }
 
-            let fieldData = fieldsMap[fieldName].find(
-                (item) => item.deviceName === deviceName
-            );
-            if (!fieldData) {
-              fieldData = {deviceName, timestamps: [], values: []};
-              fieldsMap[fieldName].push(fieldData);
-            }
+              // 查找或创建当前设备的字段数据
+              let fieldData = fieldsMap[fieldName].find(
+                  (item) => item.deviceName === deviceName
+              );
+              if (!fieldData) {
+                fieldData = { deviceName, timestamps: [], values: [] };
+                fieldsMap[fieldName].push(fieldData);
+              }
 
-            fieldData.timestamps.push(formattedTime);
-            fieldData.values.push(value);
+              // 添加时间戳和值
+              fieldData.timestamps.push(formattedTime);
+              fieldData.values.push(value);
+            });
           });
         });
       });
-      console.log("fieldsMap: " + JSON.stringify(fieldsMap));
+      console.log(fieldsMap);
       return fieldsMap;
-    },
+    }
   },
   created() {
     this.fetchData();
