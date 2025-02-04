@@ -1,7 +1,7 @@
 package top.nomelin.iot.service;
 
 import top.nomelin.iot.common.enums.QueryAggregateFunc;
-import top.nomelin.iot.model.DeviceTable;
+import top.nomelin.iot.model.dto.DeviceTable;
 
 import java.util.List;
 

@@ -1,13 +1,10 @@
 package top.nomelin.iot.dao;
 
-import org.apache.iotdb.session.template.MeasurementNode;
 import org.apache.tsfile.enums.TSDataType;
-import org.apache.tsfile.file.metadata.enums.CompressionType;
-import org.apache.tsfile.file.metadata.enums.TSEncoding;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import top.nomelin.iot.model.DeviceTable;
+import top.nomelin.iot.model.dto.DeviceTable;
 
 import java.util.Arrays;
 import java.util.List;

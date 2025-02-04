@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import top.nomelin.iot.cache.CurrentUserCache;
-import top.nomelin.iot.model.DeviceTable;
+import top.nomelin.iot.model.dto.DeviceTable;
 import top.nomelin.iot.model.User;
 import top.nomelin.iot.service.DataService;
 import top.nomelin.iot.util.JsonUtil;

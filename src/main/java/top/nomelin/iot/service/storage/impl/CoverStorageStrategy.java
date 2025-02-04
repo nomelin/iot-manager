@@ -5,7 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import top.nomelin.iot.dao.IoTDBDao;
-import top.nomelin.iot.model.DeviceTable;
+import top.nomelin.iot.model.dto.DeviceTable;
 import top.nomelin.iot.service.storage.StorageStrategy;
 import top.nomelin.iot.util.util;
 

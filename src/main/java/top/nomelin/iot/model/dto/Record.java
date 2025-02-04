@@ -1,4 +1,4 @@
-package top.nomelin.iot.model;
+package top.nomelin.iot.model.dto;
 
 
 import org.apache.tsfile.read.common.Field;

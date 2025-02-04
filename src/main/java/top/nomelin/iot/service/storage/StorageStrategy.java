@@ -2,7 +2,7 @@ package top.nomelin.iot.service.storage;
 
 import org.apache.iotdb.session.template.MeasurementNode;
 import org.apache.tsfile.enums.TSDataType;
-import top.nomelin.iot.model.DeviceTable;
+import top.nomelin.iot.model.dto.DeviceTable;
 
 import java.util.List;
 

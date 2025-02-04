@@ -13,8 +13,8 @@ import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
-import top.nomelin.iot.model.DeviceTable;
-import top.nomelin.iot.model.Record;
+import top.nomelin.iot.model.dto.DeviceTable;
+import top.nomelin.iot.model.dto.Record;
 import top.nomelin.iot.service.storage.StorageStrategy;
 import top.nomelin.iot.util.util;
 
