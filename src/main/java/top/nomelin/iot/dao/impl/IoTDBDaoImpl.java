@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
@@ -132,6 +133,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
         return measurements;
     }
 
+    @LogExecutionTime
     @Override
     public void insertAlignedRecord(String devicePath, long time, List<String> measurements, List<TSDataType> types, List<Object> values) {
         try {
@@ -142,6 +144,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
         log.info("向 {} 插入一条对齐记录成功，时间戳为 {}", devicePath, time);
     }
 
+    @LogExecutionTime
     @Override
     public void insertBatchAlignedRecordsOfOneDevice(String devicePath, List<Long> times, List<List<String>> measurementsList, List<List<TSDataType>> typesList, List<List<Object>> valuesList) {
         try {
@@ -152,13 +155,14 @@ public class IoTDBDaoImpl implements IoTDBDao {
         log.info("向 {} 插入 {} 条对齐记录成功", devicePath, times.size());
     }
 
+    @LogExecutionTime
     @Override
     public DeviceTable queryRecords(String devicePath, long startTime, long endTime) {
         List<String> paths = List.of(devicePath + ".*");//devicePath.*
         return queryRecordsByPaths(devicePath, startTime, endTime, paths);
     }
 
-
+    @LogExecutionTime
     @Override
     public DeviceTable queryRecords(String devicePath, long startTime, long endTime, List<String> selectFields) {
         //构造查询路径列表。device.measurement1, device.measurement2, ...
@@ -195,6 +199,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
         return deviceTable;
     }
 
+    @LogExecutionTime
     private void executeNonQueryStatement(String sql) {
         try {
             getSession().executeNonQueryStatement(sql);
@@ -204,6 +209,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
         }
     }
 
+    @LogExecutionTime
     private SessionDataSet executeQueryStatement(String sql) {
         SessionDataSet sessionDataSet;
         try {

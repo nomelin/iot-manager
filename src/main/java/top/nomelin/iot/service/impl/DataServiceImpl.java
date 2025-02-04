@@ -35,7 +35,7 @@ public class DataServiceImpl implements DataService {
         this.storageStrategyManager = storageStrategyManager;
     }
 
-    @LogExecutionTime
+    @LogExecutionTime(logArgs = true)
     @Override
     public void insertBatchRecord(int deviceId, List<Long> timestamps,
                                   List<String> measurements, List<List<Object>> values) {
@@ -59,7 +59,7 @@ public class DataServiceImpl implements DataService {
                 deviceId, timestamps, measurements, types, values);
     }
 
-    @LogExecutionTime
+    @LogExecutionTime(logArgs = true)
     @Override
     public DeviceTable queryRecord(int deviceId, long startTime, long endTime,
                                    List<String> selectMeasurements, Integer aggregationTime,

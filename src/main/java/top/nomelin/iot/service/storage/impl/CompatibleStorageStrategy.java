@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import top.nomelin.iot.common.Constants;
+import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
@@ -35,6 +36,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         this.iotDBDao = iotDBDao;
     }
 
+    @LogExecutionTime
     @Override
     public List<MeasurementNode> preprocessTemplateNodes(List<MeasurementNode> originalNodes) {
         return originalNodes.stream()
@@ -51,6 +53,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         return "_COMPATIBLE";
     }
 
+    @LogExecutionTime
     @Override
     public void storeData(String devicePath, List<Long> timestamps,
                           List<List<String>> measurementsList, List<List<TSDataType>> typesList,
@@ -109,6 +112,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
                 devicePath, storedTimestamps, storedMeasurements, storedTypes, storedValues);
     }
 
+    @LogExecutionTime
     @Override
     public DeviceTable retrieveData(String devicePath, long startTime, long endTime,
                                     List<String> selectedMeasurements, int aggregationTime) {

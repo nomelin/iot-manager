@@ -4,6 +4,7 @@ import org.apache.tsfile.enums.TSDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.model.dto.DeviceTable;
 import top.nomelin.iot.service.storage.StorageStrategy;
@@ -25,6 +26,7 @@ public class CoverStorageStrategy implements StorageStrategy {
         return "_COVER";
     }
 
+    @LogExecutionTime
     @Override
     public void storeData(String devicePath, List<Long> timestamps,
                           List<List<String>> measurementsList, List<List<TSDataType>> typesList,
@@ -40,6 +42,7 @@ public class CoverStorageStrategy implements StorageStrategy {
                 devicePath, alignedTimestamps, measurementsList, typesList, valuesList);
     }
 
+    @LogExecutionTime
     @Override
     public DeviceTable retrieveData(String devicePath, long startTime, long endTime,
                                     List<String> selectedMeasurements, int aggregationTime) {

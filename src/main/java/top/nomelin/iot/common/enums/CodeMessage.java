@@ -31,6 +31,8 @@ public enum CodeMessage {
     JSON_WRITE_ERROR("606", "写入数据库时，JSON序列化异常"),
     JSON_READ_ERROR("607", "读取数据库时，JSON反序列化异常"),
     DUPLICATE_TIME_ERROR("608", "兼容模式下，存在时间戳重复行。"),
+    INSERT_VALUE_NUM_ERROR("609", "插入时，时间戳数量与数据行数量不匹配"),
+    INSERT_MEASUREMENT_NUM_ERROR("609", "插入时，属性数量与数据列数量不匹配"),
 
 
     SYSTEM_ERROR("800", "系统异常"),

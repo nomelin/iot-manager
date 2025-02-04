@@ -1,5 +1,6 @@
 package top.nomelin.iot.controller;
 
+import cn.hutool.core.util.ObjectUtil;
 import org.springframework.web.bind.annotation.*;
 import top.nomelin.iot.common.Result;
 import top.nomelin.iot.common.enums.CodeMessage;
@@ -28,9 +29,17 @@ public class DataController {
 
     @PostMapping("/insert")
     public Result insertBatchData(@RequestBody DataInsertRequest request) {
-        if (request.getDeviceId() == null || request.getTimestamps() == null ||
-                request.getMeasurements() == null || request.getValues() == null) {
+        if (request.getDeviceId() == null || ObjectUtil.isEmpty(request.getTimestamps()) ||
+                ObjectUtil.isEmpty(request.getMeasurements()) || ObjectUtil.isEmpty(request.getValues())) {
             throw new BusinessException(CodeMessage.PARAM_LOST_ERROR, "参数缺失,request:" + request);
+        }
+        if (request.getTimestamps().size() != request.getValues().size()) {
+            throw new BusinessException(CodeMessage.INSERT_VALUE_NUM_ERROR,
+                    "时间戳数量：" + request.getTimestamps().size() + "，数据行数量：" + request.getValues().size());
+        }
+        if (request.getMeasurements().size() != request.getValues().get(0).size()) {
+            throw new BusinessException(CodeMessage.INSERT_MEASUREMENT_NUM_ERROR,
+                    "属性数量：" + request.getMeasurements().size() + "，数据列数量：" + request.getValues().get(0).size());
         }
         dataService.insertBatchRecord(request.getDeviceId(), request.getTimestamps(),
                 request.getMeasurements(), request.getValues());
