@@ -28,10 +28,11 @@
       <el-form-item label="选择传感器">
         <el-select
             v-model="form.selectMeasurements"
-            multiple
             clearable
+            multiple
             placeholder="请选择传感器"
-            style="width: 100%"
+            style="width: 80%"
+            @change="handleMeasurementsChange"
         >
           <el-option
               v-for="item in deviceMeasurements"
@@ -63,25 +64,30 @@
         </el-select>
       </el-form-item>
 
+      <!-- 阈值过滤开关 -->
+      <el-form-item label="阈值过滤">
+        <el-switch v-model="thresholdFilterEnabled"/>
+      </el-form-item>
+
       <!-- 阈值设置 -->
       <el-form-item
-          v-if="form.selectMeasurements && form.selectMeasurements.length > 0"
+          v-if="form.selectMeasurements && form.selectMeasurements.length > 0 && thresholdFilterEnabled"
           label="阈值设置"
       >
         <div v-for="(measurement, index) in form.selectMeasurements" :key="measurement" class="threshold-item">
           <span class="threshold-label">{{ measurement }}</span>
           <el-input-number
               v-model="thresholds[index][0]"
+              :placeholder="thresholds[index][0] === null ? '-∞' : '最小值'"
               :precision="3"
               class="threshold-input"
-              placeholder="最小值"
           ></el-input-number>
           <span class="threshold-separator">-</span>
           <el-input-number
               v-model="thresholds[index][1]"
+              :placeholder="thresholds[index][1] === null ? '+∞' : '最大值'"
               :precision="3"
               class="threshold-input"
-              placeholder="最大值"
           ></el-input-number>
         </div>
       </el-form-item>
@@ -127,7 +133,8 @@ export default {
         aggregationTime: null,
         queryAggregateFunc: null,
       },
-      timeRange: [1719072000000,1719158400000],
+      thresholdFilterEnabled: false,
+      timeRange: [1719072000000, 1719158400000],
       deviceMeasurements: [],
       thresholds: [],
       aggregateFuncOptions: ['AVG', 'MAX', 'MIN', 'SUM', 'COUNT', 'FIRST', 'LAST'],
@@ -140,6 +147,7 @@ export default {
       handler(newVal) {
         // 初始化阈值数组
         this.thresholds = newVal.map(() => [null, null])
+        console.log("thresholds: " + JSON.stringify(this.thresholds))
       },
       deep: true
     }
@@ -151,7 +159,7 @@ export default {
         const res = await this.$request.get(`/device/getMeasurements/${deviceId}`)
         if (res.code === '200') {
           this.deviceMeasurements = res.data
-          console.log("属性值：" + this.deviceMeasurements)
+          this.form.selectMeasurements = []
         } else {
           this.$message.error(res.msg)
         }
@@ -160,20 +168,26 @@ export default {
       }
     },
 
+    handleMeasurementsChange(selected) {
+      //保持选择的传感器顺序
+      this.form.selectMeasurements = this.deviceMeasurements.filter(m => selected.includes(m))
+    },
+
     async submitQuery() {
-      // 处理时间范围
-      if (this.timeRange && this.timeRange.length === 2) {
+      if (this.timeRange?.length === 2) {
         this.form.startTime = this.timeRange[0]
         this.form.endTime = this.timeRange[1]
       }
+      this.form.selectMeasurements = this.deviceMeasurements
 
       // 构建请求参数
       const params = {
         ...this.form,
-        thresholds: this.form.selectMeasurements.length > 0
+        thresholds: this.thresholdFilterEnabled
             ? this.thresholds.map(t => t.map(v => v !== null ? Number(v) : null))
             : null
       }
+      console.log("params: " + JSON.stringify(params))
 
       try {
         const res = await this.$request.post('/data/query', params)
@@ -183,33 +197,32 @@ export default {
           this.$message.error(res.msg)
         }
       } catch (error) {
-        this.$message.error('请求失败')
+        this.$message.error('请求失败: ' + error)
       }
     },
 
     transformData(deviceTable) {
+      // console.log("deviceTable: " + JSON.stringify(deviceTable))
       this.tableData = []
-      this.measurementsColumns = []
 
-      // 提取测量项列
-      if (deviceTable.types) {
-        this.measurementsColumns = [...deviceTable.types]
-      }
+      this.measurementsColumns = this.form.selectMeasurements;
+      console.log("measurementsColumns: " + JSON.stringify(this.measurementsColumns))
 
       // 处理records数据
       const records = deviceTable.records || {}
+      console.log("records: " + JSON.stringify(Object.entries(records).slice(0, 5)))
       for (const [timestamp, recordList] of Object.entries(records)) {
         recordList.forEach(record => {
-          const rowData = {
+          this.tableData.push({
             timestamp: Number(timestamp),
             ...record.fields
-          }
-          this.tableData.push(rowData)
+          })
         })
       }
 
       // 按时间排序
       this.tableData.sort((a, b) => a.timestamp - b.timestamp)
+      console.log("tableData: " + JSON.stringify(this.tableData.slice(0, 5)))
     },
 
     resetForm() {
@@ -221,12 +234,13 @@ export default {
         aggregationTime: null,
         queryAggregateFunc: null,
       }
+      this.thresholdFilterEnabled = false
       this.timeRange = []
       this.thresholds = []
       this.tableData = []
     },
     selectAll() {
-      this.form.selectMeasurements = this.deviceMeasurements
+      this.form.selectMeasurements = [...this.deviceMeasurements]
     }
   }
 }
@@ -234,12 +248,16 @@ export default {
 
 <style scoped>
 .container {
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* 填满父容器 */
+  box-sizing: border-box;
+  font-weight: bold;
 }
 
 .query-form {
-  max-width: 800px;
-  margin: 0 auto;
+  max-width: 90%;
+  margin: 20px auto;
 }
 
 .threshold-item {
@@ -262,7 +280,9 @@ export default {
 }
 
 .result-container {
-  margin-top: 30px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
 }
 
 .empty-tip {
