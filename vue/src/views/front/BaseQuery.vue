@@ -72,10 +72,13 @@
               <el-select v-model="form.queryAggregateFunc" placeholder="请选择聚合函数">
                 <el-option
                     v-for="func in aggregateFuncOptions"
-                    :key="func"
-                    :label="func"
-                    :value="func"
-                ></el-option>
+                    :key="func.code"
+                    :value="func.code"
+                >
+                  <el-tooltip effect="dark" :content="func.desc" placement="top">
+                    <span>{{ func.code }} ({{ func.name }})</span>
+                  </el-tooltip>
+                </el-option>
               </el-select>
             </el-form-item>
 
@@ -135,7 +138,7 @@
             :prop="col"
         >
           <template #default="{ row }">
-            {{ typeof row[col] === 'number' ? row[col].toFixed(4) : row[col] }}
+            {{ typeof row[col] === 'number' ? (Number.isInteger(row[col]) ? row[col] : row[col].toFixed(4)) : row[col] }}
           </template>
         </el-table-column>
 
@@ -164,7 +167,7 @@ export default {
       timeRange: [1719072000000, 1719158400000],
       deviceMeasurements: [],
       thresholds: [],
-      aggregateFuncOptions: ['AVG', 'MAX', 'MIN', 'SUM', 'COUNT', 'FIRST', 'LAST'],
+      aggregateFuncOptions: [], // 聚合函数动态获取
       tableData: [],
       measurementsColumns: [],
       aggregationTimeOptions: [
@@ -187,6 +190,9 @@ export default {
       },
       deep: true
     }
+  },
+  created() {
+    this.loadAggregateFunctions();
   },
   methods: {
     handleThresholdChange(index, position, value) {
@@ -211,6 +217,23 @@ export default {
     handleMeasurementsChange(selected) {
       //保持选择的传感器顺序
       this.form.selectMeasurements = this.deviceMeasurements.filter(m => selected.includes(m))
+    },
+
+    async loadAggregateFunctions() {
+      try {
+        const res = await this.$request.get('/data/aggregateFuncs');
+        if (res.code === '200') {
+          this.aggregateFuncOptions = res.data.map(item => ({
+            code: item.code,
+            name: item.name,
+            desc: item.desc,
+          }));
+        } else {
+          this.$message.error(res.msg);
+        }
+      } catch (error) {
+        this.$message.error('获取聚合函数失败');
+      }
     },
 
     async submitQuery() {

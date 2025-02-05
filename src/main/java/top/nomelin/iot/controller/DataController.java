@@ -7,11 +7,14 @@ import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.controller.request.DataInsertRequest;
 import top.nomelin.iot.controller.request.DataQueryRequest;
+import top.nomelin.iot.controller.response.EnumInfo;
 import top.nomelin.iot.model.dto.DeviceTable;
-import top.nomelin.iot.model.dto.Record;
+import top.nomelin.iot.model.enums.QueryAggregateFunc;
+import top.nomelin.iot.model.enums.StorageMode;
 import top.nomelin.iot.service.DataService;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * DataController
@@ -67,62 +70,36 @@ public class DataController {
     }
     //TODO 同一个时间戳多个值，在前端怎么处理？
 
-    @RequestMapping("/test/{deviceId}/{extraDataNum}")
-    public Result test(@PathVariable("deviceId") String deviceId, @PathVariable("extraDataNum") int extraDataNum) {
-        // 配置生成数据的参数
-        long startTimestamp = 1734529151000L; // 起始时间戳
-        int durationSeconds = 10; // 持续时间（秒）
-        int intervalMillis = 1000; // 时间间隔（毫秒）
-        double tempMin = -10.0, tempMax = 30.0; // 温度范围
-        int humidityMin = 20, humidityMax = 60; // 湿度范围
-
-        // 额外数据
-        int extraDataMin = 0, extraDataMax = 100; // 额外数据范围
-
-        // 创建 DeviceTable 对象
-        DeviceTable deviceTable = new DeviceTable();
-        deviceTable.setDevicePath("root.123.testdevice" + deviceId);
-        deviceTable.setTypes(Arrays.asList("DOUBLE", "INT32"));
-
-        Map<Long, List<Record>> records = new LinkedHashMap<>();
-        Random random = new Random();
-
-        // 随机选择几个时间戳
-        Set<Long> selectedTimestamps = new HashSet<>();
-        while (selectedTimestamps.size() < 3) {  // 假设我们随机选择3个时间戳
-            long timestamp = startTimestamp + random.nextInt(durationSeconds) * intervalMillis;
-            selectedTimestamps.add(timestamp);
+    /**
+     * 获取所有存储模式
+     */
+    @GetMapping("/storageModes")
+    public Result getStorageModes() {
+        List<EnumInfo> modes = new ArrayList<>();
+        for (StorageMode mode : StorageMode.values()) {
+            modes.add(new EnumInfo(
+                    mode.name(),
+                    mode.getName(),
+                    mode.getDesc()
+            ));
         }
-
-        // 为每个选中的时间戳生成多个数据行
-        for (long timestamp : selectedTimestamps) {
-            int dataRowsCount = 1 + random.nextInt(3);  // 每个时间戳随机生成1-3个数据行
-            List<Record> recordList = new ArrayList<>();
-
-            for (int i = 0; i < dataRowsCount; i++) {
-                Record record = new Record();
-                // 小概率给null值
-                if (random.nextInt(100) < 0) {
-                    record.getFields().put("temperature", null);
-                    record.getFields().put("humidity", null);
-                } else {
-                    record.getFields().put("temperature", tempMin + (tempMax - tempMin) * random.nextDouble());
-                    record.getFields().put("humidity", humidityMin + random.nextInt(humidityMax - humidityMin + 1));
-                    for (int j = 0; j < extraDataNum; j++) {
-                        record.getFields().put("extraData" + j, extraDataMin + random.nextInt(extraDataMax - extraDataMin + 1));
-                    }
-                }
-                recordList.add(record);
-            }
-
-            records.put(timestamp, recordList);
-        }
-
-        deviceTable.setRecords(records);
-
-        // 返回数据
-        return Result.success(deviceTable);
+        return Result.success(modes);
     }
 
+    /**
+     * 获取所有聚合函数
+     */
+    @GetMapping("/aggregateFuncs")
+    public Result getAggregateFunctions() {
+        List<EnumInfo> funcs = new ArrayList<>();
+        for (QueryAggregateFunc func : QueryAggregateFunc.values()) {
+            funcs.add(new EnumInfo(
+                    func.name(),
+                    func.getName(),
+                    func.getDesc()
+            ));
+        }
+        return Result.success(funcs);
+    }
 
 }
