@@ -12,6 +12,7 @@ public enum CodeMessage {
     ACCOUNT_CACHE_ERROR("406", "缓存读取失败,请重新登录"),
     TOKEN_EXPIRED_ERROR("407", "token已过期，请重新登录"),
     DEVICE_NOT_EXIST_ERROR("410", "设备不存在"),
+    DB_DATA_ROW_ERROR("411","数据库数据行异常"),
 
 
     USER_NAME_EXIST_ERROR("501", "用户名已存在"),

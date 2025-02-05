@@ -118,6 +118,7 @@ public class DataServiceImpl implements DataService {
                         "QueryAggregateFunc={}, thresholds={}, result={}",
                 deviceId, startTime, endTime, selectMeasurements, aggregationTime,
                 queryAggregateFunc, thresholds, aggregatedTable);
+        log.info("共查询到{}条时间戳（每个时间戳可能有多条记录，这里不统计）", aggregatedTable.getRecords().size());
 
         return aggregatedTable;
     }
