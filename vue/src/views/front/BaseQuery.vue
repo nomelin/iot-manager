@@ -77,17 +77,21 @@
         <div v-for="(measurement, index) in form.selectMeasurements" :key="measurement" class="threshold-item">
           <span class="threshold-label">{{ measurement }}</span>
           <el-input-number
-              v-model="thresholds[index][0]"
+              :controls="true"
               :placeholder="thresholds[index][0] === null ? '-∞' : '最小值'"
               :precision="3"
+              :value="thresholds[index][0]"
               class="threshold-input"
+              @change="val => handleThresholdChange(index, 0, val)"
           ></el-input-number>
           <span class="threshold-separator">-</span>
           <el-input-number
-              v-model="thresholds[index][1]"
+              :controls="true"
               :placeholder="thresholds[index][1] === null ? '+∞' : '最大值'"
               :precision="3"
+              :value="thresholds[index][1]"
               class="threshold-input"
+              @change="val => handleThresholdChange(index, 1, val)"
           ></el-input-number>
         </div>
       </el-form-item>
@@ -153,6 +157,10 @@ export default {
     }
   },
   methods: {
+    handleThresholdChange(index, position, value) {
+      const newValue = value === undefined || value === null ? null : Number(value)
+      this.$set(this.thresholds[index], position, newValue)
+    },
     async handleDeviceChange(deviceId) {
       if (!deviceId) return
       try {
@@ -178,13 +186,17 @@ export default {
         this.form.startTime = this.timeRange[0]
         this.form.endTime = this.timeRange[1]
       }
-      this.form.selectMeasurements = this.deviceMeasurements
-
+      if (this.form.selectMeasurements === null || this.form.selectMeasurements.length === 0) {
+        this.form.selectMeasurements = this.deviceMeasurements // 如果没有选择属性，则选择全部属性.
+      }
       // 构建请求参数
       const params = {
         ...this.form,
         thresholds: this.thresholdFilterEnabled
-            ? this.thresholds.map(t => t.map(v => v !== null ? Number(v) : null))
+            ? this.thresholds.map(t => [
+              t[0] !== null ? Number(t[0]) : null,
+              t[1] !== null ? Number(t[1]) : null
+            ])
             : null
       }
       console.log("params: " + JSON.stringify(params))
