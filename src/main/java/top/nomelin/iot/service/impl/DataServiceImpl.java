@@ -87,6 +87,10 @@ public class DataServiceImpl implements DataService {
         Device device = deviceService.getDeviceById(deviceId);
         StorageStrategy strategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
+        if (ObjectUtil.isEmpty(selectMeasurements)) {
+            selectMeasurements = device.getConfig().getMeasurements();
+            log.info("queryRecord, selectMeasurements为空，使用设备的配置的所有物理量: {}", selectMeasurements);
+        }
 
         // 对齐时间窗口
         long[] alignedTimeRange = alignTimeRange(startTime, endTime, aggregationTime);

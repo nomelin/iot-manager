@@ -28,4 +28,6 @@ public interface DeviceService {
     List<Device> getDevicesByIds(List<Integer> deviceIds);
 
     List<Device> getAllDevice();
+
+    List<String> getAllMeasurementsById(int deviceId);
 }

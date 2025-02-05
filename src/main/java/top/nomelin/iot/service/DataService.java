@@ -47,7 +47,7 @@ public interface DataService {
      * @param deviceId           设备ID
      * @param startTime          开始时间戳
      * @param endTime            结束时间戳
-     * @param selectMeasurements 选择的属性名列表。如果为null，则查询所有属性。
+     * @param selectMeasurements 选择的属性名列表。如果为null或空列表，则查询所有属性。
      * @param aggregationTime    聚合时间,单位：ms。读取粒度不能小于存储粒度。为null时，不聚合; 小于1时，不聚合。
      * @param queryAggregateFunc 查询聚合模式。为null时，不聚合。
      * @param thresholds         阈值列表。如果为null，则不进行阈值过滤。按照属性名顺序排列。如果查询模式为COUNT，则该参数无效。

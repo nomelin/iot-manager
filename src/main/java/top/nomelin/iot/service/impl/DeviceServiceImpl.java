@@ -7,6 +7,7 @@ import top.nomelin.iot.cache.CurrentUserCache;
 import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
+import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.DeviceMapper;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.model.Config;
@@ -181,5 +182,17 @@ public class DeviceServiceImpl implements DeviceService {
         Device device = new Device();
         device.setUserId(currentUserCache.getCurrentUser().getId());
         return deviceMapper.selectAll(device);
+    }
+
+    @Override
+    public List<String> getAllMeasurementsById(int deviceId) {
+        Device device = getDeviceById(deviceId);
+        Config config = device.getConfig();
+        if (ObjectUtil.isNull(config)) {
+            log.warn("设备 {} 没有配置", deviceId);
+            throw new SystemException(CodeMessage.DB_DATA_ROW_ERROR, "设备 " + deviceId + " 没有配置");
+        }
+        return config.getMeasurements();
+
     }
 }

@@ -79,4 +79,12 @@ public class DeviceController {
     public Result getAllDevice() {
         return Result.success(deviceService.getAllDevice());
     }
+
+    @RequestMapping("/getMeasurements/{deviceId}")
+    public Result getMeasurements(@PathVariable Integer deviceId) {
+        if (ObjectUtil.isNull(deviceId)) {
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        return Result.success(deviceService.getAllMeasurementsById(deviceId));
+    }
 }
