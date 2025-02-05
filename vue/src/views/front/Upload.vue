@@ -95,7 +95,7 @@ export default {
       form: {
         file: null,
         deviceId: null,
-        skipRows: 0
+        skipRows: 1
       },
       rules: {
         file: [
@@ -180,7 +180,7 @@ export default {
           const res = await this.$request.get(`/task/get/${this.taskId}`)
           if (res.code === '200') {
             this.taskInfo = res.data
-            console.log("taskInfo:" + this.taskInfo)
+            console.log("taskInfo:" + JSON.stringify(this.taskInfo))
             // 处理结束状态
             if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(this.taskInfo.status)) {
               this.clearPolling()

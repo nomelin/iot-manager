@@ -33,4 +33,12 @@ public class SystemException extends RuntimeException {
         this.extraMessage = "";
     }
 
+    @Override
+    public String toString() {
+        return "SystemException{" +
+                "codeMessage=" + codeMessage +
+                ", extraMessage='" + extraMessage + '\'' +
+                ", cause=" + cause +
+                '}';
+    }
 }

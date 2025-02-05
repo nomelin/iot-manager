@@ -12,7 +12,10 @@ const request = axios.create({
 // 可以自请求发送前对请求做一些处理
 // 比如统一加token，对请求参数统一加密
 request.interceptors.request.use(config => {
-    config.headers['Content-Type'] = 'application/json;charset=utf-8';        // 设置请求头格式
+    //上传文件时，不设置Content-Type
+    if (!config.url.includes('/files/upload')) {
+        config.headers['Content-Type'] = 'application/json;charset=utf-8'; // 设置请求头格式
+    }
     let user = getItemWithExpiry("user")  // 获取缓存的用户信息
     // console.log("user: "+user)
     if (user && Object.keys(user).length > 0 && user.token) {

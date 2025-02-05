@@ -94,6 +94,7 @@ public abstract class Task {
 
     public void fail(String errorMessage) {
         if (this.status == FileTaskStatus.FAILED) {
+            this.errorMessage = errorMessage;
             return;
         }
         //除了已完成和已取消的任务，其他状态都可以失败

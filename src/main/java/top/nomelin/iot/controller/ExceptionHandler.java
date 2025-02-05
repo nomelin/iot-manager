@@ -1,6 +1,5 @@
 package top.nomelin.iot.controller;
 
-import cn.hutool.core.util.ObjectUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,14 +27,8 @@ public class ExceptionHandler {
     @org.springframework.web.bind.annotation.ExceptionHandler(BusinessException.class)
     public Result doBusinessException(BusinessException e) {
         if ("dev".equals(env)) {// 开发环境才显示业务异常信息
-            String cause = e.getCause() == null ? "" : e.getCause().getMessage();
-            if (ObjectUtil.isEmpty(cause)) {
-                cause = e.getCause() == null ? "" : e.getCause().toString();
-            }
-            log.warn("业务异常->" + e.codeMessage.code + ":" + e.codeMessage.msg +
-                    ", cause:" + cause + ", extraMsg:" + e.extraMessage);
+            log.warn("业务异常->{}", e, e);
             e.printStackTrace();
-            System.out.println("---test---");
             if (e.cause != null) {
                 e.cause.printStackTrace();
             }
@@ -51,14 +44,8 @@ public class ExceptionHandler {
      */
     @org.springframework.web.bind.annotation.ExceptionHandler(SystemException.class)
     public Result doSystemException(SystemException e) {
-        String cause = e.getCause() == null ? "" : e.getCause().getMessage();
-        if (ObjectUtil.isEmpty(cause)) {
-            cause = e.getCause() == null ? "" : e.getCause().toString();
-        }
-        log.warn("系统异常->" + e.codeMessage.code + ":" + e.codeMessage.msg +
-                ", cause:" + cause + ", extraMsg:" + e.extraMessage);
+        log.warn("系统异常->{}", e, e);
         e.printStackTrace();
-        System.out.println("---test---");
         if (e.cause != null) {
             e.cause.printStackTrace();
         }

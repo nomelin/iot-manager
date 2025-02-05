@@ -1,7 +1,8 @@
 package top.nomelin.iot.service;
 
-import top.nomelin.iot.model.enums.QueryAggregateFunc;
+import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.dto.DeviceTable;
+import top.nomelin.iot.model.enums.QueryAggregateFunc;
 
 import java.util.List;
 
@@ -17,7 +18,7 @@ public interface DataService {
 //                      List<String> measurements, List<IotDataType> types, List<Object> values);
 
     /**
-     * 批量插入记录。插入时的配置信息会从device表中获取。
+     * 批量插入记录。插入时的配置信息会从device表中获取, 每次插入都要查询一次mysql。
      *
      * @param deviceId     设备ID
      * @param timestamps   时间戳列表
@@ -25,6 +26,18 @@ public interface DataService {
      * @param values       数据值列表，每行代表一个时间戳的记录。
      */
     void insertBatchRecord(int deviceId, List<Long> timestamps,
+                           List<String> measurements, List<List<Object>> values);
+
+    /**
+     * 批量插入记录。插入时的配置信息从device对象中获取, 不查询mysql。
+     * 在没有session用户缓存的情况下（比如异步任务），必须使用该方法，否则无法查询设备。
+     *
+     * @param device       设备对象
+     * @param timestamps   时间戳列表
+     * @param measurements 字段名列表。每个时间戳的字段都相同。
+     * @param values       数据值列表，每行代表一个时间戳的记录。
+     */
+    void insertBatchRecord(Device device, List<Long> timestamps,
                            List<String> measurements, List<List<Object>> values);
 
     /**
@@ -47,9 +60,9 @@ public interface DataService {
      *                           [[null, 100], [200,null],...],表示属性1<=100，属性2>=200，...
      *                           [null,[100,200],[null,100]]，表示属性1不过滤,100<=属性2<=200，属性3<=100
      */
-    //TODO 每次查询都需要先查询设备配置表来获取写入时的配置，是否有更好的方式？比如缓存? 前端传入？前端传入可以重载一个方法。
+
     DeviceTable queryRecord(int deviceId, long startTime, long endTime, List<String> selectMeasurements,
                             Integer aggregationTime, QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds);
-
+    //TODO 每次查询都需要先查询设备配置表来获取写入时的配置，是否有更好的方式？比如缓存? 前端传入？前端传入可以重载一个方法。
 
 }

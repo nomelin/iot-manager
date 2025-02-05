@@ -7,13 +7,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CodeMessage;
-import top.nomelin.iot.model.enums.IotDataType;
-import top.nomelin.iot.model.enums.QueryAggregateFunc;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.model.Config;
 import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.dto.DeviceTable;
 import top.nomelin.iot.model.dto.Record;
+import top.nomelin.iot.model.enums.IotDataType;
+import top.nomelin.iot.model.enums.QueryAggregateFunc;
 import top.nomelin.iot.service.DataService;
 import top.nomelin.iot.service.DeviceService;
 import top.nomelin.iot.service.storage.StorageStrategy;
@@ -44,6 +44,22 @@ public class DataServiceImpl implements DataService {
         StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
 
+        batchInsert(timestamps, measurements, values, config, strategy, devicePath);
+    }
+
+    @LogExecutionTime(logArgs = true)
+    @Override
+    public void insertBatchRecord(Device device, List<Long> timestamps,
+                                  List<String> measurements, List<List<Object>> values) {
+        Config config = device.getConfig();
+        StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
+        String devicePath = util.getDevicePath(device.getUserId(), device.getId());
+
+        batchInsert(timestamps, measurements, values, config, strategy, devicePath);
+    }
+
+    private void batchInsert(List<Long> timestamps, List<String> measurements,
+                             List<List<Object>> values, Config config, StorageStrategy strategy, String devicePath) {
         // 把config中的物理量的类型转换为TSDataType
         List<TSDataType> types = measurements.stream()
                 .map(m -> IotDataType.convertToTsDataType(config.getDataTypes().get(m))).toList();
@@ -55,8 +71,8 @@ public class DataServiceImpl implements DataService {
                 Collections.nCopies(timestamps.size(), types),
                 values,
                 config.getAggregationTime());
-        log.info("insertBatchRecord: deviceId={}, timestamps={}, measurements={}, types={}, values={}",
-                deviceId, timestamps, measurements, types, values);
+        log.info("insertBatchRecord: devicePath={}, timestamps={}, measurements={}, types={}, values={}",
+                devicePath, timestamps, measurements, types, values);
     }
 
     @LogExecutionTime(logArgs = true)

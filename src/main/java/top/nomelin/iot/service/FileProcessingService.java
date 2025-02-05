@@ -1,6 +1,7 @@
 package top.nomelin.iot.service;
 
 import org.springframework.web.multipart.MultipartFile;
+import top.nomelin.iot.model.Device;
 
 /**
  * FileProcessingService
@@ -14,9 +15,9 @@ public interface FileProcessingService {
      *
      * @param taskId   任务ID
      * @param file     文件
-     * @param deviceId 设备ID
+     * @param device   设备信息
      * @param skipRows 跳过的行数(不包括表头)
      */
 
-    void processAsync(String taskId, MultipartFile file, int deviceId, int skipRows);
+    void processAsync(String taskId, MultipartFile file, Device device, int skipRows);
 }

@@ -11,14 +11,16 @@ import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.common.exception.SystemException;
+import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.dto.FileTask;
 import top.nomelin.iot.model.enums.FileTaskStatus;
 import top.nomelin.iot.service.DataService;
 import top.nomelin.iot.service.processor.FileProcessor;
-import top.nomelin.iot.util.TimeUtil;
+import top.nomelin.iot.util.TimestampConverter;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Component
@@ -34,53 +36,62 @@ public class CsvProcessor implements FileProcessor {
 
     @LogExecutionTime
     @Override
-    public void process(InputStream inputStream, int deviceId, FileTask task, int skipRows) throws IOException {
+    public void process(InputStream inputStream, Device device, FileTask task, int skipRows) throws IOException {
         // 包装为支持 mark/reset 的流
         BufferedInputStream bufferedStream = new BufferedInputStream(inputStream);
         bufferedStream.mark(Integer.MAX_VALUE);
 
         try {
+            log.info("开始处理CSV文件: {}", task.getFileName());
             // 第一阶段：计算总行数
             int totalRows = calculateTotalRows(bufferedStream, skipRows);
             task.setTotalRows(totalRows);
-            log.debug("文件总数据行数: {}", totalRows);
+            log.info("文件总数据行数: {}", totalRows);
 
             // 重置流到起始位置
             bufferedStream.reset();
+            log.info("流已重置到起始位置");
 
             // 第二阶段：数据处理
-            processData(bufferedStream, deviceId, task, skipRows);
+            processData(bufferedStream, device, task, skipRows);
+            log.info("CSV文件处理完成: {}", task.getFileName());
         } catch (Exception e) {
-            task.fail("CSV处理失败: " + e.getMessage());
+            task.fail("CSV处理失败: " + e);
             throw new BusinessException(CodeMessage.FILE_HANDLER_ERROR, "CSV处理失败，文件名：" + task.getFileName(), e);
+        } finally {
+            // 确保流被关闭
+            try {
+                bufferedStream.close();
+            } catch (IOException e) {
+                log.warn("关闭BufferedInputStream失败: {}", e.getMessage());
+            }
         }
     }
 
     @Override
     public String getSupportedType() {
-        return "csv";
+        return "text/csv";
     }
 
     private int calculateTotalRows(InputStream stream, int skipLines) throws IOException {
         int count = 0;
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
-            // 跳过指定行数
-            for (int i = 0; i < skipLines; i++) {
-                String line = reader.readLine();
-                if (line == null) {
-                    break;
-                }
+        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));//此处不关闭流，后续还要用到。
+        // 跳过指定行数
+        for (int i = 0; i < skipLines; i++) {
+            String line = reader.readLine();
+            if (line == null) {
+                break;
             }
-            reader.readLine(); // 跳过标题行
-            while (reader.readLine() != null) {
-                count++;
-            }
+        }
+        reader.readLine(); // 跳过标题行
+        while (reader.readLine() != null) {
+            count++;
         }
         return count;
     }
 
     @LogExecutionTime
-    private void processData(InputStream stream, int deviceId, FileTask task, int skipLines) throws IOException {
+    private void processData(InputStream stream, Device device, FileTask task, int skipLines) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
         // 跳过指定行数
         for (int i = 0; i < skipLines; i++) {
@@ -89,19 +100,31 @@ public class CsvProcessor implements FileProcessor {
                 throw new IOException("文件行数不足，无法跳过 " + skipLines + " 行");
             }
         }
-        // 配置 CSV 格式（标题行现在是跳过后剩下的第一行）
+        log.info("CSV文件{}已跳过 {} 行", task.getFileName(), skipLines);
+
+        //手动读取表头
+        String line = reader.readLine();
+        if (line == null) {
+            throw new IOException("文件行数不足，无法读取表头");
+        }
+        String[] split = line.split(",");
+        List<String> headers = new ArrayList<>(Arrays.asList(split));
+        log.info("CSV文件{}的表头: {}", task.getFileName(), headers);
+
+        // 配置 CSV 格式
         try (CSVParser parser = new CSVParser(
-                new InputStreamReader(stream),
+//                new InputStreamReader(stream),
+                reader,
                 CSVFormat.DEFAULT.builder()
-                        .setHeader()
-                        .setSkipHeaderRecord(true)// 跳过标题行
+//                        .setHeader()//自动解析标题行
+//                        .setSkipHeaderRecord(false)// 不跳过标题行，标题行是文件表头
+//                        .setCommentMarker('#')  // 设置注释标识符，以#开头的行将被忽略
                         .setIgnoreEmptyLines(true)
                         .setTrim(true)
                         .build()
         )) {
-            List<String> headers = parser.getHeaderNames();
-            log.info("CSV文件{}的文件头: {}", task.getFileName(), headers);
             List<String> measurements = headers.subList(1, headers.size()); // 跳过timestamp列
+            log.info("CSV文件{}的属性列: {}", task.getFileName(), measurements);
 
             List<Long> timestamps = new ArrayList<>(BATCH_SIZE);
             List<List<Object>> valuesBatch = new ArrayList<>(BATCH_SIZE);
@@ -112,15 +135,14 @@ public class CsvProcessor implements FileProcessor {
                 processSingleRecord(record, timestamps, valuesBatch);
 
                 if (shouldFlushBatch(timestamps)) {
-                    flushBatch(deviceId, measurements, timestamps, valuesBatch, task);
+                    flushBatch(device, measurements, timestamps, valuesBatch, task);
+                    updateProgress(task);
                 }
-
-                updateProgress(task);
             }
 
             // 处理剩余批次
             if (!timestamps.isEmpty()) {
-                flushBatch(deviceId, measurements, timestamps, valuesBatch, task);
+                flushBatch(device, measurements, timestamps, valuesBatch, task);
             }
         }
     }
@@ -135,7 +157,8 @@ public class CsvProcessor implements FileProcessor {
     // 解析单行数据，并将其添加到批次中
     private void processSingleRecord(CSVRecord record, List<Long> timestamps, List<List<Object>> valuesBatch) {
         try {
-            long timestamp = TimeUtil.convertToMillis(record.get(0));
+            long timestamp = TimestampConverter.convertToMillis(record.get(0));
+//            log.info("timestamp: {}->{}", record.get(0), timestamp);
             List<Object> values = new ArrayList<>();
 
             for (int i = 1; i < record.size(); i++) {
@@ -169,18 +192,18 @@ public class CsvProcessor implements FileProcessor {
 
     // 刷新批次数据到数据库
     @LogExecutionTime
-    private void flushBatch(int deviceId, List<String> measurements,
+    private void flushBatch(Device device, List<String> measurements,
                             List<Long> timestamps, List<List<Object>> valuesBatch,
                             FileTask task) {
         try {
             dataService.insertBatchRecord(
-                    deviceId,
+                    device,
 //                    new ArrayList<>(timestamps),
                     timestamps,
                     measurements,
 //                    new ArrayList<>(valuesBatch)
                     valuesBatch
-            );
+            );//TODO 异步插入时由于没有session，导致无法获取用户，就无法获取设备信息。
             task.addProcessedRows(timestamps.size());// 已处理行数增加
             log.info("成功插入批次数据，数量: {}", timestamps.size());
 
@@ -193,11 +216,9 @@ public class CsvProcessor implements FileProcessor {
     }
 
     private void updateProgress(FileTask task) {
-        if (task.getProcessedRows() % 100 == 0) { // 每处理100行更新日志
-            log.info("任务进度: {}/{} ({}%)",
-                    task.getProcessedRows(),
-                    task.getTotalRows(),
-                    String.format("%.1f", task.getProgressPercentage()));
-        }
+        log.info("任务进度: {}/{} ({}%)",
+                task.getProcessedRows(),
+                task.getTotalRows(),
+                String.format("%.1f", task.getProgressPercentage()));
     }
 }

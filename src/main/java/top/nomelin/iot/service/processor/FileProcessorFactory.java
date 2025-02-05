@@ -2,6 +2,8 @@ package top.nomelin.iot.service.processor;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import top.nomelin.iot.common.enums.CodeMessage;
+import top.nomelin.iot.common.exception.SystemException;
 
 import java.util.List;
 import java.util.Map;
@@ -24,6 +26,9 @@ public class FileProcessorFactory {
     }
 
     public FileProcessor getProcessor(String fileType) {
+        if (!processors.containsKey(fileType.toLowerCase())) {
+            throw new SystemException(CodeMessage.UNSUPPORTED_FILE_TYPE_ERROR, "不支持的文件类型: " + fileType);
+        }
         return processors.get(fileType.toLowerCase());
     }
 }

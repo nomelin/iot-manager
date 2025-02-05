@@ -28,6 +28,12 @@ const routes = [
                 name: 'upload',
                 meta: {name: '文件上传'},
                 component: () => import('../views/front/Upload.vue')
+            },
+            {
+                path:'base_query',
+                name:'baseQuery',
+                meta:{name:'基础查询'},
+                component:()=>import('../views/front/BaseQuery.vue')
             }
         ]
 

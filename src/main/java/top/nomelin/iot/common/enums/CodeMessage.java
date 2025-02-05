@@ -11,6 +11,7 @@ public enum CodeMessage {
     PARAM_LOST_ERROR("405", "参数缺失"),
     ACCOUNT_CACHE_ERROR("406", "缓存读取失败,请重新登录"),
     TOKEN_EXPIRED_ERROR("407", "token已过期，请重新登录"),
+    DEVICE_NOT_EXIST_ERROR("410", "设备不存在"),
 
 
     USER_NAME_EXIST_ERROR("501", "用户名已存在"),
@@ -45,9 +46,10 @@ public enum CodeMessage {
     INSERT_DATA_ERROR("806", "插入数据异常"),
 
     FILE_HANDLER_ERROR("806", "文件处理异常"),
-    DATA_FORMAT_ERROR("807", "数据格式异常"),
-    TIME_FORMAT_ERROR("808", "时间格式处理异常, 或者不支持的时间格式"),
-    TASK_CANCELLED("809", "任务已取消"),
+    UNSUPPORTED_FILE_TYPE_ERROR("807", "不支持的文件类型"),
+    DATA_FORMAT_ERROR("810", "数据格式异常"),
+    TIME_FORMAT_ERROR("813", "时间格式处理异常, 或者不支持的时间格式"),
+    TASK_CANCELLED("815", "任务已取消"),
 
 
     UNKNOWN_ERROR("900", "未知异常");
@@ -58,5 +60,13 @@ public enum CodeMessage {
     CodeMessage(String code, String msg) {
         this.code = code;
         this.msg = msg;
+    }
+
+    @Override
+    public String toString() {
+        return "CodeMessage{" +
+                "code='" + code + '\'' +
+                ", msg='" + msg + '\'' +
+                '}';
     }
 }

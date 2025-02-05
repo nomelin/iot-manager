@@ -1,5 +1,6 @@
 package top.nomelin.iot.service.processor;
 
+import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.dto.FileTask;
 
 import java.io.IOException;
@@ -15,11 +16,11 @@ public interface FileProcessor {
     /**
      * 处理文件流
      * @param inputStream 文件输入流
-     * @param deviceId 关联设备ID
+     * @param device 设备信息
      * @param task 处理任务上下文
      * @param skipRows 要跳过的行数(不包括表头行)
      */
-    void process(InputStream inputStream, int deviceId, FileTask task, int skipRows) throws IOException;
+    void process(InputStream inputStream, Device device, FileTask task, int skipRows) throws IOException;
 
     String getSupportedType();
 }

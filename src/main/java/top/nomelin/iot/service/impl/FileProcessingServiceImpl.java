@@ -6,7 +6,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import top.nomelin.iot.common.enums.CodeMessage;
+import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.common.exception.SystemException;
+import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.dto.FileTask;
 import top.nomelin.iot.service.FileProcessingService;
 import top.nomelin.iot.service.TaskService;
@@ -33,20 +35,20 @@ public class FileProcessingServiceImpl implements FileProcessingService {
 
     @Async
     @Override
-    public void processAsync(String taskId, MultipartFile file, int deviceId, int skipRows) {
+    public void processAsync(String taskId, MultipartFile file, Device device, int skipRows) {
         FileTask task = taskService.getTask(taskId);
         task.start();
-        log.info("异步处理文件:，任务ID:{}, 文件名:{}, 设备ID:{}，文件类型:{}",
-                taskId, file.getOriginalFilename(), deviceId, file.getContentType());
+        log.info("异步处理文件:，任务ID:{}, 文件名:{}, 设备:{}，文件类型:{}",
+                taskId, file.getOriginalFilename(), device, file.getContentType());
         try {
             FileProcessor processor = processorFactory.getProcessor(file.getContentType());
             log.info("使用{}处理器处理文件", processor.getClass().getSimpleName());
-            processor.process(file.getInputStream(), deviceId, task, skipRows);
+            processor.process(file.getInputStream(), device, task, skipRows);
             task.complete();
             log.info("文件处理完成，任务ID:{}", taskId);
         } catch (Exception e) {
-            task.fail(e.getMessage());
-            log.error("文件处理失败，任务ID:{}, 错误信息:{}", taskId, e.getMessage());
+            log.error("文件处理失败，任务ID:{}, 错误信息:{}", taskId, e);
+            task.fail("文件处理失败，error: " + e);
             throw new SystemException(CodeMessage.FILE_HANDLER_ERROR, "任务ID:" + taskId, e);
         }
     }
