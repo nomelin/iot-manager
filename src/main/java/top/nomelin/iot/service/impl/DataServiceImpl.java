@@ -103,14 +103,21 @@ public class DataServiceImpl implements DataService {
 
         // 阈值过滤（COUNT模式不处理）
         if (shouldApplyThreshold(queryAggregateFunc, thresholds)) {
+            log.info("queryRecord 应用阈值过滤, selectMeasurements={}, thresholds={}", selectMeasurements, thresholds);
             applyThresholdFilter(rawTable, selectMeasurements, thresholds);
+        }else{
+            log.info("queryRecord 不应用阈值过滤, selectMeasurements={}, thresholds={}", selectMeasurements, thresholds);
         }
 
         DeviceTable aggregatedTable;
         // 聚合处理
         if (aggregationTime == 0 || ObjectUtil.isNull(queryAggregateFunc)) {
+            log.info("queryRecord 不聚合, selectMeasurements={}, aggregationTime={}, QueryAggregateFunc={}",
+                    selectMeasurements, aggregationTime, queryAggregateFunc);
             aggregatedTable = rawTable;//不聚合直接返回原始数据
         } else {
+            log.info("queryRecord 应用聚合, selectMeasurements={}, aggregationTime={}, QueryAggregateFunc={}",
+                    selectMeasurements, aggregationTime, queryAggregateFunc);
             aggregatedTable = aggregateRawData(rawTable, aggregationTime, queryAggregateFunc);
         }
 

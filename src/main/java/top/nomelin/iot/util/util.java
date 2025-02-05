@@ -55,7 +55,7 @@ public class util {
                 throw new IllegalArgumentException("不支持的查询粒度: " + granularity);
             }
         }
-        log.info("对齐到东八区时间窗口: {}->{},granularity: {}", timestamp, zdt.toInstant().toEpochMilli(), granularity);
+//        log.info("对齐到东八区时间窗口: {}->{},granularity: {}", timestamp, zdt.toInstant().toEpochMilli(), granularity);
         return zdt.toInstant().toEpochMilli();
     }
 

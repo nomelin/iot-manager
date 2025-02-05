@@ -1,106 +1,124 @@
 <template>
   <div class="container">
-    <el-form :model="form" class="query-form" label-position="left" label-width="120px">
-      <!-- 设备ID -->
-      <el-form-item label="设备ID">
-        <el-input-number
-            v-model="form.deviceId"
-            :min="1"
-            placeholder="请输入设备ID"
-            @change="handleDeviceChange"
-        ></el-input-number>
-      </el-form-item>
+    <el-collapse v-model="settingsVisible" accordion >
+      <el-collapse-item name="1">
+        <template slot="title">
+          <div style="font-weight: bold;font-size: 18px; text-align: center;color: #555;width: 100%">
+            查询设置
+          </div>
+        </template>
+        <div class="scrollable-container">
+          <el-form :model="form" class="query-form" label-position="left" label-width="120px">
+            <!-- 设备ID -->
+            <el-form-item label="设备ID">
+              <el-input-number
+                  v-model="form.deviceId"
+                  :min="1"
+                  placeholder="请输入设备ID"
+                  @change="handleDeviceChange"
+              ></el-input-number>
+            </el-form-item>
 
-      <!-- 时间范围 -->
-      <el-form-item label="时间范围">
-        <el-date-picker
-            v-model="timeRange"
-            :default-time="['00:00:00', '23:59:59']"
-            end-placeholder="结束时间"
-            range-separator="至"
-            start-placeholder="开始时间"
-            type="datetimerange"
-            value-format="timestamp"
-        ></el-date-picker>
-      </el-form-item>
+            <!-- 时间范围 -->
+            <el-form-item label="时间范围">
+              <el-date-picker
+                  v-model="timeRange"
+                  :default-time="['00:00:00', '23:59:59']"
+                  end-placeholder="结束时间"
+                  range-separator="至"
+                  start-placeholder="开始时间"
+                  type="datetimerange"
+                  value-format="timestamp"
+              ></el-date-picker>
+            </el-form-item>
 
-      <!-- 传感器选择 -->
-      <el-form-item label="选择传感器">
-        <el-select
-            v-model="form.selectMeasurements"
-            clearable
-            multiple
-            placeholder="请选择传感器"
-            style="width: 80%"
-            @change="handleMeasurementsChange"
-        >
-          <el-option
-              v-for="item in deviceMeasurements"
-              :key="item"
-              :label="item"
-              :value="item"
-          ></el-option>
-        </el-select>
-        <el-button @click="selectAll">全选</el-button>
-      </el-form-item>
+            <!-- 传感器选择 -->
+            <el-form-item label="选择传感器">
+              <el-select
+                  v-model="form.selectMeasurements"
+                  clearable
+                  multiple
+                  placeholder="请选择传感器"
+                  style="width: 80%"
+                  @change="handleMeasurementsChange"
+              >
+                <el-option
+                    v-for="item in deviceMeasurements"
+                    :key="item"
+                    :label="item"
+                    :value="item"
+                ></el-option>
+              </el-select>
+              <el-button @click="selectAll">全选</el-button>
+            </el-form-item>
 
-      <!-- 聚合设置 -->
-      <el-form-item label="聚合时间(ms)">
-        <el-input-number
-            v-model="form.aggregationTime"
-            :min="0"
-            placeholder="输入聚合时间"
-        ></el-input-number>
-      </el-form-item>
+            <!-- 聚合设置 -->
+            <el-form-item label="聚合时间">
+              <el-select
+                  v-model="form.aggregationTime"
+                  placeholder="请选择聚合时间"
+              >
+                <el-option
+                    v-for="item in aggregationTimeOptions"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                ></el-option>
+              </el-select>
+            </el-form-item>
 
-      <el-form-item label="聚合函数">
-        <el-select v-model="form.queryAggregateFunc" placeholder="请选择聚合函数">
-          <el-option
-              v-for="func in aggregateFuncOptions"
-              :key="func"
-              :label="func"
-              :value="func"
-          ></el-option>
-        </el-select>
-      </el-form-item>
 
-      <!-- 阈值过滤开关 -->
-      <el-form-item label="阈值过滤">
-        <el-switch v-model="thresholdFilterEnabled"/>
-      </el-form-item>
+            <el-form-item v-if="form.aggregationTime!== 0" label="聚合函数">
+              <el-select v-model="form.queryAggregateFunc" placeholder="请选择聚合函数">
+                <el-option
+                    v-for="func in aggregateFuncOptions"
+                    :key="func"
+                    :label="func"
+                    :value="func"
+                ></el-option>
+              </el-select>
+            </el-form-item>
 
-      <!-- 阈值设置 -->
-      <el-form-item
-          v-if="form.selectMeasurements && form.selectMeasurements.length > 0 && thresholdFilterEnabled"
-          label="阈值设置"
-      >
-        <div v-for="(measurement, index) in form.selectMeasurements" :key="measurement" class="threshold-item">
-          <span class="threshold-label">{{ measurement }}</span>
-          <el-input-number
-              :controls="true"
-              :placeholder="thresholds[index][0] === null ? '-∞' : '最小值'"
-              :precision="3"
-              :value="thresholds[index][0]"
-              class="threshold-input"
-              @change="val => handleThresholdChange(index, 0, val)"
-          ></el-input-number>
-          <span class="threshold-separator">-</span>
-          <el-input-number
-              :controls="true"
-              :placeholder="thresholds[index][1] === null ? '+∞' : '最大值'"
-              :precision="3"
-              :value="thresholds[index][1]"
-              class="threshold-input"
-              @change="val => handleThresholdChange(index, 1, val)"
-          ></el-input-number>
+            <!-- 阈值过滤开关 -->
+            <el-form-item label="阈值过滤">
+              <el-switch v-model="thresholdFilterEnabled"/>
+            </el-form-item>
+
+            <!-- 阈值设置 -->
+            <el-form-item
+                v-if="form.selectMeasurements && form.selectMeasurements.length > 0 && thresholdFilterEnabled"
+                label="阈值设置"
+            >
+              <div v-for="(measurement, index) in form.selectMeasurements" :key="measurement" class="threshold-item">
+                <span class="threshold-label">{{ measurement }}</span>
+                <el-input-number
+                    :controls="true"
+                    :placeholder="thresholds[index][0] === null || thresholds[index][0] === undefined? '不限制' : '最小值'"
+                    :precision="2"
+                    :value="thresholds[index][0]"
+                    class="threshold-input"
+                    @change="val => handleThresholdChange(index, 0, val)"
+                ></el-input-number>
+                <span class="threshold-separator">-</span>
+                <el-input-number
+                    :controls="true"
+                    :placeholder="thresholds[index][1] === null || thresholds[index][1] === undefined? '不限制' : '最大值'"
+                    :precision="2"
+                    :value="thresholds[index][1]"
+                    class="threshold-input"
+                    @change="val => handleThresholdChange(index, 1, val)"
+                ></el-input-number>
+              </div>
+            </el-form-item>
+
+            <el-form-item>
+              <el-button type="primary" @click="submitQuery">查询</el-button>
+              <el-button @click="resetForm">重置</el-button>
+            </el-form-item>
+          </el-form>
         </div>
-      </el-form-item>
-
-      <el-form-item>
-        <el-button type="primary" @click="submitQuery">查询</el-button>
-        <el-button @click="resetForm">重置</el-button>
-      </el-form-item>
-    </el-form>
+      </el-collapse-item>
+    </el-collapse>
 
     <!-- 结果展示 -->
     <div v-if="tableData.length > 0" class="result-container">
@@ -115,7 +133,12 @@
             :key="col"
             :label="col"
             :prop="col"
-        ></el-table-column>
+        >
+          <template #default="{ row }">
+            {{ typeof row[col] === 'number' ? row[col].toFixed(4) : row[col] }}
+          </template>
+        </el-table-column>
+
       </el-table>
     </div>
     <div v-else class="empty-tip">
@@ -134,7 +157,7 @@ export default {
         startTime: null,
         endTime: null,
         selectMeasurements: [],
-        aggregationTime: null,
+        aggregationTime: 0,
         queryAggregateFunc: null,
       },
       thresholdFilterEnabled: false,
@@ -143,14 +166,23 @@ export default {
       thresholds: [],
       aggregateFuncOptions: ['AVG', 'MAX', 'MIN', 'SUM', 'COUNT', 'FIRST', 'LAST'],
       tableData: [],
-      measurementsColumns: []
+      measurementsColumns: [],
+      aggregationTimeOptions: [
+        {label: '不聚合', value: 0},
+        {label: '1s', value: 1000},
+        {label: '10s', value: 10000},
+        {label: '1m', value: 60000},
+        {label: '1h', value: 3600000},
+        {label: '1d', value: 86400000}
+      ],
+      settingsVisible: ['1'], // 设置默认展开状态
     }
   },
   watch: {
     'form.selectMeasurements': {
       handler(newVal) {
         // 初始化阈值数组
-        this.thresholds = newVal.map(() => [null, null])
+        this.thresholds = newVal.map(() => [undefined, undefined])
         console.log("thresholds: " + JSON.stringify(this.thresholds))
       },
       deep: true
@@ -182,6 +214,10 @@ export default {
     },
 
     async submitQuery() {
+      if (this.form.aggregationTime !== 0 && this.form.queryAggregateFunc === null) {
+        this.$message.error('请选择聚合函数')
+        return
+      }
       if (this.timeRange?.length === 2) {
         this.form.startTime = this.timeRange[0]
         this.form.endTime = this.timeRange[1]
@@ -267,6 +303,12 @@ export default {
   font-weight: bold;
 }
 
+.scrollable-container {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 10px;
+}
+
 .query-form {
   max-width: 90%;
   margin: 20px auto;
@@ -294,6 +336,7 @@ export default {
 .result-container {
   flex: 1;
   overflow-y: auto;
+  /*max-height: 400px;*/
   padding: 10px;
 }
 
