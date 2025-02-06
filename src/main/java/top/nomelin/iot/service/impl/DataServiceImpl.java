@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CodeMessage;
+import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.model.Config;
 import top.nomelin.iot.model.Device;
@@ -22,6 +23,8 @@ import top.nomelin.iot.util.util;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static top.nomelin.iot.util.TimeUtil.isValidQueryAggregationTime;
 
 @Service
 public class DataServiceImpl implements DataService {
@@ -80,11 +83,8 @@ public class DataServiceImpl implements DataService {
     public DeviceTable queryRecord(int deviceId, long startTime, long endTime,
                                    List<String> selectMeasurements, Integer aggregationTime,
                                    QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds) {
-        if (aggregationTime == null || aggregationTime < 0) {
-            aggregationTime = 0;
-        }
-        //TODO 查询聚合粒度应该不小于插入聚合粒度。小于也许可以也表示不聚合？0是不聚合。
         Device device = deviceService.getDeviceById(deviceId);
+        aggregationTime = checkAggregationTime(device, aggregationTime);
         StorageStrategy strategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
         if (ObjectUtil.isEmpty(selectMeasurements)) {
@@ -105,7 +105,7 @@ public class DataServiceImpl implements DataService {
         if (shouldApplyThreshold(queryAggregateFunc, thresholds)) {
             log.info("queryRecord 应用阈值过滤, selectMeasurements={}, thresholds={}", selectMeasurements, thresholds);
             applyThresholdFilter(rawTable, selectMeasurements, thresholds);
-        }else{
+        } else {
             log.info("queryRecord 不应用阈值过滤, selectMeasurements={}, thresholds={}", selectMeasurements, thresholds);
         }
 
@@ -133,6 +133,21 @@ public class DataServiceImpl implements DataService {
         log.info("共查询到{}条时间戳（每个时间戳可能有多条记录，这里不统计）", aggregatedTable.getRecords().size());
 
         return aggregatedTable;
+    }
+
+    private int checkAggregationTime(Device device, Integer aggregationTime) {
+        if (aggregationTime == null || aggregationTime < 0) {
+            aggregationTime = 0;
+        }
+        if (aggregationTime > 0 && aggregationTime < device.getConfig().getAggregationTime()) {
+            throw new BusinessException(CodeMessage.QUERY_AGGREGATION_TIME_ERROR,
+                    "查询聚合粒度" + aggregationTime + "小于设备配置的最小聚合粒度" + device.getConfig().getAggregationTime());
+        }
+        if (!isValidQueryAggregationTime(aggregationTime)){
+            throw new BusinessException(CodeMessage.INVALID_QUERY_AGGREGATION_TIME_ERROR,
+                    "查询聚合粒度" + aggregationTime + "不是有效的聚合粒度");
+        }
+            return aggregationTime;
     }
 
     private long[] alignTimeRange(long start, long end, int aggregationTime) {

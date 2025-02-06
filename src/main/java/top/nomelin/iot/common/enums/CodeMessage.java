@@ -12,7 +12,7 @@ public enum CodeMessage {
     ACCOUNT_CACHE_ERROR("406", "缓存读取失败,请重新登录"),
     TOKEN_EXPIRED_ERROR("407", "token已过期，请重新登录"),
     DEVICE_NOT_EXIST_ERROR("410", "设备不存在"),
-    DB_DATA_ROW_ERROR("411","数据库数据行异常"),
+    DB_DATA_ROW_ERROR("411", "数据库数据行异常"),
 
 
     USER_NAME_EXIST_ERROR("501", "用户名已存在"),
@@ -36,6 +36,9 @@ public enum CodeMessage {
     DUPLICATE_TIME_ERROR("608", "兼容模式下，存在时间戳重复行。"),
     INSERT_VALUE_NUM_ERROR("609", "插入时，时间戳数量与数据行数量不匹配"),
     INSERT_MEASUREMENT_NUM_ERROR("609", "插入时，属性数量与数据列数量不匹配"),
+
+    QUERY_AGGREGATION_TIME_ERROR("610", "查询聚合时间粒度不能小于存储聚合时间粒度"),
+    INVALID_QUERY_AGGREGATION_TIME_ERROR("611", "不支持的查询聚合时间粒度"),
 
 
     SYSTEM_ERROR("800", "系统异常"),

@@ -27,7 +27,7 @@ import java.util.List;
 public class CsvProcessor implements FileProcessor {
     private static final Logger log = LoggerFactory.getLogger(CsvProcessor.class);
     private final DataService dataService;
-    @Value("${file.processor.csv.batch-size:1000}")
+    @Value("${file.processor.csv.batch-size:100}")
     private int BATCH_SIZE;
 
     public CsvProcessor(DataService dataService) {
@@ -203,7 +203,7 @@ public class CsvProcessor implements FileProcessor {
                     measurements,
 //                    new ArrayList<>(valuesBatch)
                     valuesBatch
-            );//TODO 异步插入时由于没有session，导致无法获取用户，就无法获取设备信息。
+            );
             task.addProcessedRows(timestamps.size());// 已处理行数增加
             log.info("成功插入批次数据，数量: {}", timestamps.size());
 

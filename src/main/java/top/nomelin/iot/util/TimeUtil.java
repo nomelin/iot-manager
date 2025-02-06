@@ -1,15 +1,9 @@
 package top.nomelin.iot.util;
 
-import top.nomelin.iot.common.enums.CodeMessage;
-import top.nomelin.iot.common.exception.BusinessException;
-
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 
 /**
  * TimeUtil
@@ -58,6 +52,14 @@ public class TimeUtil {
         // 将 LocalDateTime 转换为时间戳（毫秒）
         return localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 
+    }
+
+    /**
+     * 是否为合法的查询聚合时间。
+     * 合法时间：1ms，1s，1m，1h，1d
+     */
+    public static boolean isValidQueryAggregationTime(int time) {
+        return time == 0 || time == 1 || time == 1000 || time == 60000 || time == 3600000 || time == 86400000;
     }
 
 }

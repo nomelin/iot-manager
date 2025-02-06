@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <el-collapse v-model="settingsVisible" accordion >
+    <el-collapse v-model="settingsVisible" accordion>
       <el-collapse-item name="1">
         <template slot="title">
           <div style="font-weight: bold;font-size: 18px; text-align: center;color: #555;width: 100%">
@@ -75,7 +75,7 @@
                     :key="func.code"
                     :value="func.code"
                 >
-                  <el-tooltip effect="dark" :content="func.desc" placement="top">
+                  <el-tooltip :content="func.desc" effect="dark" placement="top">
                     <span>{{ func.code }} ({{ func.name }})</span>
                   </el-tooltip>
                 </el-option>
@@ -138,7 +138,9 @@
             :prop="col"
         >
           <template #default="{ row }">
-            {{ typeof row[col] === 'number' ? (Number.isInteger(row[col]) ? row[col] : row[col].toFixed(4)) : row[col] }}
+            {{
+              typeof row[col] === 'number' ? (Number.isInteger(row[col]) ? row[col] : row[col].toFixed(4)) : row[col]
+            }}
           </template>
         </el-table-column>
 
@@ -172,6 +174,7 @@ export default {
       measurementsColumns: [],
       aggregationTimeOptions: [
         {label: '不聚合', value: 0},
+        {label: '1ms', value: 1},
         {label: '1s', value: 1000},
         {label: '10s', value: 10000},
         {label: '1m', value: 60000},
@@ -264,6 +267,8 @@ export default {
         const res = await this.$request.post('/data/query', params)
         if (res.code === '200') {
           this.transformData(res.data)
+          this.$message.success('查询成功')
+          this.settingsVisible = ['0'] // 关闭设置面板
         } else {
           this.$message.error(res.msg)
         }
