@@ -268,7 +268,7 @@ export default {
         if (res.code === '200') {
           this.transformData(res.data)
           this.$message.success('查询成功')
-          this.settingsVisible = ['0'] // 关闭设置面板
+          this.settingsVisible = [] // 关闭设置面板
         } else {
           this.$message.error(res.msg)
         }

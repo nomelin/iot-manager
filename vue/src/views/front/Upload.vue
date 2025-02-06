@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <div class="main-content">
-      <el-collapse v-model="activeCollapse" class="upload-collapse" accordion>
+      <el-collapse v-model="activeCollapse" class="upload-collapse">
         <el-collapse-item name="upload">
           <template #title>
             <div class="collapse-title">
@@ -9,67 +9,70 @@
               <span>批量文件上传（点击展开/折叠）</span>
             </div>
           </template>
-          <el-form ref="formRef" :model="form" :rules="rules">
-            <!-- 多文件上传 -->
-            <el-form-item prop="files">
-              <el-upload
-                  multiple
-                  :auto-upload="false"
-                  :on-change="handleFileChange"
-                  :on-remove="handleFileRemove"
-                  :file-list="fileList"
-                  :limit="20"
-                  class="upload-demo"
-              >
-                <el-button size="medium" type="primary">选择多个文件</el-button>
-                <template #tip>
-                  <div class="el-upload__tip">
-                    支持最多20个文件，单个文件不超过100MB
-                  </div>
-                </template>
-              </el-upload>
-            </el-form-item>
+          <div class="collapse-content">
+            <el-form ref="formRef" :model="form" :rules="rules">
+              <!-- 多文件上传 -->
+              <el-form-item prop="files">
+                <el-upload
+                    :auto-upload="false"
+                    :before-upload="checkFileDuplicate"
+                    :file-list="fileList"
+                    :limit="20"
+                    :on-change="handleFileChange"
+                    :on-remove="handleFileRemove"
+                    class="upload-demo"
+                    multiple
+                >
+                  <el-button size="medium" type="primary">选择多个文件</el-button>
+                  <template #tip>
+                    <div class="el-upload__tip">
+                      支持最多20个文件，单个文件不超过100MB（自动过滤重复文件）
+                    </div>
+                  </template>
+                </el-upload>
+              </el-form-item>
 
-            <!-- 设备ID -->
-            <el-form-item prop="deviceId">
-              <el-input
-                  v-model.number="form.deviceId"
-                  min="0"
-                  placeholder="请输入设备ID"
-                  type="number"
-              >
-                <template #prefix>
-                  <i class="el-icon-cpu"></i>
-                </template>
-              </el-input>
-            </el-form-item>
+              <!-- 设备ID -->
+              <el-form-item prop="deviceId">
+                <el-input
+                    v-model.number="form.deviceId"
+                    min="0"
+                    placeholder="请输入设备ID"
+                    type="number"
+                >
+                  <template #prefix>
+                    <i class="el-icon-cpu"></i>
+                  </template>
+                </el-input>
+              </el-form-item>
 
-            <!-- 跳过行数 -->
-            <el-form-item prop="skipRows">
-              <el-input
-                  v-model.number="form.skipRows"
-                  min="0"
-                  placeholder="请输入跳过的行数"
-                  type="number"
-              >
-                <template #prefix>
-                  <i class="el-icon-skip"></i>
-                </template>
-              </el-input>
-            </el-form-item>
+              <!-- 跳过行数 -->
+              <el-form-item prop="skipRows">
+                <el-input
+                    v-model.number="form.skipRows"
+                    min="0"
+                    placeholder="请输入跳过的行数"
+                    type="number"
+                >
+                  <template #prefix>
+                    <i class="el-icon-skip"></i>
+                  </template>
+                </el-input>
+              </el-form-item>
 
-            <!-- 提交按钮 -->
-            <el-form-item>
-              <el-button
-                  :loading="isUploading"
-                  type="primary"
-                  @click="submitUpload"
-                  :disabled="fileList.length === 0"
-              >
-                {{ isUploading ? '批量上传中...' : '开始批量上传' }}
-              </el-button>
-            </el-form-item>
-          </el-form>
+              <!-- 提交按钮 -->
+              <el-form-item>
+                <el-button
+                    :disabled="fileList.length === 0"
+                    :loading="isUploading"
+                    type="primary"
+                    @click="submitUpload"
+                >
+                  {{ isUploading ? '批量上传中...' : '开始批量上传' }}
+                </el-button>
+              </el-form-item>
+            </el-form>
+          </div>
         </el-collapse-item>
       </el-collapse>
 
@@ -77,7 +80,7 @@
       <div class="task-list-container">
         <div class="task-list-header">
           任务列表（{{ Object.keys(taskInfos).length }}）
-          <el-tag type="info" size="mini">点击上方折叠面板管理上传任务</el-tag>
+          <el-tag size="mini" type="info">点击上方折叠面板管理上传任务</el-tag>
         </div>
         <div class="task-list">
           <div
@@ -88,8 +91,8 @@
             <div class="task-meta">
               <span class="filename">{{ task.fileName }}</span>
               <el-tag
-                  size="small"
                   :type="statusTagType(task.status)"
+                  size="small"
               >
                 {{ statusText(task.status) }}
               </el-tag>
@@ -135,17 +138,18 @@ export default {
       },
       rules: {
         deviceId: [
-          { required: true, message: '请输入设备ID', trigger: 'blur' },
-          { type: 'number', min: 0, message: '设备ID不能为负数', trigger: 'blur' }
+          {required: true, message: '请输入设备ID', trigger: 'blur'},
+          {type: 'number', min: 0, message: '设备ID不能为负数', trigger: 'blur'}
         ],
         skipRows: [
-          { type: 'number', min: 0, message: '跳过的行数不能为负数', trigger: 'blur' }
+          {type: 'number', min: 0, message: '跳过的行数不能为负数', trigger: 'blur'}
         ]
       },
       fileList: [],
       taskInfos: {},
       pollingMap: new Map(),
-      isUploading: false
+      isUploading: false,
+      existingFiles: new Set() // 用于文件名去重
     }
   },
   beforeUnmount() {
@@ -155,16 +159,28 @@ export default {
     formatDateTime(datetime) {
       return datetime ? dayjs(datetime).format('YYYY-MM-DD HH:mm') : '-'
     },
+    // 新增文件名去重逻辑
+    checkFileDuplicate(file) {
+      const filename = file.name.toLowerCase()
+      if (this.existingFiles.has(filename)) {
+        this.$message.warning(`文件 ${file.name} 已存在，自动过滤`)
+        return false
+      }
+      this.existingFiles.add(filename)
+      return true
+    },
 
     handleFileChange(file, files) {
       if (file.size > 100 * 1024 * 1024) {
         this.$message.error(`${file.name} 超过100MB限制`)
+        this.existingFiles.delete(file.name.toLowerCase())
         return false
       }
       this.fileList = files
     },
-    handleFileRemove(file, fileList) {
-      this.fileList = fileList
+    handleFileRemove(file) {
+      this.existingFiles.delete(file.name.toLowerCase())
+      this.fileList = this.fileList.filter(f => f.uid !== file.uid)
     },
 
     async submitUpload() {
@@ -183,7 +199,7 @@ export default {
 
           try {
             const res = await this.$request.post('/files/upload', formData, {
-              headers: { 'Content-Type': 'multipart/form-data' }
+              headers: {'Content-Type': 'multipart/form-data'}
             })
 
             if (res.code === '200') {
@@ -277,9 +293,9 @@ export default {
 <style scoped>
 .container {
   height: 100%;
-  width: 99%;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* 防止全局滚动条 */
 }
 
 .main-content {
@@ -287,29 +303,31 @@ export default {
   display: flex;
   flex-direction: column;
   padding: 20px;
+  overflow: hidden; /* 关键样式 */
 }
 
 .upload-collapse {
-  margin-bottom: 20px;
   background: #fff;
-  border-radius: 4px;
+  border-radius: 1rem;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  min-height: 60px;
+
+}
 
 ::v-deep .el-collapse-item__header {
   padding: 0 24px;
-  font-weight: 500;
   height: 60px;
+  border-bottom: none;
 }
 
 ::v-deep .el-collapse-item__content {
-  padding: 0 24px 24px;
-}
+  padding: 0 24px;
+  overflow-y: auto; /* 折叠面板内部滚动 */
+  max-height: 50vh; /* 限制最大高度 */
 }
 
-.collapse-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.collapse-content {
+  padding-bottom: 24px;
 }
 
 .task-list-container {
@@ -319,23 +337,36 @@ export default {
   background: #fff;
   border-radius: 1rem;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  padding: 24px;
-  max-height: 100%;
+  margin-top: 20px;
+  overflow: hidden; /* 关键样式 */
 }
 
 .task-list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+  padding: 16px 24px;
   border-bottom: 1px solid #ebeef5;
 }
 
 .task-list {
   flex: 1;
   overflow-y: auto;
-  max-height: 100%;
+  padding: 0 24px;
+}
+
+.task-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #f8f9fa;
+  border-radius: 1rem;
+}
+/*鼠标指针选中时偏移卡片*/
+.task-item:hover {
+  transform: translateX(4px);
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+
+}
+
+.task-item:last-child {
+  margin-bottom: 0;
 }
 
 .time-info {
@@ -346,23 +377,45 @@ export default {
   margin: 8px 0;
 }
 
-.task-item {
-  max-width: 90%;
-  padding: 16px;
-  margin-bottom: 12px;
-  background: #f8f9fa;
-  border-radius: 1rem;
-  transition: all 0.3s;
-
-&:hover {
-   transform: translateX(4px);
-   box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
- }
+.task-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
-.error-message{
-  color: red;
+.filename {
+  flex: 1;
+  margin-right: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* 其他样式保持原有实现不变 */
+.progress-detail {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.error-message {
+  color: #f56c6c;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* 其他优化样式 */
+.el-form-item {
+  margin-bottom: 18px;
+}
+
+.el-input {
+  max-width: 400px;
+}
+
+.upload-demo {
+  width: 100%;
+}
 </style>
