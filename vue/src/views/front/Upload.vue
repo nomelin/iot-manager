@@ -1,12 +1,14 @@
 <template>
   <div class="container">
-    <div class="header">
-      <!-- 可添加统一头部内容 -->
-    </div>
     <div class="main-content">
-      <div class="upload-box">
-        <div class="upload-form">
-          <div class="title">批量文件上传</div>
+      <el-collapse v-model="activeCollapse" class="upload-collapse" accordion>
+        <el-collapse-item name="upload">
+          <template #title>
+            <div class="collapse-title">
+              <i class="el-icon-upload"></i>
+              <span>批量文件上传（点击展开/折叠）</span>
+            </div>
+          </template>
           <el-form ref="formRef" :model="form" :rules="rules">
             <!-- 多文件上传 -->
             <el-form-item prop="files">
@@ -30,34 +32,30 @@
 
             <!-- 设备ID -->
             <el-form-item prop="deviceId">
-              <div class="custom-input">
-                <el-input
-                    v-model.number="form.deviceId"
-                    min="0"
-                    placeholder="请输入设备ID"
-                    type="number"
-                >
-                  <template #prefix>
-                    <i class="el-icon-cpu"></i>
-                  </template>
-                </el-input>
-              </div>
+              <el-input
+                  v-model.number="form.deviceId"
+                  min="0"
+                  placeholder="请输入设备ID"
+                  type="number"
+              >
+                <template #prefix>
+                  <i class="el-icon-cpu"></i>
+                </template>
+              </el-input>
             </el-form-item>
 
             <!-- 跳过行数 -->
             <el-form-item prop="skipRows">
-              <div class="custom-input">
-                <el-input
-                    v-model.number="form.skipRows"
-                    min="0"
-                    placeholder="请输入跳过的行数"
-                    type="number"
-                >
-                  <template #prefix>
-                    <i class="el-icon-skip"></i>
-                  </template>
-                </el-input>
-              </div>
+              <el-input
+                  v-model.number="form.skipRows"
+                  min="0"
+                  placeholder="请输入跳过的行数"
+                  type="number"
+              >
+                <template #prefix>
+                  <i class="el-icon-skip"></i>
+                </template>
+              </el-input>
             </el-form-item>
 
             <!-- 提交按钮 -->
@@ -71,43 +69,52 @@
                 {{ isUploading ? '批量上传中...' : '开始批量上传' }}
               </el-button>
             </el-form-item>
+          </el-form>
+        </el-collapse-item>
+      </el-collapse>
 
-            <!-- 多任务进度展示 -->
-            <div class="task-list-container">
-              <div class="task-list-header">上传任务列表（{{ Object.keys(taskInfos).length }}）</div>
-              <div class="task-list">
-                <div
-                    v-for="[taskId, task] in Object.entries(taskInfos)"
-                    :key="taskId"
-                    class="task-item"
-                >
-                  <div class="task-meta">
-                    <span class="filename">{{ task.fileName }}</span>
-                    <el-tag
-                        size="small"
-                        :type="statusTagType(task.status)"
-                    >
-                      {{ statusText(task.status) }}
-                    </el-tag>
-                  </div>
-                  <div class="progress-container">
-                    <el-progress
-                        :percentage="Math.round(task.progressPercentage || 0)"
-                        :status="progressStatus(task.status)"
-                        :stroke-width="14"
-                    />
-                    <div class="progress-detail">
-                      <span>已处理：{{ task.processedRows || 0 }}/{{ task.totalRows || '?' }}行</span>
-                      <span v-if="task.speed">速度：{{ task.speed }}/s</span>
-                    </div>
-                    <div v-if="task.errorMessage" class="error-message">
-                      {{ task.errorMessage }}
-                    </div>
-                  </div>
-                </div>
+      <!-- 任务列表 -->
+      <div class="task-list-container">
+        <div class="task-list-header">
+          任务列表（{{ Object.keys(taskInfos).length }}）
+          <el-tag type="info" size="mini">点击上方折叠面板管理上传任务</el-tag>
+        </div>
+        <div class="task-list">
+          <div
+              v-for="[taskId, task] in Object.entries(taskInfos)"
+              :key="taskId"
+              class="task-item"
+          >
+            <div class="task-meta">
+              <span class="filename">{{ task.fileName }}</span>
+              <el-tag
+                  size="small"
+                  :type="statusTagType(task.status)"
+              >
+                {{ statusText(task.status) }}
+              </el-tag>
+            </div>
+
+            <div class="time-info">
+              <span>开始：{{ formatDateTime(task.startTime) }}</span>
+              <span>结束：{{ formatDateTime(task.endTime) }}</span>
+            </div>
+
+            <div class="progress-container">
+              <el-progress
+                  :percentage="Math.round(task.progressPercentage || 0)"
+                  :status="progressStatus(task.status)"
+                  :stroke-width="14"
+              />
+              <div class="progress-detail">
+                <span>已处理：{{ task.processedRows || 0 }}/{{ task.totalRows || '?' }}行</span>
+                <span v-if="task.speed">速度：{{ task.speed }}/s</span>
+              </div>
+              <div v-if="task.errorMessage" class="error-message">
+                {{ task.errorMessage }}
               </div>
             </div>
-          </el-form>
+          </div>
         </div>
       </div>
     </div>
@@ -115,10 +122,13 @@
 </template>
 
 <script>
+import dayjs from 'dayjs'
+
 export default {
   name: 'BatchUpload',
   data() {
     return {
+      activeCollapse: ['upload'], // 默认展开上传面板
       form: {
         deviceId: null,
         skipRows: 1
@@ -133,8 +143,8 @@ export default {
         ]
       },
       fileList: [],
-      taskInfos: {}, // 结构：{ [taskId]: { fileName, status, ... } }
-      pollingMap: new Map(), // 存储轮询器的Map
+      taskInfos: {},
+      pollingMap: new Map(),
       isUploading: false
     }
   },
@@ -142,6 +152,10 @@ export default {
     this.clearAllPolling()
   },
   methods: {
+    formatDateTime(datetime) {
+      return datetime ? dayjs(datetime).format('YYYY-MM-DD HH:mm') : '-'
+    },
+
     handleFileChange(file, files) {
       if (file.size > 100 * 1024 * 1024) {
         this.$message.error(`${file.name} 超过100MB限制`)
@@ -149,17 +163,18 @@ export default {
       }
       this.fileList = files
     },
-
-    handleFileRemove(file, files) {
-      this.fileList = files
+    handleFileRemove(file, fileList) {
+      this.fileList = fileList
     },
 
     async submitUpload() {
       try {
         await this.$refs.formRef.validate()
         this.isUploading = true
+        console.log('开始上传')
+        console.log(this.activeCollapse)
+        this.activeCollapse = [] // 提交后自动折叠面板
 
-        // 遍历上传每个文件
         for (const file of this.fileList) {
           const formData = new FormData()
           formData.append('file', file.raw)
@@ -173,11 +188,12 @@ export default {
 
             if (res.code === '200') {
               const taskId = res.data
-              // 初始化任务信息（仅包含前端已知信息）
               this.$set(this.taskInfos, taskId, {
                 fileName: file.name,
                 status: 'PENDING',
-                progressPercentage: 0
+                progressPercentage: 0,
+                startTime: null,
+                endTime: null
               })
               this.startPolling(taskId)
             }
@@ -259,85 +275,94 @@ export default {
 </script>
 
 <style scoped>
-.main-content {
-  font-weight: bold;
-  height: 100%; /* 填满父容器 */
-}
-.upload-box {
-  margin-top: 24px;
-  width: 100%;
-  justify-content: center;
-  align-items: center;
+.container {
+  height: 100%;
+  width: 99%;
   display: flex;
   flex-direction: column;
 }
-.upload-form {
-  width: 80%;
-  max-width: 600px;
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.upload-collapse {
+  margin-bottom: 20px;
   background: #fff;
   border-radius: 4px;
-  padding: 24px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+
+::v-deep .el-collapse-item__header {
+  padding: 0 24px;
+  font-weight: 500;
+  height: 60px;
 }
+
+::v-deep .el-collapse-item__content {
+  padding: 0 24px 24px;
+}
+}
+
+.collapse-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .task-list-container {
-  margin-top: 24px;
-  border-top: 1px solid #ebeef5;
-  padding-top: 16px;
-  /*height: 100%;*/
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  max-height: 100%;
 }
 
 .task-list-header {
-  font-weight: 500;
-  color: #606266;
-  margin-bottom: 12px;
-}
-
-.task-list {
-  max-height: 400px;
-  flex: 1;
-  overflow-y: auto;
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
-  padding: 8px;
-}
-
-.task-item {
-  padding: 12px;
-  margin-bottom: 8px;
-  background: #f8f9fa;
-  border-radius: 4px;
-}
-
-.task-item:last-child {
-  margin-bottom: 0;
-}
-
-.task-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ebeef5;
 }
 
-.filename {
+.task-list {
   flex: 1;
-  margin-right: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-y: auto;
+  max-height: 100%;
 }
 
-.progress-detail {
+.time-info {
   display: flex;
-  justify-content: space-between;
-  margin-top: 6px;
+  gap: 20px;
   font-size: 12px;
   color: #909399;
+  margin: 8px 0;
 }
 
-.error-message {
-  color: #f56c6c;
-  font-size: 12px;
-  margin-top: 4px;
+.task-item {
+  max-width: 90%;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: #f8f9fa;
+  border-radius: 1rem;
+  transition: all 0.3s;
+
+&:hover {
+   transform: translateX(4px);
+   box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+ }
 }
+
+.error-message{
+  color: red;
+}
+
+/* 其他样式保持原有实现不变 */
 </style>
