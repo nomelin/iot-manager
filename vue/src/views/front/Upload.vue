@@ -6,18 +6,25 @@
     <div class="main-content">
       <div class="upload-box">
         <div class="upload-form">
-          <div class="title">文 件 上 传</div>
+          <div class="title">批量文件上传</div>
           <el-form ref="formRef" :model="form" :rules="rules">
-            <!-- 文件上传 -->
-            <el-form-item prop="file">
+            <!-- 多文件上传 -->
+            <el-form-item prop="files">
               <el-upload
+                  multiple
                   :auto-upload="false"
                   :on-change="handleFileChange"
-                  :show-file-list="false"
+                  :on-remove="handleFileRemove"
+                  :file-list="fileList"
+                  :limit="20"
                   class="upload-demo"
               >
-                <el-button size="medium" type="primary">选择文件</el-button>
-                <span v-if="form.file" class="file-name">{{ form.file.name }}</span>
+                <el-button size="medium" type="primary">选择多个文件</el-button>
+                <template #tip>
+                  <div class="el-upload__tip">
+                    支持最多20个文件，单个文件不超过100MB
+                  </div>
+                </template>
               </el-upload>
             </el-form-item>
 
@@ -59,25 +66,45 @@
                   :loading="isUploading"
                   type="primary"
                   @click="submitUpload"
+                  :disabled="fileList.length === 0"
               >
-                {{ isUploading ? '上传中...' : '开始上传' }}
+                {{ isUploading ? '批量上传中...' : '开始批量上传' }}
               </el-button>
             </el-form-item>
 
-            <!-- 进度展示 -->
-            <div v-if="taskInfo" class="progress-container">
-              <div class="progress-info">
-                <span>状态：{{ taskInfo.status }}</span>
-                <span>进度：{{ taskInfo.processedRows }}/{{ taskInfo.totalRows }}</span>
-                <span>{{ progressPercentage }}%</span>
-              </div>
-              <el-progress
-                  :percentage="progressPercentage"
-                  :status="progressStatus"
-                  :stroke-width="16"
-              />
-              <div v-if="taskInfo.errorMessage" class="error-message">
-                错误信息：{{ taskInfo.errorMessage }}
+            <!-- 多任务进度展示 -->
+            <div class="task-list-container">
+              <div class="task-list-header">上传任务列表（{{ Object.keys(taskInfos).length }}）</div>
+              <div class="task-list">
+                <div
+                    v-for="[taskId, task] in Object.entries(taskInfos)"
+                    :key="taskId"
+                    class="task-item"
+                >
+                  <div class="task-meta">
+                    <span class="filename">{{ task.fileName }}</span>
+                    <el-tag
+                        size="small"
+                        :type="statusTagType(task.status)"
+                    >
+                      {{ statusText(task.status) }}
+                    </el-tag>
+                  </div>
+                  <div class="progress-container">
+                    <el-progress
+                        :percentage="Math.round(task.progressPercentage || 0)"
+                        :status="progressStatus(task.status)"
+                        :stroke-width="14"
+                    />
+                    <div class="progress-detail">
+                      <span>已处理：{{ task.processedRows || 0 }}/{{ task.totalRows || '?' }}行</span>
+                      <span v-if="task.speed">速度：{{ task.speed }}/s</span>
+                    </div>
+                    <div v-if="task.errorMessage" class="error-message">
+                      {{ task.errorMessage }}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </el-form>
@@ -89,59 +116,42 @@
 
 <script>
 export default {
-  name: 'Upload',
+  name: 'BatchUpload',
   data() {
     return {
       form: {
-        file: null,
         deviceId: null,
         skipRows: 1
       },
       rules: {
-        file: [
-          {required: true, message: '请选择文件', trigger: 'change'}
-        ],
         deviceId: [
-          {required: true, message: '请输入设备ID', trigger: 'blur'},
-          {type: 'number', min: 0, message: '设备ID不能为负数', trigger: 'blur'}
+          { required: true, message: '请输入设备ID', trigger: 'blur' },
+          { type: 'number', min: 0, message: '设备ID不能为负数', trigger: 'blur' }
         ],
         skipRows: [
-          {type: 'number', min: 0, message: '跳过的行数不能为负数', trigger: 'blur'}
+          { type: 'number', min: 0, message: '跳过的行数不能为负数', trigger: 'blur' }
         ]
       },
-      taskId: null,
-      taskInfo: null,
-      pollingInterval: null,
+      fileList: [],
+      taskInfos: {}, // 结构：{ [taskId]: { fileName, status, ... } }
+      pollingMap: new Map(), // 存储轮询器的Map
       isUploading: false
     }
   },
-  computed: {
-    progressPercentage() {
-      return this.taskInfo ? Math.round(this.taskInfo.progressPercentage || 0) : 0
-    },
-    progressStatus() {
-      if (!this.taskInfo) return 'success'
-      switch (this.taskInfo.status) {
-        case 'FAILED':
-          return 'exception'
-        case 'COMPLETED':
-          return 'success'
-        default:
-          return null
-      }
-    }
-  },
   beforeUnmount() {
-    this.clearPolling()
+    this.clearAllPolling()
   },
   methods: {
-    handleFileChange(file) {
+    handleFileChange(file, files) {
       if (file.size > 100 * 1024 * 1024) {
-        this.$message.error('文件大小不能超过100MB')
+        this.$message.error(`${file.name} 超过100MB限制`)
         return false
       }
-      this.form.file = file.raw
-      this.$refs.formRef.validateField('file')
+      this.fileList = files
+    },
+
+    handleFileRemove(file, files) {
+      this.fileList = files
     },
 
     async submitUpload() {
@@ -149,114 +159,185 @@ export default {
         await this.$refs.formRef.validate()
         this.isUploading = true
 
-        // 构建FormData
-        const formData = new FormData()
-        formData.append('file', this.form.file)
-        formData.append('deviceId', this.form.deviceId)
-        formData.append('skipRows', this.form.skipRows)
+        // 遍历上传每个文件
+        for (const file of this.fileList) {
+          const formData = new FormData()
+          formData.append('file', file.raw)
+          formData.append('deviceId', this.form.deviceId)
+          formData.append('skipRows', this.form.skipRows)
 
-        // 调用上传接口
-        const res = await this.$request.post('/files/upload', formData, {
-          headers: {'Content-Type': 'multipart/form-data'}
-        })
+          try {
+            const res = await this.$request.post('/files/upload', formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+            })
 
-        if (res.code === '200') {
-          this.taskId = res.data
-          this.startPolling()
-        } else {
-          this.$message.error(res.msg)
+            if (res.code === '200') {
+              const taskId = res.data
+              // 初始化任务信息（仅包含前端已知信息）
+              this.$set(this.taskInfos, taskId, {
+                fileName: file.name,
+                status: 'PENDING',
+                progressPercentage: 0
+              })
+              this.startPolling(taskId)
+            }
+          } catch (error) {
+            this.$message.error(`${file.name} 上传失败: ${error.message}`)
+          }
         }
       } catch (error) {
-        this.$message.error('上传失败: ' + (error.message || error))
+        this.$message.error('表单验证失败')
       } finally {
         this.isUploading = false
       }
     },
 
-    startPolling() {
-      this.clearPolling()
-      this.pollingInterval = setInterval(async () => {
+    startPolling(taskId) {
+      // 先停止已有轮询
+      if (this.pollingMap.has(taskId)) {
+        clearInterval(this.pollingMap.get(taskId))
+      }
+
+      const interval = setInterval(async () => {
         try {
-          const res = await this.$request.get(`/task/get/${this.taskId}`)
+          const res = await this.$request.get(`/task/get/${taskId}`)
           if (res.code === '200') {
-            this.taskInfo = res.data
-            console.log("taskInfo:" + JSON.stringify(this.taskInfo))
-            // 处理结束状态
-            if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(this.taskInfo.status)) {
-              this.clearPolling()
-              if (this.taskInfo.status === 'FAILED') {
-                this.$message.error('处理失败: ' + (this.taskInfo.errorMessage || ''))
-              }
+            // 合并后端返回的最新状态
+            this.$set(this.taskInfos, taskId, {
+              ...this.taskInfos[taskId], // 保留前端信息
+              ...res.data,               // 覆盖后端数据
+              fileName: this.taskInfos[taskId].fileName // 保持文件名不变
+            })
+
+            // 终止轮询条件
+            if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(res.data.status)) {
+              clearInterval(interval)
+              this.pollingMap.delete(taskId)
             }
           }
         } catch (error) {
-          this.$message.error('获取任务状态失败')
-          this.clearPolling()
+          console.error(`轮询任务${taskId}失败:`, error)
+          clearInterval(interval)
+          this.pollingMap.delete(taskId)
         }
-      }, 1000)
+      }, 100)
+
+      this.pollingMap.set(taskId, interval)
     },
 
-    clearPolling() {
-      if (this.pollingInterval) {
-        clearInterval(this.pollingInterval)
-        this.pollingInterval = null
+    clearAllPolling() {
+      this.pollingMap.forEach(interval => clearInterval(interval))
+      this.pollingMap.clear()
+    },
+
+    statusTagType(status) {
+      const map = {
+        PROCESSING: 'info',
+        COMPLETED: 'success',
+        FAILED: 'danger',
+        PENDING: 'warning'
       }
+      return map[status] || 'info'
+    },
+
+    statusText(status) {
+      const map = {
+        PROCESSING: '处理中',
+        COMPLETED: '已完成',
+        FAILED: '失败',
+        PENDING: '等待中'
+      }
+      return map[status] || '未知状态'
+    },
+
+    progressStatus(status) {
+      return status === 'FAILED' ? 'exception' :
+          status === 'COMPLETED' ? 'success' : null
     }
   }
 }
 </script>
 
 <style scoped>
-/* 复用注册页面的样式基础 */
-.container {
-  min-height: 100vh;
-  background: #f0f2f5;
+.main-content {
+  font-weight: bold;
+  height: 100%; /* 填满父容器 */
 }
-
 .upload-box {
+  margin-top: 24px;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+}
+.upload-form {
+  width: 80%;
   max-width: 600px;
-  margin: 0 auto;
-  padding: 40px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  border-radius: 4px;
+  padding: 24px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+.task-list-container {
+  margin-top: 24px;
+  border-top: 1px solid #ebeef5;
+  padding-top: 16px;
+  /*height: 100%;*/
 }
 
-.title {
-  font-size: 24px;
-  color: #303133;
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.custom-input {
-  margin: 10px 0;
-}
-
-.file-name {
-  margin-left: 10px;
+.task-list-header {
+  font-weight: 500;
   color: #606266;
+  margin-bottom: 12px;
 }
 
-.progress-container {
-  margin-top: 20px;
+.task-list {
+  max-height: 400px;
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 8px;
 }
 
-.progress-info {
+.task-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.task-item:last-child {
+  margin-bottom: 0;
+}
+
+.task-meta {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10px;
-  color: #606266;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.filename {
+  flex: 1;
+  margin-right: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progress-detail {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #909399;
 }
 
 .error-message {
-  margin-top: 10px;
   color: #f56c6c;
-  font-size: 14px;
-}
-
-.el-button {
-  width: 100%;
-  margin-top: 20px;
+  font-size: 12px;
+  margin-top: 4px;
 }
 </style>
