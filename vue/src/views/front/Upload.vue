@@ -15,20 +15,25 @@
               <el-form-item prop="files">
                 <el-upload
                     :auto-upload="false"
-                    :before-upload="checkFileDuplicate"
                     :file-list="fileList"
                     :limit="20"
                     :on-change="handleFileChange"
+                    :on-exceed="handleExceed"
                     :on-remove="handleFileRemove"
+                    action=null
                     class="upload-demo"
+                    drag
                     multiple
                 >
-                  <el-button size="medium" type="primary">选择多个文件</el-button>
-                  <template #tip>
-                    <div class="el-upload__tip">
-                      支持最多20个文件，单个文件不超过100MB（自动过滤重复文件）
-                    </div>
-                  </template>
+                  <!--                  <el-button size="medium" type="primary">选择多个文件</el-button>-->
+                  <i class="el-icon-upload"></i>
+                  <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+                  <div slot="tip" class="el-upload__tip">支持最多20个文件，单个文件不超过100MB</div>
+                  <!--                  <template #tip>-->
+                  <!--                    <div class="el-upload__tip">-->
+                  <!--                      支持最多20个文件，单个文件不超过100MB（自动过滤重复文件）-->
+                  <!--                    </div>-->
+                  <!--                  </template>-->
                 </el-upload>
               </el-form-item>
 
@@ -145,11 +150,11 @@ export default {
           {type: 'number', min: 0, message: '跳过的行数不能为负数', trigger: 'blur'}
         ]
       },
-      fileList: [],
+      fileList: [],// 上传文件列表
       taskInfos: {},
       pollingMap: new Map(),
       isUploading: false,
-      existingFiles: new Set() // 用于文件名去重
+      fileSet: new Set() // 用于文件名去重
     }
   },
   beforeUnmount() {
@@ -159,28 +164,33 @@ export default {
     formatDateTime(datetime) {
       return datetime ? dayjs(datetime).format('YYYY-MM-DD HH:mm') : '-'
     },
-    // 新增文件名去重逻辑
-    checkFileDuplicate(file) {
-      const filename = file.name.toLowerCase()
-      if (this.existingFiles.has(filename)) {
-        this.$message.warning(`文件 ${file.name} 已存在，自动过滤`)
-        return false
-      }
-      this.existingFiles.add(filename)
-      return true
+    generateFileKey(file) {
+      return `${file.name}_${file.size}`;//按文件名和文件大小来去重
     },
-
+    // 处理文件变化，移除重复的文件
     handleFileChange(file, files) {
-      if (file.size > 100 * 1024 * 1024) {
-        this.$message.error(`${file.name} 超过100MB限制`)
-        this.existingFiles.delete(file.name.toLowerCase())
-        return false
+      //file是当前处理的文件，files是添加这个文件之后的列表
+      //几个一起上传时，会调用几次这个钩子函数。
+      // console.log("file:" + file.name + "\nfiles:" + files.map(file => file.name))
+      const key = this.generateFileKey(file);
+      if (this.fileSet.has(key)) {
+        this.$message.warning(`文件 "${file.name}" 已存在，自动忽略`);
+        //删除重复文件
+        this.fileList = this.fileList.filter(f => f.uid !== file.uid)
+        return false;
       }
-      this.fileList = files
+      this.fileSet.add(key);
+      this.fileList.push(file);
+      // console.log("fileSet:" + Array.from(this.fileSet) + "\nfileList:" + this.fileList.map(file => file.name))
+      return true;
     },
     handleFileRemove(file) {
-      this.existingFiles.delete(file.name.toLowerCase())
+      this.fileSet.delete(this.generateFileKey(file))
       this.fileList = this.fileList.filter(f => f.uid !== file.uid)
+      // console.log("fileSet:" + Array.from(this.fileSet) + "\nfileList:" + this.fileList.map(file => file.name))
+    },
+    handleExceed() {
+      this.$message.error("最多同时上传20个文件")
     },
 
     async submitUpload() {
@@ -358,6 +368,7 @@ export default {
   background: #f8f9fa;
   border-radius: 1rem;
 }
+
 /*鼠标指针选中时偏移卡片*/
 .task-item:hover {
   transform: translateX(4px);
