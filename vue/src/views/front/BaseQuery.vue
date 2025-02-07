@@ -39,7 +39,7 @@
                   clearable
                   multiple
                   placeholder="请选择传感器"
-                  style="width: 80%"
+                  style="width: 70%"
                   @change="handleMeasurementsChange"
               >
                 <el-option
@@ -82,36 +82,87 @@
               </el-select>
             </el-form-item>
 
-            <!-- 阈值过滤开关 -->
-            <el-form-item label="阈值过滤">
-              <el-switch v-model="thresholdFilterEnabled"/>
-            </el-form-item>
+            <!--            &lt;!&ndash; 阈值过滤开关 &ndash;&gt;-->
+            <!--            <el-form-item label="阈值过滤">-->
+            <!--              <el-switch v-model="thresholdFilterEnabled"/>-->
+            <!--            </el-form-item>-->
 
-            <!-- 阈值设置 -->
+            <!--            &lt;!&ndash; 高亮开关 &ndash;&gt;-->
+            <!--            <el-form-item label="阈值高亮">-->
+            <!--              <el-switch v-model="thresholdHighlightEnabled"/>-->
+            <!--            </el-form-item>-->
+
+            <!-- 阈值设置区域 -->
             <el-form-item
-                v-if="form.selectMeasurements && form.selectMeasurements.length > 0 && thresholdFilterEnabled"
+                v-if="form.selectMeasurements && form.selectMeasurements.length > 0"
+                class="threshold-settings"
                 label="阈值设置"
             >
-              <div v-for="(measurement, index) in form.selectMeasurements" :key="measurement" class="threshold-item">
-                <span class="threshold-label">{{ measurement }}</span>
-                <el-input-number
-                    :controls="true"
-                    :placeholder="thresholds[index][0] === null || thresholds[index][0] === undefined? '不限制' : '最小值'"
-                    :precision="2"
-                    :value="thresholds[index][0]"
-                    class="threshold-input"
-                    @change="val => handleThresholdChange(index, 0, val)"
-                ></el-input-number>
-                <span class="threshold-separator">-</span>
-                <el-input-number
-                    :controls="true"
-                    :placeholder="thresholds[index][1] === null || thresholds[index][1] === undefined? '不限制' : '最大值'"
-                    :precision="2"
-                    :value="thresholds[index][1]"
-                    class="threshold-input"
-                    @change="val => handleThresholdChange(index, 1, val)"
-                ></el-input-number>
-              </div>
+              <el-row :gutter="20" class="threshold-container">
+                <!-- 阈值过滤 -->
+                <el-col :span="12">
+                  <!-- 阈值过滤开关 -->
+                  <el-form-item label="阈值过滤">
+                    <el-switch v-model="thresholdFilterEnabled"/>
+                  </el-form-item>
+                  <div v-if="thresholdFilterEnabled" class="threshold-panel">
+                    <div class="threshold-title">过滤阈值(min, max)</div>
+                    <div v-for="(measurement, index) in form.selectMeasurements" :key="measurement+'-filter'"
+                         class="threshold-item">
+                      <span class="threshold-label">{{ measurement }}</span>
+                      <el-input-number
+                          :controls="true"
+                          :placeholder="thresholds[index][0] === null || thresholds[index][0] === undefined? '不限制' : '最小值'"
+                          :precision="2"
+                          :value="thresholds[index][0]"
+                          class="threshold-input"
+                          @change="val => handleThresholdChange(index, 0, val)"
+                      ></el-input-number>
+                      <span class="threshold-separator">-</span>
+                      <el-input-number
+                          :controls="true"
+                          :placeholder="thresholds[index][1] === null || thresholds[index][1] === undefined? '不限制' : '最大值'"
+                          :precision="2"
+                          :value="thresholds[index][1]"
+                          class="threshold-input"
+                          @change="val => handleThresholdChange(index, 1, val)"
+                      ></el-input-number>
+                    </div>
+                  </div>
+                </el-col>
+
+                <!-- 阈值高亮 -->
+                <el-col :span="12">
+                  <!-- 高亮开关 -->
+                  <el-form-item label="阈值高亮">
+                    <el-switch v-model="thresholdHighlightEnabled"/>
+                  </el-form-item>
+                  <div v-if="thresholdHighlightEnabled" class="threshold-panel">
+                    <div class="threshold-title">高亮阈值(min, max)</div>
+                    <div v-for="(measurement, index) in form.selectMeasurements" :key="measurement+'-highlight'"
+                         class="threshold-item">
+                      <span class="threshold-label">{{ measurement }}</span>
+                      <el-input-number
+                          :controls="true"
+                          :placeholder="highlightThresholds[index][0] === null || highlightThresholds[index][0] === undefined? '不限制' : '最小值'"
+                          :precision="2"
+                          :value="highlightThresholds[index][0]"
+                          class="threshold-input"
+                          @change="val => handleHighlightChange(index, 0, val)"
+                      ></el-input-number>
+                      <span class="threshold-separator">-</span>
+                      <el-input-number
+                          :controls="true"
+                          :placeholder="highlightThresholds[index][1] === null || highlightThresholds[index][1] === undefined? '不限制' : '最大值'"
+                          :precision="2"
+                          :value="highlightThresholds[index][1]"
+                          class="threshold-input"
+                          @change="val => handleHighlightChange(index, 1, val)"
+                      ></el-input-number>
+                    </div>
+                  </div>
+                </el-col>
+              </el-row>
             </el-form-item>
 
             <el-form-item>
@@ -125,8 +176,20 @@
 
     <!-- 结果展示 -->
     <div v-if="tableData.length > 0" class="result-container">
-      <el-table :data="tableData" border style="width: 100%">
-        <el-table-column label="时间戳" prop="timestamp" width="180">
+      <el-table
+          :data="tableData"
+          :row-class-name="getTableRowClassName"
+          border style="width: 100%"
+      >
+        <!-- 新增序号列 -->
+        <el-table-column
+            :index="indexMethod"
+            fixed="left"
+            label="序号"
+            type="index"
+            width="60"
+        ></el-table-column>
+        <el-table-column fixed="left" label="时间戳" prop="timestamp" width="180">
           <template #default="{row}">
             {{ new Date(row.timestamp).toLocaleString() }}
           </template>
@@ -165,10 +228,12 @@ export default {
         aggregationTime: 0,
         queryAggregateFunc: null,
       },
-      thresholdFilterEnabled: false,
+      thresholdFilterEnabled: false,// 阈值过滤开关
+      thresholdHighlightEnabled: false, // 阈值高亮开关
+      highlightThresholds: [], // 高亮阈值配置
       timeRange: [1719072000000, 1719158400000],
       deviceMeasurements: [],
-      thresholds: [],
+      thresholds: [],//阈值过滤配置
       aggregateFuncOptions: [], // 聚合函数动态获取
       tableData: [],
       measurementsColumns: [],
@@ -189,7 +254,9 @@ export default {
       handler(newVal) {
         // 初始化阈值数组
         this.thresholds = newVal.map(() => [undefined, undefined])
+        this.highlightThresholds = newVal.map(() => [undefined, undefined])
         console.log("thresholds: " + JSON.stringify(this.thresholds))
+        console.log("highlightThresholds: " + JSON.stringify(this.highlightThresholds))
       },
       deep: true
     }
@@ -198,9 +265,38 @@ export default {
     this.loadAggregateFunctions();
   },
   methods: {
+    indexMethod(index) {
+      return index + 1; // 从1开始编号
+    },
     handleThresholdChange(index, position, value) {
       const newValue = value === undefined || value === null ? null : Number(value)
       this.$set(this.thresholds[index], position, newValue)
+    },
+    handleHighlightChange(index, position, value) {
+      const newVal = value === undefined ? null : Number(value)
+      this.$set(this.highlightThresholds[index], position, newVal)
+    },
+    getTableRowClassName({row, rowIndex}) {
+      // 如果高亮功能未开启，则不添加样式
+      if (!this.thresholdHighlightEnabled) return '';
+      // console.log("row：" + JSON.stringify(row) + ", rowIndex：" + rowIndex)
+
+      // 遍历每个选中的传感器
+      for (let i = 0; i < this.form.selectMeasurements.length; i++) {
+        const col = this.form.selectMeasurements[i];
+        const [min, max] = this.highlightThresholds[i] || [];
+        const value = row[col];
+
+        // 只针对数字进行判断
+        if (typeof value !== 'number') continue;
+
+        // 如果有设置阈值且超出范围，则返回一个标识类名
+        if ((min != null && value < min) || (max != null && value > max)) {
+          // console.log(`highlight-row: col: ${col}, value: ${value}, min: ${min}, max: ${max}`)
+          return 'highlight-row';
+        }
+      }
+      return '';
     },
     async handleDeviceChange(deviceId) {
       if (!deviceId) return
@@ -249,6 +345,7 @@ export default {
         this.form.endTime = this.timeRange[1]
       }
       if (this.form.selectMeasurements === null || this.form.selectMeasurements.length === 0) {
+        console.log("selectMeasurements is null or empty，自动选择全部属性")
         this.form.selectMeasurements = this.deviceMeasurements // 如果没有选择属性，则选择全部属性.
       }
       // 构建请求参数
@@ -268,6 +365,7 @@ export default {
         if (res.code === '200') {
           this.transformData(res.data)
           this.$message.success('查询成功')
+          document.activeElement.blur();//关闭面板前让按钮不是焦点，避免控制台报错
           this.settingsVisible = [] // 关闭设置面板
         } else {
           this.$message.error(res.msg)
@@ -332,7 +430,7 @@ export default {
 }
 
 .scrollable-container {
-  max-height: 400px;
+  max-height: 500px;
   overflow-y: auto;
   padding: 10px;
 }
@@ -372,5 +470,31 @@ export default {
   text-align: center;
   color: #999;
   margin-top: 20px;
+}
+
+.threshold-settings {
+  width: 100%;
+}
+
+.threshold-container {
+  width: 100%;
+  display: flex;
+}
+
+.threshold-panel {
+  border: 1px solid #ebeef5;
+  border-radius: 1rem;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.threshold-title {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #666;
+}
+
+/deep/ .el-table .highlight-row {
+  background-color: #ffcccc;
 }
 </style>
