@@ -43,6 +43,8 @@ iotdb:
     root: root
     ts_encoding: PLAIN
     compression_type: UNCOMPRESSED
+    compatible:
+#      dont-merge: true
   query:
     timeout: 3000
 file:

@@ -7,6 +7,8 @@ import org.apache.iotdb.rpc.StatementExecutionException;
 import org.apache.iotdb.session.Session;
 import org.apache.iotdb.session.template.MeasurementNode;
 import org.apache.tsfile.enums.TSDataType;
+import org.apache.tsfile.read.common.Field;
+import org.apache.tsfile.read.common.RowRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,12 +18,15 @@ import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.model.dto.DeviceTable;
+import top.nomelin.iot.model.dto.Record;
 import top.nomelin.iot.util.SessionContext;
 import top.nomelin.iot.util.TimeUtil;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class IoTDBDaoImpl implements IoTDBDao {
@@ -183,6 +188,31 @@ public class IoTDBDaoImpl implements IoTDBDao {
         log.info("删除数据库 {} 成功", databasePath);
     }
 
+    @Override
+    public Map<String, String> getExistingMeasurements(String devicePath, long timestamp) {
+        // 构造查询路径，查询设备所有测量（例如：devicePath.*）
+        List<String> paths = List.of(devicePath + ".*");
+        // 使用 queryRecordsByPaths 方法查询 [timestamp, timestamp+1) 的数据，确保只获取该时刻的数据记录
+        DeviceTable deviceTable = queryRecordsByPaths(devicePath, timestamp, timestamp + 1, paths);
+
+        Map<String, String> existingData = new HashMap<>();
+        // 从 DeviceTable 中获取指定 timestamp 对应的记录列表
+        List<Record> recordsAtTimestamp = deviceTable.getRecords().get(timestamp);
+        if (recordsAtTimestamp != null && !recordsAtTimestamp.isEmpty()) {
+            // 假设该时间戳下只有一条记录，取第一条
+            Record record = recordsAtTimestamp.get(0);
+            // 遍历记录中的所有字段，将每个测量名称和其对应的值转换为字符串存入返回的 Map 中
+            for (Map.Entry<String, Object> entry : record.getFields().entrySet()) {
+                // 如果值为 null，也可以根据业务需要处理为默认值
+                existingData.put(entry.getKey(), entry.getValue() != null ? entry.getValue().toString() : null);
+            }
+        } else {
+            log.warn("设备 {} 在时间戳 {} 没有查询到数据", devicePath, timestamp);
+        }
+        log.info("查询设备 {} 时间戳 {} 的数据成功, result: {}", devicePath, timestamp, existingData);
+        return existingData;
+    }
+
 
     private DeviceTable queryRecordsByPaths(String devicePath, long startTime, long endTime, List<String> paths) {
         SessionDataSet sessionDataSet;
@@ -214,7 +244,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
         SessionDataSet sessionDataSet;
         try {
             sessionDataSet = getSession().executeQueryStatement(sql);
-            log.info("执行查询 SQL 语句 {} 成功", sql);
+            log.debug("执行查询 SQL 语句 {} 成功", sql);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }

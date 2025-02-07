@@ -5,6 +5,7 @@ import org.apache.tsfile.enums.TSDataType;
 import top.nomelin.iot.model.dto.DeviceTable;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * IoTDBDao接口，用于定义与IoTDB交互的各种数据操作方法。
@@ -118,4 +119,8 @@ public interface IoTDBDao {
     void deleteDatabase(String databasePath);
 
 
+    /**
+     * 查询一个时间戳下的属性及其json value值。
+     */
+    Map<String, String> getExistingMeasurements(String devicePath, long windowTs);
 }

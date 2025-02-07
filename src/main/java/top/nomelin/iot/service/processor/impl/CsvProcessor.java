@@ -205,7 +205,7 @@ public class CsvProcessor implements FileProcessor {
                     valuesBatch
             );
             task.addProcessedRows(timestamps.size());// 已处理行数增加
-            log.info("成功插入批次数据，数量: {}", timestamps.size());
+            log.info("-----成功插入批次数据，数量: {}", timestamps.size());
 
             timestamps.clear();
             valuesBatch.clear();

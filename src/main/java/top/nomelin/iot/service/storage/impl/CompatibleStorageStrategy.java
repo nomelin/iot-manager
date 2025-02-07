@@ -8,6 +8,7 @@ import org.apache.tsfile.enums.TSDataType;
 import org.apache.tsfile.file.metadata.enums.TSEncoding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.annotation.LogExecutionTime;
@@ -31,6 +32,9 @@ public class CompatibleStorageStrategy implements StorageStrategy {
     private static final Logger log = LoggerFactory.getLogger(CompatibleStorageStrategy.class);
     private final IoTDBDao iotDBDao;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${iotdb.storage.compatible.dont-merge:false}")
+    private boolean DONT_MERGE;
 
     public CompatibleStorageStrategy(IoTDBDao iotDBDao) {
         this.iotDBDao = iotDBDao;
@@ -60,7 +64,31 @@ public class CompatibleStorageStrategy implements StorageStrategy {
                           List<List<Object>> valuesList, int aggregationTime) {
         // 调整存储粒度
         int storageGranularity = util.adjustStorageGranularity(aggregationTime);
-        log.info("调整存储粒度，从{}调整到{}", aggregationTime, storageGranularity);
+        log.info("Adjusted storage granularity from {} to {}", aggregationTime, storageGranularity);
+
+        // 聚合当前批次数据到时间窗口
+        Map<Long, Map<String, List<Object>>> windowData = aggregateCurrentBatch(
+                timestamps, measurementsList, valuesList, storageGranularity);
+
+        if (DONT_MERGE) {
+            log.info("DONT_MERGE is true, skip merging existing data");
+        } else {
+            log.info("DONT_MERGE is false, start merging existing data");
+            mergeExistingData(devicePath, windowData);
+        }
+
+        // 生成存储记录
+        StorageRecords records = generateStorageRecords(windowData);
+
+        // 存储到IoTDB
+        iotDBDao.insertBatchAlignedRecordsOfOneDevice(
+                devicePath, records.timestamps(), records.measurements(), records.types(), records.values());
+    }
+
+    private Map<Long, Map<String, List<Object>>> aggregateCurrentBatch(List<Long> timestamps,
+                                                                       List<List<String>> measurementsList,
+                                                                       List<List<Object>> valuesList,
+                                                                       int storageGranularity) {
         Map<Long, Map<String, List<Object>>> windowData = new HashMap<>();
 
         // 聚合数据到调整后的时间窗口
@@ -68,18 +96,49 @@ public class CompatibleStorageStrategy implements StorageStrategy {
             long originalTs = timestamps.get(i);//原始时间戳
             //调整后的时间戳,也就是一个聚合粒度的开始时间戳
             long windowTs = util.alignToStorageWindow(originalTs, storageGranularity);
-            //measurements是一个时间粒度内聚合后的数据行
-            Map<String, List<Object>> measurements = windowData.computeIfAbsent(windowTs, k -> new HashMap<>());
             List<String> ms = measurementsList.get(i);
             List<Object> vs = valuesList.get(i);
+            Map<String, List<Object>> measurements = windowData.computeIfAbsent(windowTs, k -> new HashMap<>());
 
-            // 合并同窗口数据
             for (int j = 0; j < ms.size(); j++) {
-                measurements.computeIfAbsent(ms.get(j), k -> new ArrayList<>()).add(vs.get(j));
+                String measurement = ms.get(j);
+                Object value = vs.get(j);
+                measurements.computeIfAbsent(measurement, k -> new ArrayList<>()).add(value);
             }
         }
-        log.info("对齐时间戳，从{}调整到{}", timestamps, windowData.keySet());
+        log.info("Aligned timestamps from {} to windows: {}", timestamps, windowData.keySet());
+        return windowData;
+    }
 
+    private void mergeExistingData(String devicePath, Map<Long, Map<String, List<Object>>> windowData) {
+        windowData.forEach((windowTs, currentMeasurements) -> {
+            Map<String, String> existingData = iotDBDao.getExistingMeasurements(devicePath, windowTs);
+            existingData.forEach((measurement, jsonValue) -> {
+                try {
+                    log.info("currentMeasurements: {}, measurement: {}, jsonValue: {}", currentMeasurements, measurement, jsonValue);
+                    if (jsonValue == null) {
+                        log.info("!!!!!!!!!!!!jsonValue is null");
+                    }
+                    List<?> existingValues = objectMapper.readValue(jsonValue, List.class);
+                    List<Object> currentValues = currentMeasurements.get(measurement);
+                    if (currentValues == null) {
+                        //如果此物理量没有新数据，则直接使用旧数据回写。
+                        currentMeasurements.put(measurement, new ArrayList<>(existingValues));
+                    } else {
+                        List<Object> merged = new ArrayList<>(existingValues);
+                        merged.addAll(currentValues);
+                        currentMeasurements.put(measurement, merged);
+                    }
+                } catch (JsonProcessingException e) {
+                    log.error("Failed to merge data for {} at {}: {}", measurement, windowTs, e.getMessage());
+                    throw new SystemException(CodeMessage.JSON_READ_ERROR,
+                            "Failed to merge data for " + measurement + " at " + windowTs, e);
+                }
+            });
+        });
+    }
+
+    private StorageRecords generateStorageRecords(Map<Long, Map<String, List<Object>>> windowData) {
         // 转换为单条记录存储（JSON数组）
         List<Long> storedTimestamps = new ArrayList<>();//聚合后的时间戳
         List<List<String>> storedMeasurements = new ArrayList<>();
@@ -87,28 +146,31 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         List<List<Object>> storedValues = new ArrayList<>();// 转为JSON字符串
 
         windowData.forEach((windowTs, measurements) -> {
-            storedTimestamps.add(windowTs);//聚合后的时间戳
-            List<String> ms = new ArrayList<>();
-            List<TSDataType> ts = new ArrayList<>();
-            List<Object> vs = new ArrayList<>();
+            List<String> msList = new ArrayList<>();
+            List<TSDataType> typeList = new ArrayList<>();
+            List<Object> valueList = new ArrayList<>();
 
             measurements.forEach((measurement, values) -> {
-                ms.add(measurement);
-                ts.add(TSDataType.TEXT);// 转为TEXT
-                try {
-                    vs.add(objectMapper.writeValueAsString(values));// 转为JSON字符串
-                } catch (JsonProcessingException e) {
-                    throw new SystemException(CodeMessage.JSON_WRITE_ERROR);
-                }
+                msList.add(measurement);
+                typeList.add(TSDataType.TEXT);
+                valueList.add(serializeValues(values));
             });
 
-            storedMeasurements.add(ms);
-            storedTypes.add(ts);
-            storedValues.add(vs);
+            storedTimestamps.add(windowTs);
+            storedMeasurements.add(msList);
+            storedTypes.add(typeList);
+            storedValues.add(valueList);
         });
 
-        iotDBDao.insertBatchAlignedRecordsOfOneDevice(
-                devicePath, storedTimestamps, storedMeasurements, storedTypes, storedValues);
+        return new StorageRecords(storedTimestamps, storedMeasurements, storedTypes, storedValues);
+    }
+
+    private String serializeValues(List<Object> values) {
+        try {
+            return objectMapper.writeValueAsString(values);
+        } catch (JsonProcessingException e) {
+            throw new SystemException(CodeMessage.JSON_WRITE_ERROR, "values:" + values.toString(), e);
+        }
     }
 
     @LogExecutionTime
@@ -158,5 +220,12 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         for (Record record : records) {
             resultTable.addRecord(storedTimestamp, record);
         }
+    }
+
+    //只是用于内部传递返回值
+    private record StorageRecords(List<Long> timestamps,
+                                  List<List<String>> measurements,
+                                  List<List<TSDataType>> types,
+                                  List<List<Object>> values) {
     }
 }
