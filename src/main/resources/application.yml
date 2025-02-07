@@ -48,4 +48,4 @@ iotdb:
 file:
   processor:
     csv:
-      batch-size: 100
+      batch-size: 500

@@ -159,43 +159,4 @@ public class CompatibleStorageStrategy implements StorageStrategy {
             resultTable.addRecord(storedTimestamp, record);
         }
     }
-
-/*    public void testProcessStoredRecord() {
-        // 临时创建一个模拟的 DeviceTable 和 Record
-        DeviceTable resultTable = new DeviceTable();
-        long storedTimestamp = 1623245678000L; // 模拟时间戳
-
-        // 模拟一个 Record（包含温度和湿度的压缩存储数据）
-        Record storedRecord = new Record();
-
-        // 模拟温度和湿度的 JSON 列表值
-        List<Object> temperatureValues = List.of(16.0, 17.5, 15.0); // 模拟温度的值
-        List<Object> humidityValues = List.of(65.0, 65.0, 70.0);    // 模拟湿度的值
-
-        // 将这些值作为 JSON 存储到 Record 的 fields 中
-        try {
-            storedRecord.getFields().put("温度", new ObjectMapper().writeValueAsString(temperatureValues));
-            storedRecord.getFields().put("湿度", new ObjectMapper().writeValueAsString(humidityValues));
-        } catch (JsonProcessingException e) {
-            e.printStackTrace(); // 处理 JSON 序列化异常
-        }
-
-        // 调用 processStoredRecord 方法来处理这些记录
-        processStoredRecord(storedTimestamp, storedRecord, resultTable);
-
-        // 输出结果以检查是否正确
-        resultTable.getRecords().forEach((timestamp, records) -> {
-            System.out.println("时间戳: " + timestamp);
-            records.forEach(record -> {
-                record.getFields().forEach((measurement, value) -> {
-                    System.out.println("测量项: " + measurement + ", 值: " + value);
-                });
-                System.out.println("----------");
-            });
-        });
-    }
-    public static void main(String[] args) {
-        CompatibleStorageStrategy compatibleStorageStrategy = new CompatibleStorageStrategy(null);
-        compatibleStorageStrategy.testProcessStoredRecord();
-    }*/
 }

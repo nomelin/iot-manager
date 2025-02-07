@@ -27,7 +27,7 @@ import java.util.List;
 public class CsvProcessor implements FileProcessor {
     private static final Logger log = LoggerFactory.getLogger(CsvProcessor.class);
     private final DataService dataService;
-    @Value("${file.processor.csv.batch-size:100}")
+    @Value("${file.processor.csv.batch-size:500}")
     private int BATCH_SIZE;
 
     public CsvProcessor(DataService dataService) {
