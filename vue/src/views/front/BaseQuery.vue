@@ -177,9 +177,9 @@
     <!-- 结果展示 -->
     <div v-if="tableData.length > 0" class="result-container">
       <el-table
-          :data="tableData"
-          :row-class-name="getTableRowClassName"
-          border style="width: 100%"
+          :cell-style="getCellStyle"
+          :data="tableData" border
+          style="width: 100%"
       >
         <!-- 新增序号列 -->
         <el-table-column
@@ -276,27 +276,25 @@ export default {
       const newVal = value === undefined ? null : Number(value)
       this.$set(this.highlightThresholds[index], position, newVal)
     },
-    getTableRowClassName({row, rowIndex}) {
-      // 如果高亮功能未开启，则不添加样式
-      if (!this.thresholdHighlightEnabled) return '';
-      // console.log("row：" + JSON.stringify(row) + ", rowIndex：" + rowIndex)
+    getCellStyle({row, column, rowIndex, columnIndex}) {
+      // console.log(`row: ${JSON.stringify(row)}, column: ${JSON.stringify(column)}, rowIndex: ${rowIndex}, columnIndex: ${columnIndex}`)
+      if (!this.thresholdHighlightEnabled) return {}
+      if (columnIndex === 0 || columnIndex === 1) return {} // 序号列和时间戳列不高亮
+      const value = row[column.label]
+      // console.log(`value: ${value}`)
+      if (typeof value !== 'number') return {}
 
-      // 遍历每个选中的传感器
-      for (let i = 0; i < this.form.selectMeasurements.length; i++) {
-        const col = this.form.selectMeasurements[i];
-        const [min, max] = this.highlightThresholds[i] || [];
-        const value = row[col];
+      const labelIndex = this.form.selectMeasurements.indexOf(column.label)
+      const [min, max] = this.highlightThresholds[labelIndex] || []
+      // console.log(` labelIndex: ${labelIndex}, min: ${min}, max: ${max}`)
 
-        // 只针对数字进行判断
-        if (typeof value !== 'number') continue;
+      const exceedMin = min !== null && value < min
+      const exceedMax = max !== null && value > max
+      // console.log(`exceedMin: ${exceedMin}, exceedMax: ${exceedMax}`)
+      return exceedMin || exceedMax
+          ? {backgroundColor: '#ffcccc'}
+          : {}
 
-        // 如果有设置阈值且超出范围，则返回一个标识类名
-        if ((min != null && value < min) || (max != null && value > max)) {
-          // console.log(`highlight-row: col: ${col}, value: ${value}, min: ${min}, max: ${max}`)
-          return 'highlight-row';
-        }
-      }
-      return '';
     },
     async handleDeviceChange(deviceId) {
       if (!deviceId) return
@@ -361,10 +359,16 @@ export default {
       console.log("params: " + JSON.stringify(params))
 
       try {
+        const startTime = new Date().getTime()
+        this.$message.info('等待服务器响应...')
         const res = await this.$request.post('/data/query', params)
         if (res.code === '200') {
+          const queryEndTime = new Date().getTime()
+          this.$message.success('查询成功, 共' + res.data.total + '条数据, 准备展示...')
+          console.log('查询成功, 共' + res.data.total + '条数据,耗时' + (queryEndTime - startTime) + '毫秒')
           this.transformData(res.data)
-          this.$message.success('查询成功')
+          const endTime = new Date().getTime()
+          console.log('处理数据成功, 共耗时' + (endTime - queryEndTime) + '毫秒')
           document.activeElement.blur();//关闭面板前让按钮不是焦点，避免控制台报错
           this.settingsVisible = [] // 关闭设置面板
         } else {
@@ -492,9 +496,5 @@ export default {
   font-weight: bold;
   margin-bottom: 10px;
   color: #666;
-}
-
-/deep/ .el-table .highlight-row {
-  background-color: #ffcccc;
 }
 </style>
