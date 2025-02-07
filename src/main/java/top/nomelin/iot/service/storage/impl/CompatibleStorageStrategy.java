@@ -81,23 +81,22 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         log.info("对齐时间戳，从{}调整到{}", timestamps, windowData.keySet());
 
         // 转换为单条记录存储（JSON数组）
-        //TODO 为什么需要重新创建？除了时间戳和value，不能直接用吗？
-        List<Long> storedTimestamps = new ArrayList<>();
+        List<Long> storedTimestamps = new ArrayList<>();//聚合后的时间戳
         List<List<String>> storedMeasurements = new ArrayList<>();
-        List<List<TSDataType>> storedTypes = new ArrayList<>();
-        List<List<Object>> storedValues = new ArrayList<>();
+        List<List<TSDataType>> storedTypes = new ArrayList<>();// 转为TEXT
+        List<List<Object>> storedValues = new ArrayList<>();// 转为JSON字符串
 
         windowData.forEach((windowTs, measurements) -> {
-            storedTimestamps.add(windowTs);
+            storedTimestamps.add(windowTs);//聚合后的时间戳
             List<String> ms = new ArrayList<>();
             List<TSDataType> ts = new ArrayList<>();
             List<Object> vs = new ArrayList<>();
 
             measurements.forEach((measurement, values) -> {
                 ms.add(measurement);
-                ts.add(TSDataType.TEXT);
+                ts.add(TSDataType.TEXT);// 转为TEXT
                 try {
-                    vs.add(objectMapper.writeValueAsString(values));
+                    vs.add(objectMapper.writeValueAsString(values));// 转为JSON字符串
                 } catch (JsonProcessingException e) {
                     throw new SystemException(CodeMessage.JSON_WRITE_ERROR);
                 }
