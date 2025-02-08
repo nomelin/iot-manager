@@ -3,8 +3,10 @@
     <el-collapse v-model="settingsVisible" accordion class="query-collapse">
       <el-collapse-item name="1">
         <template slot="title">
-          <div style="font-weight: bold;font-size: 18px; text-align: center;color: #555;width: 100%">
+          <div style="font-weight: bold;font-size: 18px; text-align: left;color: #555;width: 100%">
             查询设置
+            <el-button type="primary" @click="submitQuery">查询</el-button>
+            <el-button @click="resetForm">重置</el-button>
           </div>
         </template>
         <div class="scrollable-container">
@@ -77,16 +79,6 @@
                 </el-option>
               </el-select>
             </el-form-item>
-
-            <!--            &lt;!&ndash; 阈值过滤开关 &ndash;&gt;-->
-            <!--            <el-form-item label="阈值过滤">-->
-            <!--              <el-switch v-model="thresholdFilterEnabled"/>-->
-            <!--            </el-form-item>-->
-
-            <!--            &lt;!&ndash; 高亮开关 &ndash;&gt;-->
-            <!--            <el-form-item label="阈值高亮">-->
-            <!--              <el-switch v-model="thresholdHighlightEnabled"/>-->
-            <!--            </el-form-item>-->
 
             <!-- 阈值设置区域 -->
             <el-form-item
@@ -167,10 +159,7 @@
               </el-row>
             </el-form-item>
 
-            <el-form-item>
-              <el-button type="primary" @click="submitQuery">查询</el-button>
-              <el-button @click="resetForm">重置</el-button>
-            </el-form-item>
+
           </el-form>
         </div>
       </el-collapse-item>
@@ -267,7 +256,7 @@ export default {
         {label: '不聚合', value: 0},
         {label: '1ms', value: 1},
         {label: '1s', value: 1000},
-        {label: '10s', value: 10000},
+        // {label: '10s', value: 10000},
         {label: '1m', value: 60000},
         {label: '1h', value: 3600000},
         {label: '1d', value: 86400000}
@@ -493,7 +482,7 @@ export default {
 
 .scrollable-container {
   max-height: 500px;
-  overflow-y: auto;
+  /*overflow-y: auto;*/
   padding: 10px;
 }
 
@@ -505,7 +494,7 @@ export default {
 }
 
 ::v-deep .el-collapse-item__content {
-  padding: 0 24px;
+  padding: 24px;
   overflow-y: auto; /* 折叠面板内部滚动 */
   max-height: 50vh; /* 限制最大高度 */
   /*border-radius: 1rem;*/

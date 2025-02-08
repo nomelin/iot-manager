@@ -90,7 +90,7 @@ export default {
         type: 'success',
         center: true
       }).then(response => {
-        this.$request.delete("/logout").then(res => {
+        this.$request.delete("/openapi/logout").then(res => {
           if (res.code === '200') {
             this.$message.success("退出成功")
             localStorage.removeItem("user");
