@@ -124,7 +124,7 @@ export default {
 .main-body {
   display: flex;
   /*height: 100%;*/
-  height: 90vh;
+  height: 92vh;
   /*flex-grow: 1;*/
 }
 
@@ -223,7 +223,7 @@ export default {
 
 .front-header {
   display: flex;
-  height: 10vh;
+  height: 7vh;
   width: 100vw;
   /*line-height: 60px;*/
   /*border-bottom: 1px solid #eee;*/

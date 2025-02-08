@@ -54,10 +54,7 @@
 
             <!-- 聚合设置 -->
             <el-form-item label="聚合时间">
-              <el-select
-                  v-model="form.aggregationTime"
-                  placeholder="请选择聚合时间"
-              >
+              <el-select v-model="form.aggregationTime" placeholder="请选择聚合时间">
                 <el-option
                     v-for="item in aggregationTimeOptions"
                     :key="item.value"
@@ -67,8 +64,7 @@
               </el-select>
             </el-form-item>
 
-
-            <el-form-item v-if="form.aggregationTime!== 0" label="聚合函数">
+            <el-form-item v-if="form.aggregationTime !== 0" label="聚合函数">
               <el-select v-model="form.queryAggregateFunc" placeholder="请选择聚合函数">
                 <el-option
                     v-for="func in aggregateFuncOptions"
@@ -107,8 +103,11 @@
                   </el-form-item>
                   <div v-if="thresholdFilterEnabled" class="threshold-panel">
                     <div class="threshold-title">过滤阈值(min, max)</div>
-                    <div v-for="(measurement, index) in form.selectMeasurements" :key="measurement+'-filter'"
-                         class="threshold-item">
+                    <div
+                        v-for="(measurement, index) in form.selectMeasurements"
+                        :key="measurement+'-filter'"
+                        class="threshold-item"
+                    >
                       <span class="threshold-label">{{ measurement }}</span>
                       <el-input-number
                           :controls="true"
@@ -139,8 +138,11 @@
                   </el-form-item>
                   <div v-if="thresholdHighlightEnabled" class="threshold-panel">
                     <div class="threshold-title">高亮阈值(min, max)</div>
-                    <div v-for="(measurement, index) in form.selectMeasurements" :key="measurement+'-highlight'"
-                         class="threshold-item">
+                    <div
+                        v-for="(measurement, index) in form.selectMeasurements"
+                        :key="measurement+'-highlight'"
+                        class="threshold-item"
+                    >
                       <span class="threshold-label">{{ measurement }}</span>
                       <el-input-number
                           :controls="true"
@@ -174,15 +176,16 @@
       </el-collapse-item>
     </el-collapse>
 
-    <!-- 结果展示 -->
+    <!-- 结果展示区域，使用 el-table 前端分页 -->
     <div v-if="tableData.length > 0" class="result-container">
       <el-table
           :cell-style="getCellStyle"
-          :data="tableData" border
+          :data="currentPageData"
+          border
+          height="tableHeight"
           style="width: 100%"
-          height="100%"
       >
-        <!-- 新增序号列 -->
+        <!-- 序号列 -->
         <el-table-column
             :index="indexMethod"
             fixed="left"
@@ -190,11 +193,18 @@
             type="index"
             width="60"
         ></el-table-column>
-        <el-table-column fixed="left" label="时间戳" prop="timestamp" width="180">
-          <template #default="{row}">
+        <!-- 时间戳列 -->
+        <el-table-column
+            fixed="left"
+            label="时间戳"
+            prop="timestamp"
+            width="180"
+        >
+          <template #default="{ row }">
             {{ new Date(row.timestamp).toLocaleString() }}
           </template>
         </el-table-column>
+        <!-- 根据选中的传感器生成列 -->
         <el-table-column
             v-for="col in measurementsColumns"
             :key="col"
@@ -203,12 +213,27 @@
         >
           <template #default="{ row }">
             {{
-              typeof row[col] === 'number' ? (Number.isInteger(row[col]) ? row[col] : row[col].toFixed(4)) : row[col]
+              typeof row[col] === 'number'
+                  ? (Number.isInteger(row[col]) ? row[col] : row[col].toFixed(4))
+                  : row[col]
             }}
           </template>
         </el-table-column>
-
       </el-table>
+
+      <!-- 分页控制 -->
+      <div class="pagination-container">
+        <el-pagination
+            :current-page.sync="currentPage"
+            :page-sizes="[10, 50, 100]"
+            :page-size="pageSize"
+            :total="tableData.length"
+            background
+            layout="total, prev, pager, next, jumper, sizes"
+            @current-change="handlePageChange"
+            @size-change="handleSizeChange"
+        ></el-pagination>
+      </div>
     </div>
     <div v-else class="empty-tip">
       暂无数据
@@ -229,15 +254,15 @@ export default {
         aggregationTime: 0,
         queryAggregateFunc: null,
       },
-      thresholdFilterEnabled: false,// 阈值过滤开关
-      thresholdHighlightEnabled: false, // 阈值高亮开关
-      highlightThresholds: [], // 高亮阈值配置
+      thresholdFilterEnabled: false,      // 阈值过滤开关
+      thresholdHighlightEnabled: false,     // 阈值高亮开关
+      highlightThresholds: [],              // 高亮阈值配置
       timeRange: [1719072000000, 1719158400000],
       deviceMeasurements: [],
-      thresholds: [],//阈值过滤配置
-      aggregateFuncOptions: [], // 聚合函数动态获取
-      tableData: [],
-      measurementsColumns: [],
+      thresholds: [],                       // 阈值过滤配置
+      aggregateFuncOptions: [],             // 聚合函数选项
+      tableData: [],                        // 完整查询数据
+      measurementsColumns: [],              // 传感器列
       aggregationTimeOptions: [
         {label: '不聚合', value: 0},
         {label: '1ms', value: 1},
@@ -247,17 +272,32 @@ export default {
         {label: '1h', value: 3600000},
         {label: '1d', value: 86400000}
       ],
-      settingsVisible: ['1'], // 设置默认展开状态
+      settingsVisible: ['1'],               // 设置默认展开状态
+
+      // 分页相关数据
+      currentPage: 1,                       // 当前页码，默认第1页
+      pageSize: 100,                         // 每页显示数据数量，可根据需要调整
+    };
+  },
+  computed: {
+    // 根据当前页码和每页条数计算当前页显示数据
+    currentPageData() {
+      const start = (this.currentPage - 1) * this.pageSize;
+      return this.tableData.slice(start, start + this.pageSize);
+    },
+    // 动态计算表格高度：假设分页区域高度为 50px
+    tableHeight() {
+      return 'calc(100% - 50px)';
     }
   },
   watch: {
     'form.selectMeasurements': {
       handler(newVal) {
         // 初始化阈值数组
-        this.thresholds = newVal.map(() => [undefined, undefined])
-        this.highlightThresholds = newVal.map(() => [undefined, undefined])
-        console.log("thresholds: " + JSON.stringify(this.thresholds))
-        console.log("highlightThresholds: " + JSON.stringify(this.highlightThresholds))
+        this.thresholds = newVal.map(() => [undefined, undefined]);
+        this.highlightThresholds = newVal.map(() => [undefined, undefined]);
+        // console.log("thresholds: " + JSON.stringify(this.thresholds))
+        // console.log("highlightThresholds: " + JSON.stringify(this.highlightThresholds))
       },
       deep: true
     }
@@ -266,8 +306,14 @@ export default {
     this.loadAggregateFunctions();
   },
   methods: {
+    // 序号从当前页数据基数开始计算
     indexMethod(index) {
-      return index + 1; // 从1开始编号
+      return index + 1 + (this.currentPage - 1) * this.pageSize;
+    },
+    handleSizeChange(newSize) {
+      this.pageSize = newSize;
+      // 若页码不再合适，可重置为第一页
+      this.currentPage = 1;
     },
     handleThresholdChange(index, position, value) {
       const newValue = value === undefined || value === null ? null : Number(value)
@@ -276,47 +322,43 @@ export default {
     handleHighlightChange(index, position, value) {
       const newVal = value === undefined ? null : Number(value)
       this.$set(this.highlightThresholds[index], position, newVal)
+      // 当在“阈值高亮”配置中修改数字时，触发了 el-input-number 的 @change 事件，进而调用了 handleHighlightChange 方法，
+      // 该方法通过 this.$set 更新了 highlightThresholds 数组中的值。
+      // 由于这些数据是 Vue 实例中的响应式数据，一旦更新，所有依赖这些数据的视图都会自动重新渲染，所以高亮单元格也会更新。
     },
+    // 高亮单元格方法（保持原有逻辑）
     getCellStyle({row, column, rowIndex, columnIndex}) {
-      // console.log(`row: ${JSON.stringify(row)}, column: ${JSON.stringify(column)}, rowIndex: ${rowIndex}, columnIndex: ${columnIndex}`)
-      if (!this.thresholdHighlightEnabled) return {}
-      if (columnIndex === 0 || columnIndex === 1) return {} // 序号列和时间戳列不高亮
-      const value = row[column.label]
-      // console.log(`value: ${value}`)
-      if (typeof value !== 'number') return {}
-
-      const labelIndex = this.form.selectMeasurements.indexOf(column.label)
-      const [min, max] = this.highlightThresholds[labelIndex] || []
-      // console.log(` labelIndex: ${labelIndex}, min: ${min}, max: ${max}`)
-
-      const exceedMin = min !== null && value < min
-      const exceedMax = max !== null && value > max
-      // console.log(`exceedMin: ${exceedMin}, exceedMax: ${exceedMax}`)
-      return exceedMin || exceedMax
-          ? {backgroundColor: '#ffcccc'}
-          : {}
-
+      console.log(`row: ${JSON.stringify(row)}, column: ${JSON.stringify(column)}, rowIndex: ${rowIndex}, columnIndex: ${columnIndex}`)
+      if (!this.thresholdHighlightEnabled) return {};
+      // 序号列和时间戳列不高亮
+      if (columnIndex === 0 || columnIndex === 1) return {};
+      // 注意：el‑table 中获取单元格对应数据时，使用 column.property
+      const value = row[column.label];
+      if (typeof value !== 'number') return {};
+      const labelIndex = this.form.selectMeasurements.indexOf(column.label);
+      const [min, max] = this.highlightThresholds[labelIndex] || [];
+      const exceedMin = min != null && value < min;
+      const exceedMax = max != null && value > max;
+      return (exceedMin || exceedMax) ? {backgroundColor: '#ffcccc'} : {};
     },
     async handleDeviceChange(deviceId) {
-      if (!deviceId) return
+      if (!deviceId) return;
       try {
-        const res = await this.$request.get(`/device/getMeasurements/${deviceId}`)
+        const res = await this.$request.get(`/device/getMeasurements/${deviceId}`);
         if (res.code === '200') {
-          this.deviceMeasurements = res.data
-          this.form.selectMeasurements = []
+          this.deviceMeasurements = res.data;
+          this.form.selectMeasurements = [];
         } else {
-          this.$message.error(res.msg)
+          this.$message.error(res.msg);
         }
       } catch (error) {
-        this.$message.error('获取设备信息失败')
+        this.$message.error('获取设备信息失败');
       }
     },
-
     handleMeasurementsChange(selected) {
-      //保持选择的传感器顺序
-      this.form.selectMeasurements = this.deviceMeasurements.filter(m => selected.includes(m))
+      // 保持选择的传感器顺序
+      this.form.selectMeasurements = this.deviceMeasurements.filter(m => selected.includes(m));
     },
-
     async loadAggregateFunctions() {
       try {
         const res = await this.$request.get('/data/aggregateFuncs');
@@ -333,19 +375,19 @@ export default {
         this.$message.error('获取聚合函数失败');
       }
     },
-
     async submitQuery() {
-      if (this.form.aggregationTime !== 0 && this.form.queryAggregateFunc === null) {
-        this.$message.error('请选择聚合函数')
-        return
+      if (this.form.aggregationTime !== 0 && this.form.queryAggregateFunc == null) {
+        this.$message.error('请选择聚合函数');
+        return;
       }
-      if (this.timeRange?.length === 2) {
-        this.form.startTime = this.timeRange[0]
-        this.form.endTime = this.timeRange[1]
+      if (this.timeRange && this.timeRange.length === 2) {
+        this.form.startTime = this.timeRange[0];
+        this.form.endTime = this.timeRange[1];
       }
-      if (this.form.selectMeasurements === null || this.form.selectMeasurements.length === 0) {
+      if (!this.form.selectMeasurements || this.form.selectMeasurements.length === 0) {
+        // 如果没有选择属性，则自动选择全部属性
+        this.form.selectMeasurements = this.deviceMeasurements;
         console.log("selectMeasurements is null or empty，自动选择全部属性")
-        this.form.selectMeasurements = this.deviceMeasurements // 如果没有选择属性，则选择全部属性.
       }
       // 构建请求参数
       const params = {
@@ -360,50 +402,53 @@ export default {
       console.log("params: " + JSON.stringify(params))
 
       try {
-        const startTime = new Date().getTime()
-        this.$message.info('请稍候...')
-        const res = await this.$request.post('/data/query', params)
+        const startTime = new Date().getTime();
+        this.$message.info('等待服务器响应, 请稍候...');
+        const res = await this.$request.post('/data/query', params);
         if (res.code === '200') {
-          const queryEndTime = new Date().getTime()
-          this.$message.success('查询成功, 共' + res.data.total + '条数据, 准备展示...')
-          console.log('查询成功, 共' + res.data.total + '条数据,耗时' + (queryEndTime - startTime) + '毫秒')
-          this.transformData(res.data)
+          const queryEndTime = new Date().getTime();
+          this.$message.success(`查询成功, 耗时${queryEndTime - startTime}毫秒`);
+          console.log('查询成功, 耗时' + (queryEndTime - startTime) + '毫秒')
+
+          this.transformData(res.data);
+
           const endTime = new Date().getTime()
           console.log('处理数据成功, 共耗时' + (endTime - queryEndTime) + '毫秒')
+          setTimeout(() => {
+            this.$message.success(`处理${this.tableData.length}条数据成功, 共耗时${endTime - queryEndTime}毫秒`)
+          }, 1);//只是为了消息不重叠
+
+          // 重置分页为第一页
+          this.currentPage = 1;
           document.activeElement.blur();//关闭面板前让按钮不是焦点，避免控制台报错
           this.settingsVisible = [] // 关闭设置面板
+
         } else {
-          this.$message.error(res.msg)
+          this.$message.error(res.msg);
         }
       } catch (error) {
-        this.$message.error('请求失败: ' + error)
+        this.$message.error('请求失败: ' + error);
       }
     },
-
     transformData(deviceTable) {
       // console.log("deviceTable: " + JSON.stringify(deviceTable))
       this.tableData = []
 
       this.measurementsColumns = this.form.selectMeasurements;
-      console.log("measurementsColumns: " + JSON.stringify(this.measurementsColumns))
-
-      // 处理records数据
-      const records = deviceTable.records || {}
-      console.log("records: " + JSON.stringify(Object.entries(records).slice(0, 5)))
+      const records = deviceTable.records || {};
+      // let uniqueId = 0; // 自增 id，用于内部标识
       for (const [timestamp, recordList] of Object.entries(records)) {
         recordList.forEach(record => {
           this.tableData.push({
+            // id: uniqueId++,
             timestamp: Number(timestamp),
             ...record.fields
-          })
-        })
+          });
+        });
       }
-
-      // 按时间排序
-      this.tableData.sort((a, b) => a.timestamp - b.timestamp)
-      console.log("tableData: " + JSON.stringify(this.tableData.slice(0, 5)))
+      // 按时间戳排序
+      this.tableData.sort((a, b) => a.timestamp - b.timestamp);
     },
-
     resetForm() {
       this.form = {
         deviceId: null,
@@ -412,17 +457,21 @@ export default {
         selectMeasurements: [],
         aggregationTime: null,
         queryAggregateFunc: null,
-      }
-      this.thresholdFilterEnabled = false
-      this.timeRange = []
-      this.thresholds = []
-      this.tableData = []
+      };
+      this.thresholdFilterEnabled = false;
+      this.timeRange = [];
+      this.thresholds = [];
+      this.tableData = [];
+      this.currentPage = 1;
     },
     selectAll() {
-      this.form.selectMeasurements = [...this.deviceMeasurements]
+      this.form.selectMeasurements = [...this.deviceMeasurements];
+    },
+    handlePageChange(page) {
+      this.currentPage = page;
     }
   }
-}
+};
 </script>
 
 <style scoped>
@@ -435,7 +484,7 @@ export default {
   padding: 20px;
 }
 
-.query-collapse{
+.query-collapse {
   background: #fff;
   border-radius: 1rem;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
@@ -461,7 +510,6 @@ export default {
   max-height: 50vh; /* 限制最大高度 */
   /*border-radius: 1rem;*/
 }
-
 
 .query-form {
   max-width: 90%;
@@ -497,6 +545,9 @@ export default {
   background: #fff;
   border-radius: 1rem;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .empty-tip {
@@ -525,5 +576,18 @@ export default {
   font-weight: bold;
   margin-bottom: 10px;
   color: #666;
+}
+
+/* 表格区域，自动填满剩余空间 */
+.table-wrapper {
+  flex: 1;
+  overflow: hidden; /* 防止内部 el‑table 超出容器 */
+}
+
+/* 分页区域，固定高度 */
+.pagination-container {
+  flex: 0 0 50px; /* 分页区域高度 50px，可根据需要调整 */
+  padding: 10px 0;
+  text-align: center;
 }
 </style>
