@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <el-collapse v-model="settingsVisible" accordion>
+    <el-collapse v-model="settingsVisible" accordion class="query-collapse">
       <el-collapse-item name="1">
         <template slot="title">
           <div style="font-weight: bold;font-size: 18px; text-align: center;color: #555;width: 100%">
@@ -180,6 +180,7 @@
           :cell-style="getCellStyle"
           :data="tableData" border
           style="width: 100%"
+          height="100%"
       >
         <!-- 新增序号列 -->
         <el-table-column
@@ -360,7 +361,7 @@ export default {
 
       try {
         const startTime = new Date().getTime()
-        this.$message.info('等待服务器响应...')
+        this.$message.info('请稍候...')
         const res = await this.$request.post('/data/query', params)
         if (res.code === '200') {
           const queryEndTime = new Date().getTime()
@@ -431,6 +432,14 @@ export default {
   height: 100%; /* 填满父容器 */
   box-sizing: border-box;
   font-weight: bold;
+  padding: 20px;
+}
+
+.query-collapse{
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  min-height: 60px;
 }
 
 .scrollable-container {
@@ -438,6 +447,21 @@ export default {
   overflow-y: auto;
   padding: 10px;
 }
+
+::v-deep .el-collapse-item__header {
+  padding: 0 24px;
+  height: 60px;
+  border-bottom: none;
+  border-radius: 1rem;
+}
+
+::v-deep .el-collapse-item__content {
+  padding: 0 24px;
+  overflow-y: auto; /* 折叠面板内部滚动 */
+  max-height: 50vh; /* 限制最大高度 */
+  /*border-radius: 1rem;*/
+}
+
 
 .query-form {
   max-width: 90%;
@@ -466,8 +490,13 @@ export default {
 .result-container {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   /*max-height: 400px;*/
   padding: 10px;
+  margin-top: 16px;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
 .empty-tip {

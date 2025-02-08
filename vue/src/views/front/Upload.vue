@@ -328,16 +328,19 @@ export default {
   padding: 0 24px;
   height: 60px;
   border-bottom: none;
+  border-radius: 1rem;
 }
 
 ::v-deep .el-collapse-item__content {
   padding: 0 24px;
   overflow-y: auto; /* 折叠面板内部滚动 */
   max-height: 50vh; /* 限制最大高度 */
+  /*border-radius: 1rem;*/
 }
 
 .collapse-content {
   padding-bottom: 24px;
+  /*border-radius: 1rem;*/
 }
 
 .task-list-container {
@@ -347,7 +350,7 @@ export default {
   background: #fff;
   border-radius: 1rem;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  margin-top: 20px;
+  margin-top: 16px;
   overflow: hidden; /* 关键样式 */
 }
 
@@ -429,4 +432,8 @@ export default {
 .upload-demo {
   width: 100%;
 }
+
+/*/deep/ .el-collapse-item__header{*/
+/*  border-radius: 1rem;*/
+/*}*/
 </style>
