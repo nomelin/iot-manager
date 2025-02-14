@@ -35,14 +35,14 @@
             <span class="words" slot="title">基础查询</span>
           </el-menu-item>
 
-          <el-menu-item class="el-menu-item" index="/view_platform">
+          <el-menu-item class="el-menu-item" index="/front/template_manage">
             <i class="el-icon-folder-opened"></i>
-            <span class="words" slot="title">监测平台</span>
+            <span class="words" slot="title">模板管理</span>
           </el-menu-item>
 
-          <el-menu-item class="el-menu-item" index="/view_platform">
+          <el-menu-item class="el-menu-item" index="/front/device_manage">
             <i class="el-icon-folder-opened"></i>
-            <span class="words" slot="title">监测平台</span>
+            <span class="words" slot="title">设备管理</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" @click="logout">
             <i class="el-icon-switch-button"></i>

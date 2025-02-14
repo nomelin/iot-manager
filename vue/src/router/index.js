@@ -24,17 +24,29 @@ const routes = [
                 component: () => import('../views/front/ViewPlatform.vue')
             },
             {
-                path:'upload',
+                path: 'upload',
                 name: 'upload',
                 meta: {name: '文件上传'},
                 component: () => import('../views/front/Upload.vue')
             },
             {
-                path:'base_query',
-                name:'baseQuery',
-                meta:{name:'基础查询'},
-                component:()=>import('../views/front/BaseQuery.vue')
-            }
+                path: 'base_query',
+                name: 'baseQuery',
+                meta: {name: '基础查询'},
+                component: () => import('../views/front/BaseQuery.vue')
+            },
+            {
+                path: 'template_manage',
+                name: 'templateManage',
+                meta: {name: '模板管理'},
+                component: () => import('../views/front/TemplateManage.vue')
+            },
+            {
+                path: 'device_manage',
+                name: 'deviceManage',
+                meta: {name: '设备管理'},
+                component: () => import('../views/front/DeviceManage.vue')
+            },
         ]
 
     },
