@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Component
 public class CompatibleStorageStrategy implements StorageStrategy {
@@ -43,13 +42,17 @@ public class CompatibleStorageStrategy implements StorageStrategy {
     @LogExecutionTime
     @Override
     public List<MeasurementNode> preprocessTemplateNodes(List<MeasurementNode> originalNodes) {
-        return originalNodes.stream()
+        List<MeasurementNode> resultNodes = originalNodes.stream()
                 .map(node -> new MeasurementNode(
                         node.getName(),
                         TSDataType.TEXT,  // 强制转为TEXT
                         TSEncoding.PLAIN,// 强制转为PLAIN
                         Constants.COMPRESSION_TYPE))
-                .collect(Collectors.toList());
+                .toList();
+        log.info("COMPATIBLE: 模板节点从 {} 转换为 {}",
+                originalNodes.stream().map(MeasurementNode::getName).toList(),
+                resultNodes.stream().map(MeasurementNode::getName).toList());
+        return resultNodes;
     }
 
     @Override
@@ -115,7 +118,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
             Map<String, String> existingData = iotDBDao.getExistingMeasurements(devicePath, windowTs);
             existingData.forEach((measurement, jsonValue) -> {
                 try {
-                    log.info("currentMeasurements: {}, measurement: {}, jsonValue: {}", currentMeasurements, measurement, jsonValue);
+//                    log.info("currentMeasurements: {}, measurement: {}, jsonValue: {}", currentMeasurements, measurement, jsonValue);
                     if (jsonValue == null) {
                         log.info("!!!!!!!!!!!!jsonValue is null");
                     }

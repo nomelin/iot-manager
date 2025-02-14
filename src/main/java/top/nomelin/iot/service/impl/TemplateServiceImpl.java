@@ -63,7 +63,7 @@ public class TemplateServiceImpl implements TemplateService {
 
     @Override
     public Template createTemplate(Template template) {
-        //插入mysql
+        //插入mysql。因为后面要使用id，所以必须先插入mysql。
         template.setUserId(currentUserCache.getCurrentUser().getId());
         templateMapper.insert(template);
         log.info("mysql中插入模板成功，template: {}", template);
@@ -82,7 +82,7 @@ public class TemplateServiceImpl implements TemplateService {
             );
             log.info("创建iotdb模板成功，templateName: {}, measurementNodes: {}, strategy: {}",
                     Constants.TEMPLATE_PREFIX + template.getId() + strategy.getTemplateSuffix(),
-                    processedNodes, strategy.getClass().getSimpleName());
+                    processedNodes.stream().map(MeasurementNode::getName).toList(), strategy.getClass().getSimpleName());
         }
         log.info("全部策略创建iotdb模板成功，template: {}", template);
         return template;
@@ -102,7 +102,17 @@ public class TemplateServiceImpl implements TemplateService {
     @Override
     public void deleteTemplate(int templateId) {
         checkPermission(templateId);
-        templateMapper.delete(templateId);
+        // 删除iotdb的模板, 所有策略
+        List<StorageStrategy> strategies = strategyManager.getAllStrategies();
+        for (StorageStrategy strategy : strategies) {
+            iotDBDao.deleteSchema(
+                    Constants.TEMPLATE_PREFIX + templateId + strategy.getTemplateSuffix());
+            log.info("删除iotdb模板成功，templateName: {}",
+                    Constants.TEMPLATE_PREFIX + templateId + strategy.getTemplateSuffix());
+        }
+        // 删除mysql的模板行
+        templateMapper.delete(templateId);//级联删除mysql的设备
+        log.info("删除mysql模板成功,同时级联删除了mysql设备行，templateId: {}", templateId);
         log.info("删除模板成功，templateId: {}", templateId);
     }
 

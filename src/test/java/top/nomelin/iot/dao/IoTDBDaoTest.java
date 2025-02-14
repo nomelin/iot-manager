@@ -36,8 +36,7 @@ class IoTDBDaoTest {
 
         // 3. 挂载并激活元数据模板到设备
         String devicePath = "root.test1.testdevice1";
-        String deviceName = "testdevice1";
-        dao.setAndActivateSchema(schemaName, databasePath, deviceName);
+        dao.setAndActivateSchema(schemaName,devicePath );
         System.out.println("Schema 'testSchema' activated on device 'root.test.testdevice'.");
 
          //4. 插入一行数据

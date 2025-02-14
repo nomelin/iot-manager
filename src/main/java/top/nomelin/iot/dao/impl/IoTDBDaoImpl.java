@@ -7,8 +7,6 @@ import org.apache.iotdb.rpc.StatementExecutionException;
 import org.apache.iotdb.session.Session;
 import org.apache.iotdb.session.template.MeasurementNode;
 import org.apache.tsfile.enums.TSDataType;
-import org.apache.tsfile.read.common.Field;
-import org.apache.tsfile.read.common.RowRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -63,32 +61,94 @@ public class IoTDBDaoImpl implements IoTDBDao {
     }
 
     @Override
-    public void setAndActivateSchema(String schemaName, String databasePath, String deviceName) {
+    public void setAndActivateSchema(String schemaName, String devicePath) {
         try {
             List<String> paths = queryPathsSchemaSetOn(schemaName);
             boolean isSchemaSetOn = false;
-            if (paths.contains(databasePath + "." + deviceName)) {
-                log.info("元数据模板 {} 已经挂载到路径 {}.{} 了", schemaName, databasePath, deviceName);
+            if (paths.contains(devicePath)) {
+                log.info("元数据模板 {} 已经挂载到路径 {} 了", schemaName, devicePath);
                 isSchemaSetOn = true;
             }
             if (!isSchemaSetOn) {
-                getSession().setSchemaTemplate(schemaName, databasePath + "." + deviceName);
-                log.info("挂载 元数据模板 {} 到路径 {}.{} 成功", schemaName, databasePath, deviceName);
+                getSession().setSchemaTemplate(schemaName, devicePath);
+                log.info("挂载 元数据模板 {} 到路径 {} 成功", schemaName,devicePath);
             }
             boolean isSchemaUsingOn = false;
             paths = queryPathsSchemaUsingOn(schemaName);
-            if (paths.contains(databasePath + "." + deviceName)) {
-                log.info("元数据模板 {} 已经在设备 {}.{} 上激活", schemaName, databasePath, deviceName);
+            if (paths.contains(devicePath)) {
+                log.info("元数据模板 {} 已经在设备 {} 上激活", schemaName, devicePath);
                 isSchemaUsingOn = true;
             }
             if (!isSchemaUsingOn) {
-                executeNonQueryStatement("CREATE TIMESERIES OF SCHEMA TEMPLATE on " + databasePath + "." + deviceName);
-                log.info("激活 元数据模板 {} 到设备 {}.{} 成功, 并创建时间序列", schemaName, databasePath, deviceName);
+                executeNonQueryStatement("CREATE TIMESERIES OF SCHEMA TEMPLATE on " + devicePath);
+                log.info("激活 元数据模板 {} 到设备 {} 成功, 并创建时间序列", schemaName, devicePath);
             }
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
     }
+
+    @Override
+    public void deActiveAndUnsetSchema(String schemaName, String devicePath) {
+        try {
+            // 检查模板是否在该设备路径上被激活
+            boolean isSchemaUsingOn = false;
+            List<String> usingPaths = queryPathsSchemaUsingOn(schemaName);
+            if (usingPaths.contains(devicePath)) {
+                String deactivateSql = "DEACTIVATE DEVICE TEMPLATE " + schemaName + " FROM " + devicePath;
+                executeNonQueryStatement(deactivateSql);
+                log.info("解除模板 {} 在设备 {} 的激活状态，并删除时间序列", schemaName, devicePath);
+                isSchemaUsingOn = true;
+            }
+            if (!isSchemaUsingOn) {
+                log.info("模板 {} 不在设备 {} 上激活，无需解除激活", schemaName, devicePath);
+            }
+
+            // 检查模板是否挂载到该设备路径
+            boolean isSchemaSetOn = false;
+            List<String> setPaths = queryPathsSchemaSetOn(schemaName);
+            if (setPaths.contains(devicePath)) {
+                getSession().unsetSchemaTemplate(devicePath, schemaName);
+                log.info("卸载模板 {} 在设备 {} 的挂载", schemaName, devicePath);
+                isSchemaSetOn = true;
+            }
+            if (!isSchemaSetOn) {
+                log.info("模板 {} 不在设备 {} 上挂载，无需卸载", schemaName, devicePath);
+            }
+
+        } catch (Exception e) {
+            throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
+        }
+    }
+
+    @Override
+    public void deleteSchema(String schemaName) {
+        try {
+            // 处理所有使用该模板的路径
+            List<String> usingPaths = queryPathsSchemaUsingOn(schemaName);
+            for (String path : usingPaths) {
+                String deactivateSql = "DEACTIVATE DEVICE TEMPLATE " + schemaName + " FROM " + path;
+                executeNonQueryStatement(deactivateSql);
+                log.info("解除模板 {} 在设备 {} 的激活状态，并删除时间序列", schemaName, path);
+            }
+
+            // 处理所有挂载该模板的路径
+            List<String> setPaths = queryPathsSchemaSetOn(schemaName);
+            for (String path : setPaths) {
+                getSession().unsetSchemaTemplate(path, schemaName);
+                log.info("卸载模板 {} 在设备 {} 的挂载", schemaName, path);
+            }
+
+            // 删除模板
+            String dropSql = "DROP DEVICE TEMPLATE " + schemaName;
+            executeNonQueryStatement(dropSql);
+            log.info("删除模板 {} 成功", schemaName);
+        } catch (Exception e) {
+            throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
+        }
+
+    }
+
 
     @Override
     public List<String> queryAllSchemas() {
@@ -235,7 +295,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
             getSession().executeNonQueryStatement(sql);
             log.info("执行非查询 SQL 语句 {} 成功", sql);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
-            throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
+            throw new SystemException(CodeMessage.IOT_DB_ERROR, "SQL: " + sql, e);
         }
     }
 
@@ -246,7 +306,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
             sessionDataSet = getSession().executeQueryStatement(sql);
             log.debug("执行查询 SQL 语句 {} 成功", sql);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
-            throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
+            throw new SystemException(CodeMessage.IOT_DB_ERROR, "SQL: " + sql, e);
         }
         return sessionDataSet;
     }

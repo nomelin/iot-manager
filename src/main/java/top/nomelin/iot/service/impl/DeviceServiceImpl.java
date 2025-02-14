@@ -17,6 +17,7 @@ import top.nomelin.iot.service.DeviceService;
 import top.nomelin.iot.service.TemplateService;
 import top.nomelin.iot.service.storage.StorageStrategy;
 import top.nomelin.iot.service.storage.StorageStrategyManager;
+import top.nomelin.iot.util.util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,20 +66,20 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     public Device addDevice(Device device, int templateId) {
         device.setUserId(currentUserCache.getCurrentUser().getId());
+        device.setTemplateId(templateId);
         //使用模板的配置作为设备的基本配置
         Template template = templateService.getTemplateById(templateId);
         Config config = mergeConfig(template, device);//合并模板和设备的配置
         device.setConfig(config);
         StorageStrategy storageStrategy = storageStrategyManager.getStrategy(config.getStorageMode());
-        //插入mysql
+        //插入mysql。因为后面要使用id，所以必须先插入mysql。
         deviceMapper.insert(device);
         log.info("添加设备到mysql成功, device: {}", device);
         //创建iotdb设备。实际上databasePath不是数据库。
         //使用存储策略对应的模板
         iotDBDao.setAndActivateSchema(
                 Constants.TEMPLATE_PREFIX + templateId + storageStrategy.getTemplateSuffix(),
-                Constants.DATABASE_PREFIX + device.getUserId(),
-                Constants.DEVICE_PREFIX + device.getId());
+                util.getDevicePath(device.getUserId(), device.getId()));
         log.info("创建iotdb设备成功, templateName: {}, database: {}",
                 Constants.TEMPLATE_PREFIX + templateId + storageStrategy.getTemplateSuffix(),
                 Constants.DATABASE_PREFIX + device.getUserId());
@@ -106,9 +107,18 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     public void deleteDevice(int deviceId) {
-        checkPermission(deviceId);
+        Device device = checkPermission(deviceId);
+        //删除iotdb设备
+        //解除iotdb设备与存储策略对应的模板的关系
+        StorageStrategy storageStrategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
+        iotDBDao.deActiveAndUnsetSchema(
+                Constants.TEMPLATE_PREFIX + device.getTemplateId() + storageStrategy.getTemplateSuffix(),
+                util.getDevicePath(device.getUserId(), device.getId())
+        );
+        log.info("删除iotdb设备成功, deviceId: {}", deviceId);
+        //删除mysql设备
         deviceMapper.delete(deviceId);
-        //TODO: 删除iotdb设备
+        log.info("删除设备从mysql成功, deviceId: {}", deviceId);
         log.info("删除设备成功, deviceId: {}", deviceId);
     }
 

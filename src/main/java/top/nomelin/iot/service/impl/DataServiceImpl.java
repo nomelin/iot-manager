@@ -243,6 +243,7 @@ public class DataServiceImpl implements DataService {
     }
 
     //和applyThresholdFilter一样，只是使用并行流处理提升性能
+    //TODO 配置化开关,或者根据规模自动选择
     private void applyThresholdFilterParallel(DeviceTable table, List<String> measurements, List<List<Double>> thresholds) {
         // 并行流处理提升性能
         Map<Long, List<Record>> filtered = table.getRecords().entrySet().parallelStream()
