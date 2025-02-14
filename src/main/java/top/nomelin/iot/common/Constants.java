@@ -4,6 +4,8 @@ import org.apache.tsfile.file.metadata.enums.CompressionType;
 import org.apache.tsfile.file.metadata.enums.TSEncoding;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * @author nomelin
  */
@@ -23,5 +25,10 @@ public class Constants {
     public static final String TEMPLATE_PREFIX = "template_";
 
     public static final String DEVICE_PREFIX = "device_";
+
+    public static final List<Integer> VALID_STORAGE_AGGREGATION_TIME = List.of(1, 10, 100, 1_000, 10_000, 100_000);
+
+    //查询聚合时间粒度。0表示不聚合
+    public static final List<Integer> VALID_QUERY_AGGREGATION_TIME = List.of(0, 1, 1000, 60_000, 3600_000, 86400000);
 
 }

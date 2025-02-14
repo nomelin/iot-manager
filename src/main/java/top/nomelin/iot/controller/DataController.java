@@ -2,6 +2,7 @@ package top.nomelin.iot.controller;
 
 import cn.hutool.core.util.ObjectUtil;
 import org.springframework.web.bind.annotation.*;
+import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.Result;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
@@ -9,6 +10,7 @@ import top.nomelin.iot.controller.request.DataInsertRequest;
 import top.nomelin.iot.controller.request.DataQueryRequest;
 import top.nomelin.iot.controller.response.EnumInfo;
 import top.nomelin.iot.model.dto.DeviceTable;
+import top.nomelin.iot.model.enums.IotDataType;
 import top.nomelin.iot.model.enums.QueryAggregateFunc;
 import top.nomelin.iot.model.enums.StorageMode;
 import top.nomelin.iot.service.DataService;
@@ -100,6 +102,38 @@ public class DataController {
             ));
         }
         return Result.success(funcs);
+    }
+
+    /**
+     * 获取所有支持的数据类型
+     */
+    @GetMapping("/dataTypes")
+    public Result getDataTypes() {
+        List<EnumInfo> types = new ArrayList<>();
+        for (IotDataType type : IotDataType.values()) {
+            types.add(new EnumInfo(
+                    type.name(),
+                    null,
+                    null
+            ));
+        }
+        return Result.success(types);
+    }
+
+    /**
+     * 获取所有支持的存储聚合时间粒度
+     */
+    @GetMapping("/StorageAggregationTimes")
+    public Result getStorageAggregationTimes() {
+        return Result.success(Constants.VALID_STORAGE_AGGREGATION_TIME);
+    }
+
+    /**
+     * 获取所有支持的查询聚合时间粒度
+     */
+    @GetMapping("/queryAggregationTimes")
+    public Result getQueryAggregationTimes() {
+        return Result.success(Constants.VALID_QUERY_AGGREGATION_TIME);
     }
 
 }

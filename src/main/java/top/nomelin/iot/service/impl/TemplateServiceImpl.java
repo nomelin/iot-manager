@@ -63,6 +63,7 @@ public class TemplateServiceImpl implements TemplateService {
 
     @Override
     public Template createTemplate(Template template) {
+        checkTemplate(template);
         //插入mysql。因为后面要使用id，所以必须先插入mysql。
         template.setUserId(currentUserCache.getCurrentUser().getId());
         templateMapper.insert(template);
@@ -125,5 +126,32 @@ public class TemplateServiceImpl implements TemplateService {
     public List<Template> getAllTemplates() {
         int userId = currentUserCache.getCurrentUser().getId();
         return templateMapper.selectByUserId(userId);
+    }
+
+    private void checkTemplate(Template template) {
+        if (ObjectUtil.isNull(template)) {
+            log.warn("模板不存在");
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        if (ObjectUtil.isNull(template.getName())) {
+            log.warn("模板名称不能为空");
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        if (ObjectUtil.isNull(template.getConfig())) {
+            log.warn("模板配置不能为空");
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        if (ObjectUtil.isNull(template.getConfig().getStorageMode())) {
+            log.warn("模板存储模式不能为空");
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        if (ObjectUtil.isNull(template.getConfig().getDataTypes())) {
+            log.warn("模板节点不能为空");
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        if (ObjectUtil.isNull(template.getConfig().getAggregationTime())) {
+            log.warn("模板聚合时间不能为空");
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
     }
 }
