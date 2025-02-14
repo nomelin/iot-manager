@@ -18,6 +18,7 @@ import java.util.Map;
 @Component
 public class StorageStrategyManager {
     private final Map<StorageMode, StorageStrategy> storageStrategies;// 存储策略，策略模式
+    private final List<StorageStrategy> allStrategies;
 
     public StorageStrategyManager(
             CoverStorageStrategy coverStrategy,
@@ -28,6 +29,7 @@ public class StorageStrategyManager {
                 StorageMode.COMPATIBLE, compatibleStrategy,
                 StorageMode.PERFORMANCE, performanceStrategy
         );
+        this.allStrategies = storageStrategies.values().stream().toList();
     }
 
 
@@ -36,6 +38,6 @@ public class StorageStrategyManager {
     }
 
     public List<StorageStrategy> getAllStrategies() {
-        return storageStrategies.values().stream().toList();
+        return allStrategies;
     }
 }
