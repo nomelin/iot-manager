@@ -12,6 +12,7 @@ public class Device {
     private Integer id;
     private String name;
     private Integer userId;
+    private Integer templateId;
     private List<String> tags;
 
     private Config config;
@@ -58,14 +59,25 @@ public class Device {
     }
 
 
+    public Integer getTemplateId() {
+        return templateId;
+    }
+
+    public void setTemplateId(Integer templateId) {
+        this.templateId = templateId;
+    }
+
+
     @Override
     public String toString() {
         return "Device{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", userId=" + userId +
+                ", templateId=" + templateId +
                 ", tags=" + tags +
                 ", config='" + config + '\'' +
                 '}';
     }
+
 }

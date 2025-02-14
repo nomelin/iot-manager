@@ -22,5 +22,7 @@ public interface DeviceMapper {
 
 
     List<Device> selectByUserId(int userId);
+
+    List<Device> selectByTemplateId(int templateId);
 }
 

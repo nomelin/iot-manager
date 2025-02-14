@@ -27,6 +27,9 @@ public interface DeviceService {
 
     List<Device> getDevicesByIds(List<Integer> deviceIds);
 
+    /**
+     * @return 当前登录用户的所有设备
+     */
     List<Device> getAllDevice();
 
     List<String> getAllMeasurementsById(int deviceId);

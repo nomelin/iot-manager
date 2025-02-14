@@ -8,6 +8,7 @@
         <id column="id" property="id"/>
         <result column="name" property="name"/>
         <result column="user_id" property="userId"/>
+        <result column="template_id" property="templateId"/>
         <result column="tags" property="tags" typeHandler="top.nomelin.iot.common.handler.ListStringTypeHandler"/>
         <result column="config" property="config" typeHandler="top.nomelin.iot.common.handler.ConfigTypeHandler"/>
     </resultMap>
@@ -15,8 +16,9 @@
     <!-- 插入设备 -->
     <insert id="insert" parameterType="top.nomelin.iot.model.Device"
             useGeneratedKeys="true" keyColumn="id" keyProperty="id">
-        INSERT INTO device (name, user_id, tags, config)
-        VALUES (#{name}, #{userId}, #{tags, typeHandler=top.nomelin.iot.common.handler.ListStringTypeHandler},
+        INSERT INTO device (name, user_id, template_id, tags, config)
+        VALUES (#{name}, #{userId}, #{templateId},
+                #{tags, typeHandler=top.nomelin.iot.common.handler.ListStringTypeHandler},
                 #{config, typeHandler=top.nomelin.iot.common.handler.ConfigTypeHandler})
     </insert>
 
@@ -26,6 +28,7 @@
         <set>
             <if test="name != null">name = #{name},</if>
             <if test="userId != null">user_id = #{userId},</if>
+            <if test="templateId != null">template_id = #{templateId},</if>
             <if test="tags != null">tags = #{tags, typeHandler=top.nomelin.iot.common.handler.ListStringTypeHandler},
             </if>
             <if test="config != null">config =
@@ -44,27 +47,35 @@
 
     <!-- 根据 ID 查询设备 -->
     <select id="selectById" parameterType="int" resultMap="deviceResultMap">
-        SELECT id, name, user_id, tags, config
+        SELECT id, name, user_id, template_id, tags, config
         FROM device
         WHERE id = #{id}
     </select>
 
     <!-- 条件查询设备 -->
     <select id="selectAll" parameterType="top.nomelin.iot.model.Device" resultMap="deviceResultMap">
-        SELECT id, name, user_id, tags, config
+        SELECT id, name, user_id, template_id, tags, config
         FROM device
         <where>
             <if test="id != null">AND id = #{id}</if>
             <if test="name != null">AND name LIKE CONCAT('%', #{name}, '%')</if>
             <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="templateId != null">AND template_id = #{templateId}</if>
         </where>
     </select>
 
     <!-- 根据用户 ID 查询设备 -->
     <select id="selectByUserId" parameterType="int" resultMap="deviceResultMap">
-        SELECT id, name, user_id, tags, config
+        SELECT id, name, user_id, template_id, tags, config
         FROM device
         WHERE user_id = #{userId}
+    </select>
+
+    <!-- 根据模板 ID 查询设备 -->
+    <select id="selectByTemplateId" parameterType="int" resultMap="deviceResultMap">
+        SELECT id, name, user_id, template_id, tags, config
+        FROM device
+        WHERE template_id = #{templateId}
     </select>
 
 </mapper>
