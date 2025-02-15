@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import top.nomelin.iot.common.Result;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
+import top.nomelin.iot.controller.request.DeviceAddRequest;
 import top.nomelin.iot.model.Device;
 import top.nomelin.iot.service.DeviceService;
 
@@ -26,7 +27,12 @@ public class DeviceController {
     }
 
     @RequestMapping("/add")
-    public Result addDevice(@RequestBody Device device, @RequestParam Integer templateId) {
+    public Result addDevice(@RequestBody DeviceAddRequest deviceAddRequest) {
+        if (ObjectUtil.isNull(deviceAddRequest)) {
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        Device device = deviceAddRequest.getDevice();
+        Integer templateId = deviceAddRequest.getTemplateId();
         if (ObjectUtil.isNull(device) || ObjectUtil.isEmpty(device.getName())) {
             throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
         }

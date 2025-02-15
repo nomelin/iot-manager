@@ -67,7 +67,7 @@
           <el-input v-model="newTemplate.name" placeholder="请输入模板名称"></el-input>
         </el-form-item>
         <!-- 数据类型映射 -->
-        <el-form-item label="数据类型映射" required>
+        <el-form-item label="传感器数据类型映射" required>
           <div v-for="(item, index) in newTemplate.config.dataTypes" :key="index" class="data-type-item">
             <el-input v-model="item.key" placeholder="数据项名称"></el-input>
             <el-select v-model="item.value" placeholder="选择类型">
@@ -378,8 +378,6 @@ export default {
 }
 
 .template-name {
-  font-size: 16px;
-  font-weight: 500;
   margin-top: 8px;
 }
 
