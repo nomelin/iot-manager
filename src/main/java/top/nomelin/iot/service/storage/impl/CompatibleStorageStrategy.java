@@ -8,7 +8,6 @@ import org.apache.tsfile.enums.TSDataType;
 import org.apache.tsfile.file.metadata.enums.TSEncoding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.annotation.LogExecutionTime;
@@ -21,19 +20,13 @@ import top.nomelin.iot.service.storage.StorageStrategy;
 import top.nomelin.iot.util.util;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class CompatibleStorageStrategy implements StorageStrategy {
     private static final Logger log = LoggerFactory.getLogger(CompatibleStorageStrategy.class);
     private final IoTDBDao iotDBDao;
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    @Value("${iotdb.storage.compatible.dont-merge:false}")
-    private boolean DONT_MERGE;
 
     public CompatibleStorageStrategy(IoTDBDao iotDBDao) {
         this.iotDBDao = iotDBDao;
@@ -64,8 +57,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
     @Override
     public void storeData(String devicePath, List<Long> timestamps,
                           List<List<String>> measurementsList, List<List<TSDataType>> typesList,
-                          List<List<Object>> valuesList, int aggregationTime) {
-        // 调整存储粒度
+                          List<List<Object>> valuesList, int aggregationTime, int mergeTimestampNum) {
         int storageGranularity = util.adjustStorageGranularity(aggregationTime);
         log.info("Adjusted storage granularity from {} to {}", aggregationTime, storageGranularity);
 
@@ -73,11 +65,12 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         Map<Long, Map<String, List<Object>>> windowData = aggregateCurrentBatch(
                 timestamps, measurementsList, valuesList, storageGranularity);
 
-        if (DONT_MERGE) {
-            log.info("DONT_MERGE is true, skip merging existing data");
+        if (mergeTimestampNum != 0) {
+            log.info("mergeTimestampNum is {}, start merging existing data", mergeTimestampNum);
+            List<Long> windowTsToMerge = determineWindowsToMerge(windowData.keySet(), mergeTimestampNum);
+            mergeExistingData(devicePath, windowData, windowTsToMerge);
         } else {
-            log.info("DONT_MERGE is false, start merging existing data");
-            mergeExistingData(devicePath, windowData);
+            log.info("mergeTimestampNum is 0, skip merging existing data");
         }
 
         // 生成存储记录
@@ -87,6 +80,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         iotDBDao.insertBatchAlignedRecordsOfOneDevice(
                 devicePath, records.timestamps(), records.measurements(), records.types(), records.values());
     }
+
 
     private Map<Long, Map<String, List<Object>>> aggregateCurrentBatch(List<Long> timestamps,
                                                                        List<List<String>> measurementsList,
@@ -113,14 +107,40 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         return windowData;
     }
 
-    private void mergeExistingData(String devicePath, Map<Long, Map<String, List<Object>>> windowData) {
-        windowData.forEach((windowTs, currentMeasurements) -> {
+    // 确定需要合并的时间窗口
+    private List<Long> determineWindowsToMerge(Set<Long> windowTimestamps, int mergeTimestampNum) {
+        List<Long> sortedTimestamps = new ArrayList<>(windowTimestamps);
+        Collections.sort(sortedTimestamps);
+        int size = sortedTimestamps.size();
+
+        if (mergeTimestampNum < 0) {
+            return sortedTimestamps;
+        } else if (mergeTimestampNum == 0) {
+            return Collections.emptyList();
+        } else {
+            Set<Long> selected = new LinkedHashSet<>();
+            // 添加前n个时间戳
+            selected.addAll(sortedTimestamps.subList(0, Math.min(mergeTimestampNum, size)));
+            // 添加后n个时间戳
+            selected.addAll(sortedTimestamps.subList(Math.max(size - mergeTimestampNum, 0), size));
+            return new ArrayList<>(selected);
+        }
+    }
+
+    // 合并已有数据
+    private void mergeExistingData(String devicePath, Map<Long, Map<String, List<Object>>> windowData,
+                                   List<Long> windowTsToMerge) {
+        windowTsToMerge.forEach(windowTs -> {
+            Map<String, List<Object>> currentMeasurements = windowData.get(windowTs);
+            if (currentMeasurements == null) {
+                return; // 当前批次不包含该时间窗口，无需处理
+            }
             Map<String, String> existingData = iotDBDao.getExistingMeasurements(devicePath, windowTs);
             existingData.forEach((measurement, jsonValue) -> {
                 try {
 //                    log.info("currentMeasurements: {}, measurement: {}, jsonValue: {}", currentMeasurements, measurement, jsonValue);
                     if (jsonValue == null) {
-                        log.info("!!!!!!!!!!!!jsonValue is null");
+                        log.info("!!!jsonValue is null!!!");
                     }
                     List<?> existingValues = objectMapper.readValue(jsonValue, List.class);
                     List<Object> currentValues = currentMeasurements.get(measurement);

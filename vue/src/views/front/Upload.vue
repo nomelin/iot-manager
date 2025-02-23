@@ -10,9 +10,9 @@
             </div>
           </template>
           <div class="collapse-content">
-            <el-form ref="formRef" :model="form" :rules="rules">
+            <el-form ref="formRef" :model="form" :rules="rules" label-position="left" label-width="100px">
               <!-- 多文件上传 -->
-              <el-form-item prop="files">
+              <el-form-item prop="files" label="数据文件">
                 <el-upload
                     :auto-upload="false"
                     :file-list="fileList"
@@ -38,12 +38,13 @@
               </el-form-item>
 
               <!-- 设备ID -->
-              <el-form-item prop="deviceId">
+              <el-form-item prop="deviceId" label="设备ID">
                 <el-input
                     v-model.number="form.deviceId"
                     min="0"
                     placeholder="请输入设备ID"
                     type="number"
+                    required
                 >
                   <template #prefix>
                     <i class="el-icon-cpu"></i>
@@ -52,11 +53,37 @@
               </el-form-item>
 
               <!-- 跳过行数 -->
-              <el-form-item prop="skipRows">
+              <el-form-item prop="skipRows" label="跳过行数">
                 <el-input
                     v-model.number="form.skipRows"
                     min="0"
                     placeholder="请输入跳过的行数"
+                    type="number"
+                >
+                  <template #prefix>
+                    <i class="el-icon-skip"></i>
+                  </template>
+                </el-input>
+              </el-form-item>
+              <!--批次大小-->
+              <el-form-item prop="batchSize" label="批次大小">
+                <el-input
+                    v-model.number="form.batchSize"
+                    min="1"
+                    placeholder="请输入批次大小"
+                    type="number"
+                >
+                  <template #prefix>
+                    <i class="el-icon-skip"></i>
+                  </template>
+                </el-input>
+              </el-form-item>
+              <!--合并时间戳数量-->
+              <el-form-item prop="mergeTimeStampNum" label="每批次合并旧时间戳数量">
+                <el-input
+                    v-model.number="form.mergeTimeStampNum"
+                    min="-1"
+                    placeholder="请输入合并时间戳数量"
                     type="number"
                 >
                   <template #prefix>
@@ -139,7 +166,9 @@ export default {
       activeCollapse: ['upload'], // 默认展开上传面板
       form: {
         deviceId: null,
-        skipRows: 1
+        skipRows: 1,
+        mergeTimeStampNum: -1,
+        batchSize: 500,
       },
       rules: {
         deviceId: [
@@ -206,6 +235,8 @@ export default {
           formData.append('file', file.raw)
           formData.append('deviceId', this.form.deviceId)
           formData.append('skipRows', this.form.skipRows)
+          formData.append('mergeTimestampNum', this.form.mergeTimeStampNum)
+          formData.append('batchSize', this.form.batchSize)
 
           try {
             const res = await this.$request.post('/files/upload', formData, {

@@ -44,11 +44,11 @@ public class ExecutionTimeAspect {
             return result;
         } catch (Throwable t) {
             stopWatch.stop();
-            log.error("[{}#{}] 执行异常 | 耗时: {}ms | 异常类型: {}",
+            log.warn("[{}#{}] 执行异常 | 耗时: {}ms | 异常类型: {}, 异常信息: {}",
                     className, methodName,
                     stopWatch.getTotalTimeMillis(),
                     t.getClass().getSimpleName(),
-                    t);
+                    t.toString());
             throw t;
         }
     }

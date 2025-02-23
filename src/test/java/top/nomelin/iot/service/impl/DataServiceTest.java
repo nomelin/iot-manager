@@ -46,7 +46,7 @@ class DataServiceTest {
         values.add(List.of(25.5, 55));
         values.add(List.of(26.5, 56));
         values.add(List.of(27.5, 57));
-        dataService.insertBatchRecord(deviceId, timestamps, measurements, values);
+        dataService.insertBatchRecord(deviceId, timestamps, measurements, values, -1);
 
     }
 

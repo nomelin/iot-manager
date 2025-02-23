@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.common.exception.SystemException;
@@ -14,6 +13,10 @@ import top.nomelin.iot.service.FileProcessingService;
 import top.nomelin.iot.service.TaskService;
 import top.nomelin.iot.service.processor.FileProcessor;
 import top.nomelin.iot.service.processor.FileProcessorFactory;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 
 
 /**
@@ -35,21 +38,33 @@ public class FileProcessingServiceImpl implements FileProcessingService {
 
     @Async
     @Override
-    public void processAsync(String taskId, MultipartFile file, Device device, int skipRows) {
+    public void processAsync(String taskId, String filePath, Device device,
+                             int skipRows, int mergeTimestampNum, int batchSize) {
+        File file = new File(filePath);
+        if (!file.exists() || file.length() == 0) {
+            throw new BusinessException(CodeMessage.FILE_EMPTY_ERROR, "文件为空:" + taskId);
+        }
         FileTask task = taskService.getTask(taskId);
         task.start();
-        log.info("异步处理文件:，任务ID:{}, 文件名:{}, 设备:{}，文件类型:{}",
-                taskId, file.getOriginalFilename(), device, file.getContentType());
-        try {
-            FileProcessor processor = processorFactory.getProcessor(file.getContentType());
+        log.info("异步处理文件:，任务ID:{}, 文件名:{}, 设备:{}，文件类型:{}, skipRows:{}, mergeTimestampNum:{}, batchSize:{}",
+                taskId, task.getFileName(), device, task.getFileType(), skipRows, mergeTimestampNum, batchSize);
+        try (InputStream inputStream = new FileInputStream(file)) {
+            FileProcessor processor = processorFactory.getProcessor(task.getFileType());
             log.info("使用{}处理器处理文件", processor.getClass().getSimpleName());
-            processor.process(file.getInputStream(), device, task, skipRows);
+            processor.process(inputStream, device, task, skipRows, mergeTimestampNum, batchSize);
             task.complete();
             log.info("文件处理完成，任务ID:{}", taskId);
         } catch (Exception e) {
             log.error("文件处理失败，任务ID:{}, 错误信息:{}", taskId, e);
             task.fail("文件处理失败，error: " + e);
             throw new SystemException(CodeMessage.FILE_HANDLER_ERROR, "任务ID:" + taskId, e);
+        } finally {
+            // 处理完成后删除临时文件
+            if (file.exists()) {
+                if (!file.delete()) {
+                    log.warn("删除临时文件失败，文件名:{}", file.getName());
+                }
+            }
         }
     }
 }

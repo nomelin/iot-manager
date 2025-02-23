@@ -48,6 +48,7 @@ iotdb:
   query:
     timeout: 3000
 file:
+  tempDir: D:\lib\毕业设计\project\iot\temp\upload\
   processor:
     csv:
       batch-size: 500

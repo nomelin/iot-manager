@@ -31,7 +31,8 @@ public class PerformanceStorageStrategy implements StorageStrategy {
     @Override
     public void storeData(String devicePath, List<Long> timestamps,
                           List<List<String>> measurementsList, List<List<TSDataType>> typesList,
-                          List<List<Object>> valuesList, int aggregationTime) {
+                          List<List<Object>> valuesList, int aggregationTime, int mergeTimestampNum)  {
+        // TODO
         int storageGranularity = util.adjustStorageGranularity(aggregationTime);
         Map<Long, Integer> windowCounters = new HashMap<>();
 

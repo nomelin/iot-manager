@@ -46,8 +46,11 @@ public class DataController {
             throw new BusinessException(CodeMessage.INSERT_MEASUREMENT_NUM_ERROR,
                     "属性数量：" + request.getMeasurements().size() + "，数据列数量：" + request.getValues().get(0).size());
         }
+        if (request.getMergeTimestampNum() == null) {
+            request.setMergeTimestampNum(-1);//设置默认为全量合并
+        }
         dataService.insertBatchRecord(request.getDeviceId(), request.getTimestamps(),
-                request.getMeasurements(), request.getValues());
+                request.getMeasurements(), request.getValues(), request.getMergeTimestampNum());
         return Result.success();
     }
 

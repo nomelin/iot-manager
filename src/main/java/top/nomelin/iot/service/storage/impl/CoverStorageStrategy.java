@@ -30,7 +30,7 @@ public class CoverStorageStrategy implements StorageStrategy {
     @Override
     public void storeData(String devicePath, List<Long> timestamps,
                           List<List<String>> measurementsList, List<List<TSDataType>> typesList,
-                          List<List<Object>> valuesList, int aggregationTime) {
+                          List<List<Object>> valuesList, int aggregationTime, int mergeTimestampNum) {
         // 调整存储粒度
         int storageGranularity = util.adjustStorageGranularity(aggregationTime);
         log.info("调整存储粒度，从{}调整到{}", aggregationTime, storageGranularity);

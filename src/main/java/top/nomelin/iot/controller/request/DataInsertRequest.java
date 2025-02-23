@@ -8,6 +8,8 @@ public class DataInsertRequest {
     private List<String> measurements;
     private List<List<Object>> values;
 
+    private Integer mergeTimestampNum;
+
     // Getters and Setters
     public Integer getDeviceId() {
         return deviceId;
@@ -41,6 +43,15 @@ public class DataInsertRequest {
         this.values = values;
     }
 
+
+    public Integer getMergeTimestampNum() {
+        return mergeTimestampNum;
+    }
+
+    public void setMergeTimestampNum(Integer mergeTimestampNum) {
+        this.mergeTimestampNum = mergeTimestampNum;
+    }
+
     @Override
     public String toString() {
         return "DataInsertRequest{" +
@@ -48,6 +59,7 @@ public class DataInsertRequest {
                 ", timestamps=" + timestamps +
                 ", measurements=" + measurements +
                 ", values=" + values +
+                ", mergeTimestampNum=" + mergeTimestampNum +
                 '}';
     }
 }

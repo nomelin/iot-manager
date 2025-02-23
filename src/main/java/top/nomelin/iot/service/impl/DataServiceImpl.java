@@ -41,28 +41,29 @@ public class DataServiceImpl implements DataService {
     @LogExecutionTime(logArgs = true)
     @Override
     public void insertBatchRecord(int deviceId, List<Long> timestamps,
-                                  List<String> measurements, List<List<Object>> values) {
+                                  List<String> measurements, List<List<Object>> values, int mergeTimestampNum) {
         Device device = deviceService.getDeviceById(deviceId);
         Config config = device.getConfig();
         StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
 
-        batchInsert(timestamps, measurements, values, config, strategy, devicePath);
+        batchInsert(timestamps, measurements, values, config, strategy, devicePath, mergeTimestampNum);
     }
 
     @LogExecutionTime(logArgs = true)
     @Override
     public void insertBatchRecord(Device device, List<Long> timestamps,
-                                  List<String> measurements, List<List<Object>> values) {
+                                  List<String> measurements, List<List<Object>> values, int mergeTimestampNum) {
         Config config = device.getConfig();
         StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
         String devicePath = util.getDevicePath(device.getUserId(), device.getId());
 
-        batchInsert(timestamps, measurements, values, config, strategy, devicePath);
+        batchInsert(timestamps, measurements, values, config, strategy, devicePath, mergeTimestampNum);
     }
 
     private void batchInsert(List<Long> timestamps, List<String> measurements,
-                             List<List<Object>> values, Config config, StorageStrategy strategy, String devicePath) {
+                             List<List<Object>> values, Config config, StorageStrategy strategy, String devicePath,
+                             int mergeTimestampNum) {
         // 把config中的物理量的类型转换为TSDataType
         List<TSDataType> types = measurements.stream()
                 .map(m -> IotDataType.convertToTsDataType(config.getDataTypes().get(m))).toList();
@@ -73,7 +74,10 @@ public class DataServiceImpl implements DataService {
                 Collections.nCopies(timestamps.size(), measurements),//nCopies返回的是不可变集合。
                 Collections.nCopies(timestamps.size(), types),
                 values,
-                config.getAggregationTime());
+                config.getAggregationTime(),
+                mergeTimestampNum
+        );
+
         log.info("insertBatchRecord: devicePath={}, timestamps={}, measurements={}, types={}, values={}",
                 devicePath, timestamps, measurements, types, values);
     }
@@ -143,11 +147,11 @@ public class DataServiceImpl implements DataService {
             throw new BusinessException(CodeMessage.QUERY_AGGREGATION_TIME_ERROR,
                     "查询聚合粒度" + aggregationTime + "小于设备配置的最小聚合粒度" + device.getConfig().getAggregationTime());
         }
-        if (!isValidQueryAggregationTime(aggregationTime)){
+        if (!isValidQueryAggregationTime(aggregationTime)) {
             throw new BusinessException(CodeMessage.INVALID_QUERY_AGGREGATION_TIME_ERROR,
                     "查询聚合粒度" + aggregationTime + "不是有效的聚合粒度");
         }
-            return aggregationTime;
+        return aggregationTime;
     }
 
     private long[] alignTimeRange(long start, long end, int aggregationTime) {

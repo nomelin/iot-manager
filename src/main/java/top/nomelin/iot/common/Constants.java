@@ -31,4 +31,9 @@ public class Constants {
     //查询聚合时间粒度。0表示不聚合
     public static final List<Integer> VALID_QUERY_AGGREGATION_TIME = List.of(0, 1, 1000, 60_000, 3600_000, 86400000);
 
+    public static final int DEFAULT_FILE_BATCH_SIZE = 500;
+    public static final String DEFAULT_FILE_BATCH_SIZE_STR = "500";
+    public static final int DEFAULT_MERGE_TIMESTAMP_NUM = -1;//默认全量合并
+    public static final String DEFAULT_MERGE_TIMESTAMP_NUM_STR = "-1";//默认全量合并
+
 }

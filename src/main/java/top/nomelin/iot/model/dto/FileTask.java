@@ -34,6 +34,13 @@ public class FileTask extends Task {
         this.fileName = fileName;
     }
 
+    /**
+     * 获取文件类型，返回fileName的最后一个"."后面的字符。不包含"."
+     */
+    public String getFileType() {
+        return fileName.substring(fileName.lastIndexOf(".") + 1);
+    }
+
     public int getTotalRows() {
         return totalRows;
     }
