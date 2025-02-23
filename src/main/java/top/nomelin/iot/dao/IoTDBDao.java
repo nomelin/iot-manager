@@ -134,15 +134,14 @@ public interface IoTDBDao {
      */
     void deleteDatabase(String databasePath);
 
-//    /**
-//     * 删除设备,会先解除设备与模板的绑定关系，然后删除设备下的所有时间序列。同时清空所有数据。
-//     * @param devicePath 设备路径
-//     */
-//    void deleteDevice(String devicePath);
-
 
     /**
      * 查询一个时间戳下的属性及其json value值。
      */
     Map<String, String> getExistingMeasurements(String devicePath, long windowTs);
+
+    /**
+     * 批量查询时间戳下的属性及其json value值
+     */
+    Map<Long, Map<String, String>> getExistingMeasurementsBatch(String devicePath, List<Long> windowTimestamps);
 }

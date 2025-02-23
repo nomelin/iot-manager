@@ -21,10 +21,8 @@ import top.nomelin.iot.util.SessionContext;
 import top.nomelin.iot.util.TimeUtil;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class IoTDBDaoImpl implements IoTDBDao {
@@ -71,7 +69,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
             }
             if (!isSchemaSetOn) {
                 getSession().setSchemaTemplate(schemaName, devicePath);
-                log.info("挂载 元数据模板 {} 到路径 {} 成功", schemaName,devicePath);
+                log.info("挂载 元数据模板 {} 到路径 {} 成功", schemaName, devicePath);
             }
             boolean isSchemaUsingOn = false;
             paths = queryPathsSchemaUsingOn(schemaName);
@@ -267,10 +265,50 @@ public class IoTDBDaoImpl implements IoTDBDao {
                 existingData.put(entry.getKey(), entry.getValue() != null ? entry.getValue().toString() : null);
             }
         } else {
-            log.warn("设备 {} 在时间戳 {} 没有查询到数据", devicePath, timestamp);
+            log.info("设备 {} 在时间戳 {} 没有查询到数据", devicePath, timestamp);
         }
         log.info("查询设备 {} 时间戳 {} 的数据成功, result: {}", devicePath, timestamp, existingData);
         return existingData;
+    }
+
+    @Override
+    public Map<Long, Map<String, String>> getExistingMeasurementsBatch(String devicePath, List<Long> windowTimestamps) {
+        if (windowTimestamps.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        // 构造时间范围查询条件：timestamp >= windowTs AND timestamp < windowTs+1
+        String timeFilter = windowTimestamps.stream()
+                .map(ts -> String.format("(time = %d)", ts))
+                .collect(Collectors.joining(" OR "));
+
+        String sql = String.format("SELECT * FROM %s WHERE %s", devicePath, timeFilter);
+        SessionDataSet sessionDataSet = executeQueryStatement(sql);
+        DeviceTable deviceTable;
+        try {
+            deviceTable = DeviceTable.convertToDeviceTable(sessionDataSet, devicePath);
+        } catch (IoTDBConnectionException | StatementExecutionException e) {
+            throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
+        }
+        Map<Long, Map<String, String>> existingData = new HashMap<>();
+        for (Long windowTs : windowTimestamps) {
+            List<Record> recordsAtTimestamp = deviceTable.getRecords().get(windowTs);
+            if (recordsAtTimestamp != null && !recordsAtTimestamp.isEmpty()) {
+                // 假设该时间戳下只有一条记录，取第一条
+                Record record = recordsAtTimestamp.get(0);
+                Map<String, String> dataAtTimestamp = new HashMap<>();
+                for (Map.Entry<String, Object> entry : record.getFields().entrySet()) {
+                    // 如果值为 null，也可以根据业务需要处理为默认值
+                    dataAtTimestamp.put(entry.getKey(), entry.getValue() != null ? entry.getValue().toString() : null);
+                }
+                existingData.put(windowTs, dataAtTimestamp);
+            } else {
+//                log.info("[batch]设备 {} 在时间戳 {} 没有查询到数据", devicePath, windowTs);
+            }
+        }
+        log.info("[batch]查询设备 {} 时间戳 {} 的数据成功, result: {}", devicePath, windowTimestamps, existingData);
+        return existingData;
+
     }
 
 
@@ -304,7 +342,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
         SessionDataSet sessionDataSet;
         try {
             sessionDataSet = getSession().executeQueryStatement(sql);
-            log.debug("执行查询 SQL 语句 {} 成功", sql);
+            log.info("执行查询 SQL 语句 {} 成功", sql);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, "SQL: " + sql, e);
         }

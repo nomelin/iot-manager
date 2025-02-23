@@ -8,6 +8,7 @@ import org.apache.tsfile.enums.TSDataType;
 import org.apache.tsfile.file.metadata.enums.TSEncoding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.annotation.LogExecutionTime;
@@ -27,6 +28,9 @@ public class CompatibleStorageStrategy implements StorageStrategy {
     private static final Logger log = LoggerFactory.getLogger(CompatibleStorageStrategy.class);
     private final IoTDBDao iotDBDao;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${iotdb.storage.compatible.batch-query:false}")
+    private boolean batchQueryEnabled;
 
     public CompatibleStorageStrategy(IoTDBDao iotDBDao) {
         this.iotDBDao = iotDBDao;
@@ -127,9 +131,55 @@ public class CompatibleStorageStrategy implements StorageStrategy {
         }
     }
 
-    // 合并已有数据
     private void mergeExistingData(String devicePath, Map<Long, Map<String, List<Object>>> windowData,
                                    List<Long> windowTsToMerge) {
+        log.info("查询开关batchQueryEnabled：{}", batchQueryEnabled);
+        if (batchQueryEnabled) {
+            batchMerge(devicePath, windowData, windowTsToMerge);
+        } else {
+            singleMerge(devicePath, windowData, windowTsToMerge);
+        }
+    }
+
+    // 合并已有数据(只查一次)
+    private void batchMerge(String devicePath, Map<Long, Map<String, List<Object>>> windowData,
+                            List<Long> windowTsToMerge) {
+        Map<Long, Map<String, String>> existingDataBatch = iotDBDao.getExistingMeasurementsBatch(
+                devicePath, windowTsToMerge);
+
+        existingDataBatch.forEach((windowTs, measurements) -> {
+            Map<String, List<Object>> currentMeasurements = windowData.get(windowTs);
+            if (currentMeasurements == null) {
+                return;// 当前批次不包含该时间窗口，无需处理
+            }
+
+            measurements.forEach((measurement, jsonValue) -> {
+                try {
+                    if (jsonValue == null) {
+                        log.info("!!!jsonValue is null!!!");
+                    }
+                    List<?> existingValues = objectMapper.readValue(jsonValue, List.class);
+                    List<Object> currentValues = currentMeasurements.get(measurement);
+
+                    if (currentValues == null) {
+                        currentMeasurements.put(measurement, new ArrayList<>(existingValues));
+                    } else {
+                        List<Object> merged = new ArrayList<>(existingValues);
+                        merged.addAll(currentValues);
+                        currentMeasurements.put(measurement, merged);
+                    }
+                } catch (Exception e) {
+                    log.error("[batchMerge]Failed to merge data for {} at {}: {}", measurement, windowTs, e.getMessage());
+                    throw new SystemException(CodeMessage.JSON_READ_ERROR,
+                            "[batchMerge]Failed to merge data for " + measurement + " at " + windowTs, e);
+                }
+            });
+        });
+    }
+
+    // 合并已有数据(需查多次)
+    private void singleMerge(String devicePath, Map<Long, Map<String, List<Object>>> windowData,
+                             List<Long> windowTsToMerge) {
         windowTsToMerge.forEach(windowTs -> {
             Map<String, List<Object>> currentMeasurements = windowData.get(windowTs);
             if (currentMeasurements == null) {
@@ -153,9 +203,9 @@ public class CompatibleStorageStrategy implements StorageStrategy {
                         currentMeasurements.put(measurement, merged);
                     }
                 } catch (JsonProcessingException e) {
-                    log.error("Failed to merge data for {} at {}: {}", measurement, windowTs, e.getMessage());
+                    log.error("[singleMerge]Failed to merge data for {} at {}: {}", measurement, windowTs, e.getMessage());
                     throw new SystemException(CodeMessage.JSON_READ_ERROR,
-                            "Failed to merge data for " + measurement + " at " + windowTs, e);
+                            "[singleMerge]Failed to merge data for " + measurement + " at " + windowTs, e);
                 }
             });
         });

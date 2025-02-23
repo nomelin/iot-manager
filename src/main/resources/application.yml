@@ -44,7 +44,8 @@ iotdb:
     ts_encoding: PLAIN
     compression_type: UNCOMPRESSED
     compatible:
-#      dont-merge: true
+      batch-query: true
+  #      dont-merge: true
   query:
     timeout: 3000
 file:
