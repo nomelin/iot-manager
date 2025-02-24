@@ -47,6 +47,12 @@ const routes = [
                 meta: {name: '设备管理'},
                 component: () => import('../views/front/DeviceManage.vue')
             },
+            {
+                path: 'group_manage',
+                name: 'groupManage',
+                meta: {name: '组管理'},
+                component: () => import('../views/front/GroupManage.vue')
+            }
         ]
 
     },

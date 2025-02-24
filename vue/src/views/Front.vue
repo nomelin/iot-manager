@@ -44,6 +44,10 @@
             <i class="el-icon-folder-opened"></i>
             <span class="words" slot="title">设备管理</span>
           </el-menu-item>
+          <el-menu-item class="el-menu-item" index="/front/group_manage">
+            <i class="el-icon-folder-opened"></i>
+            <span class="words" slot="title">组管理</span>
+          </el-menu-item>
           <el-menu-item class="el-menu-item" @click="logout">
             <i class="el-icon-switch-button"></i>
             <span class="words" slot="title">退出登录</span>

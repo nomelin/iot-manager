@@ -1,5 +1,6 @@
 package top.nomelin.iot.service.impl;
 
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.ObjectUtil;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
@@ -67,6 +68,10 @@ public class GroupServiceImpl implements GroupService {
         group.setUserId(currentUserCache.getCurrentUser().getId());
         groupMapper.insert(group);
         log.info("创建group成功，group={}", group);
+        //创建时如果有设备，添加设备到group
+        if (CollectionUtil.isNotEmpty(group.getDeviceIds())) {
+            addDeviceToGroup(group.getId(), group.getDeviceIds());//这里会鉴定设备权限
+        }
         return group;
     }
 

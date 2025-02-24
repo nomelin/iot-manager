@@ -53,9 +53,11 @@
           <el-descriptions-item label="所属模板">
             <template-card-mini :template="currentTemplate"/>
           </el-descriptions-item>
-          <el-descriptions-item label="所在组" class="device-groups">
+          <el-descriptions-item label="所在组">
             <!--所在组可以有多个-->
-            <group-card-mini v-for="(group,index) in currentGroups" :key="index" :group="group"/>
+            <div class="device-groups">
+              <group-card-mini v-for="(group,index) in currentGroups" :key="index" :group="group" class="preview-item"/>
+            </div>
           </el-descriptions-item>
           <el-descriptions-item label="标签">
             <el-tag
@@ -464,6 +466,9 @@ export default {
 
 .device-groups {
   margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .tag-item {
@@ -488,6 +493,10 @@ export default {
   bottom: 10px;
   padding: 8px;
   color: #f56c6c;
+}
+
+.preview-item {
+  width: 200px;
 }
 
 .data-type-tag {

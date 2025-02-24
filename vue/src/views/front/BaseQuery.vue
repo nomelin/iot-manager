@@ -29,7 +29,8 @@
             </el-form-item>
             <!-- 显示设备缩略卡片 -->
             <div v-if="form.deviceId" class="device_preview">
-              <device-card-mini :device="selectedDevice"  :show-data-types="true"/>
+              <device-card-mini :device="selectedDevice"
+                                :show-data-types="true"/>
             </div>
 
             <!-- 时间范围 -->
