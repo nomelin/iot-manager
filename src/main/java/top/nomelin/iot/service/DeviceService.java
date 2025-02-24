@@ -1,6 +1,7 @@
 package top.nomelin.iot.service;
 
 import top.nomelin.iot.model.Device;
+import top.nomelin.iot.model.Group;
 
 import java.util.List;
 
@@ -26,6 +27,8 @@ public interface DeviceService {
     Device getDeviceById(int deviceId);
 
     List<Device> getDevicesByIds(List<Integer> deviceIds);
+
+    List<Group> getGroupsByDeviceId(int deviceId);
 
     /**
      * @return 当前登录用户的所有设备

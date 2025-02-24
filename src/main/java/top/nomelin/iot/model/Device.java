@@ -15,6 +15,8 @@ public class Device {
     private Integer templateId;
     private List<String> tags;
 
+    private List<Integer> groupIds;//这个字段不在device表中，而是通过中间表group_device关联。查表时通过left join group_device来获取。
+
     private Config config;
 
     public Integer getId() {
@@ -67,6 +69,14 @@ public class Device {
         this.templateId = templateId;
     }
 
+    public List<Integer> getGroupIds() {
+        return groupIds;
+    }
+
+    public void setGroupIds(List<Integer> groupIds) {
+        this.groupIds = groupIds;
+    }
+
 
     @Override
     public String toString() {
@@ -76,6 +86,7 @@ public class Device {
                 ", userId=" + userId +
                 ", templateId=" + templateId +
                 ", tags=" + tags +
+                ", groupIds=" + groupIds +
                 ", config='" + config + '\'' +
                 '}';
     }

@@ -27,6 +27,12 @@
                   {{ tag }}
                 </el-tag>
               </div>
+              <!--              <div class="device-groups">-->
+              <!--                <el-tag v-for="(group, index) in device.groupIds" :key="index" class="tag-item" effect="dark"-->
+              <!--                        size="medium" type="info">-->
+              <!--                  {{ group }}-->
+              <!--                </el-tag>-->
+              <!--              </div>-->
             </div>
             <el-button class="delete-btn" icon="el-icon-delete" type="text"
                        @click.stop="handleDelete(device.id)"></el-button>
@@ -46,6 +52,10 @@
           </el-descriptions-item>
           <el-descriptions-item label="所属模板">
             <template-card-mini :template="currentTemplate"/>
+          </el-descriptions-item>
+          <el-descriptions-item label="所在组" class="device-groups">
+            <!--所在组可以有多个-->
+            <group-card-mini v-for="(group,index) in currentGroups" :key="index" :group="group"/>
           </el-descriptions-item>
           <el-descriptions-item label="标签">
             <el-tag
@@ -90,7 +100,7 @@
           <el-input v-model="newDevice.name" placeholder="请输入设备名称"></el-input>
         </el-form-item>
 
-        <el-form-item label="所属模板" required>
+        <el-form-item label="创建模板" required>
           <el-select v-model="selectedTemplateId" @change="handleTemplateSelect">
             <el-option
                 v-for="template in templates"
@@ -157,16 +167,19 @@
 
 <script>
 import TemplateCardMini from './module/TemplateCardMini.vue'
+import GroupCardMini from "@/views/front/module/GroupCardMini";
 
 export default {
   name: 'DeviceManagement',
   components: {
-    TemplateCardMini
+    TemplateCardMini,
+    GroupCardMini
   },
   data() {
     return {
       devices: [],
-      templates: [],
+      templates: [],//当前用户的模板列表
+      groups: [],//当前用户的组列表
       selectedDevices: [],
       selectedTemplateId: null,
       detailVisible: false,
@@ -186,9 +199,15 @@ export default {
     }
   },
   computed: {
+    // 当前选中的模板
     selectedTemplate() {
       return this.templates.find(t => t.id === this.selectedTemplateId)
     },
+    // 设备详情的组列表
+    currentGroups() {
+      return this.groups.filter(g => this.currentDevice.groupIds.includes(g.id))
+    },
+    //设备详情的存储模式
     currentStorageMode() {
       return this.storageModes.find(m => m.code === this.currentDevice?.config?.storageMode) || {}
     }
@@ -196,6 +215,7 @@ export default {
   created() {
     this.fetchDevices()
     this.fetchTemplates()
+    this.fetchGroups()
     this.loadStorageModes()
   },
   methods: {
@@ -225,6 +245,19 @@ export default {
         }
       } catch (error) {
         this.$message.error('获取模板列表失败')
+      }
+    },
+
+    async fetchGroups() {
+      try {
+        const res = await this.$request.get('/group/all')
+        if (res.code === '200') {
+          this.groups = res.data
+        } else {
+          this.$message.error(res.msg)
+        }
+      } catch (error) {
+        this.$message.error('获取分组列表失败')
       }
     },
 
@@ -426,6 +459,10 @@ export default {
 }
 
 .device-tags {
+  margin-top: 8px;
+}
+
+.device-groups {
   margin-top: 8px;
 }
 

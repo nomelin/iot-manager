@@ -30,6 +30,8 @@ public interface GroupService {
 
     Group getGroupById(int groupId);
 
+    List<Group> getGroupByIds(List<Integer> groupIds);
+
     List<Device> getDevicesByGroupId(int groupId);
 
     /**

@@ -11,6 +11,10 @@
         <result column="template_id" property="templateId"/>
         <result column="tags" property="tags" typeHandler="top.nomelin.iot.common.handler.ListStringTypeHandler"/>
         <result column="config" property="config" typeHandler="top.nomelin.iot.common.handler.ConfigTypeHandler"/>
+        <!-- 关联查询，获取设备所属的 groupIds -->
+        <collection property="groupIds" ofType="java.lang.Integer">
+            <result column="group_id"/>
+        </collection>
     </resultMap>
 
     <!-- 插入设备 -->
@@ -45,37 +49,43 @@
         WHERE id = #{id}
     </delete>
 
-    <!-- 根据 ID 查询设备 -->
+
+    <!-- 根据 ID 查询设备，包括所属组 -->
     <select id="selectById" parameterType="int" resultMap="deviceResultMap">
-        SELECT id, name, user_id, template_id, tags, config
-        FROM device
-        WHERE id = #{id}
+        SELECT d.id, d.name, d.user_id, d.template_id, d.tags, d.config, gd.group_id
+        FROM device d
+                 LEFT JOIN group_device gd ON d.id = gd.device_id
+        WHERE d.id = #{id}
     </select>
 
     <!-- 条件查询设备 -->
     <select id="selectAll" parameterType="top.nomelin.iot.model.Device" resultMap="deviceResultMap">
-        SELECT id, name, user_id, template_id, tags, config
-        FROM device
+        SELECT d.id, d.name, d.user_id, d.template_id, d.tags, d.config, gd.group_id
+        FROM device d
+        LEFT JOIN group_device gd ON d.id = gd.device_id
         <where>
-            <if test="id != null">AND id = #{id}</if>
-            <if test="name != null">AND name LIKE CONCAT('%', #{name}, '%')</if>
-            <if test="userId != null">AND user_id = #{userId}</if>
-            <if test="templateId != null">AND template_id = #{templateId}</if>
+            <if test="id != null">AND d.id = #{id}</if>
+            <if test="name != null">AND d.name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="userId != null">AND d.user_id = #{userId}</if>
+            <if test="templateId != null">AND d.template_id = #{templateId}</if>
         </where>
     </select>
 
     <!-- 根据用户 ID 查询设备 -->
     <select id="selectByUserId" parameterType="int" resultMap="deviceResultMap">
-        SELECT id, name, user_id, template_id, tags, config
-        FROM device
-        WHERE user_id = #{userId}
+        SELECT d.id, d.name, d.user_id, d.template_id, d.tags, d.config, gd.group_id
+        FROM device d
+                 LEFT JOIN group_device gd ON d.id = gd.device_id
+        WHERE d.user_id = #{userId}
     </select>
 
     <!-- 根据模板 ID 查询设备 -->
     <select id="selectByTemplateId" parameterType="int" resultMap="deviceResultMap">
-        SELECT id, name, user_id, template_id, tags, config
-        FROM device
-        WHERE template_id = #{templateId}
+        SELECT d.id, d.name, d.user_id, d.template_id, d.tags, d.config, gd.group_id
+        FROM device d
+                 LEFT JOIN group_device gd ON d.id = gd.device_id
+        WHERE d.template_id = #{templateId}
     </select>
+
 
 </mapper>

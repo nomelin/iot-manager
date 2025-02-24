@@ -2,6 +2,7 @@ package top.nomelin.iot.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
 import org.slf4j.Logger;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import top.nomelin.iot.cache.CurrentUserCache;
 import top.nomelin.iot.common.Constants;
@@ -12,8 +13,10 @@ import top.nomelin.iot.dao.DeviceMapper;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.model.Config;
 import top.nomelin.iot.model.Device;
+import top.nomelin.iot.model.Group;
 import top.nomelin.iot.model.Template;
 import top.nomelin.iot.service.DeviceService;
+import top.nomelin.iot.service.GroupService;
 import top.nomelin.iot.service.TemplateService;
 import top.nomelin.iot.service.storage.StorageStrategy;
 import top.nomelin.iot.service.storage.StorageStrategyManager;
@@ -35,14 +38,17 @@ public class DeviceServiceImpl implements DeviceService {
     private final TemplateService templateService;
     private final CurrentUserCache currentUserCache;
     private final StorageStrategyManager storageStrategyManager;
+    private final GroupService groupService;//懒加载，避免循环依赖
 
     private final IoTDBDao iotDBDao;
 
-    public DeviceServiceImpl(DeviceMapper deviceMapper, TemplateService templateService, CurrentUserCache currentUserCache, StorageStrategyManager storageStrategyManager, IoTDBDao iotDBDao) {
+    public DeviceServiceImpl(DeviceMapper deviceMapper, TemplateService templateService, CurrentUserCache currentUserCache,
+                             StorageStrategyManager storageStrategyManager, @Lazy GroupService groupService, IoTDBDao iotDBDao) {
         this.deviceMapper = deviceMapper;
         this.templateService = templateService;
         this.currentUserCache = currentUserCache;
         this.storageStrategyManager = storageStrategyManager;
+        this.groupService = groupService;
         this.iotDBDao = iotDBDao;
     }
 
@@ -186,6 +192,12 @@ public class DeviceServiceImpl implements DeviceService {
             devices.add(checkPermission(deviceId));
         }
         return devices;
+    }
+
+    @Override
+    public List<Group> getGroupsByDeviceId(int deviceId) {
+        Device device = checkPermission(deviceId);
+        return groupService.getGroupByIds(device.getGroupIds());
     }
 
     @Override

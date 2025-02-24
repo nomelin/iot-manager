@@ -13,7 +13,7 @@ public class Group {
     private String name;
     private String description;
     private Integer userId;
-    private List<Integer> deviceIds;
+    private List<Integer> deviceIds;//这个字段不在group表中，而是通过中间表group_device关联。查表时通过left join group_device来获取。
 
     public Integer getId() {
         return id;

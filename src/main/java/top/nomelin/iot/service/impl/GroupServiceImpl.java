@@ -139,6 +139,15 @@ public class GroupServiceImpl implements GroupService {
     }
 
     @Override
+    public List<Group> getGroupByIds(List<Integer> groupIds) {
+        List<Group> groups = new ArrayList<>();
+        for (int groupId : groupIds) {
+            groups.add(checkPermission(groupId));
+        }
+        return groups;
+    }
+
+    @Override
     public List<Device> getDevicesByGroupId(int groupId) {
         Group group = checkPermission(groupId);
         return deviceService.getDevicesByIds(group.getDeviceIds());
