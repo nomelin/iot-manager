@@ -16,7 +16,15 @@ public interface DeviceService {
 
     Device addDevice(Device device, int templateId);
 
+    /**
+     * 删除设备
+     */
     void deleteDevice(int deviceId);
+
+    /**
+     * 清空设备数据
+     */
+    void clearDevice(int deviceId);
 
     void updateDeviceName(int deviceId, String name);
 

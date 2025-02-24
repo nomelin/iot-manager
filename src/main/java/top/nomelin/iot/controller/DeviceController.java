@@ -48,6 +48,15 @@ public class DeviceController {
         return Result.success();
     }
 
+    @RequestMapping("/clear/{deviceId}")
+    public Result clearDevice(@PathVariable Integer deviceId) {
+        if (ObjectUtil.isNull(deviceId)) {
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        deviceService.clearDevice(deviceId);
+        return Result.success();
+    }
+
     @RequestMapping("/updateName/{deviceId}")
     public Result updateDeviceName(@PathVariable Integer deviceId, @RequestParam String name) {
         if (ObjectUtil.isNull(deviceId) || ObjectUtil.isEmpty(name)) {

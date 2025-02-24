@@ -130,6 +130,14 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    public void clearDevice(int deviceId) {
+        Device device = checkPermission(deviceId);
+        //清空iotdb设备数据
+        iotDBDao.clearDevice(util.getDevicePath(device.getUserId(), device.getId()));
+        log.info("清空iotdb设备数据成功, deviceId: {}", deviceId);
+    }
+
+    @Override
     public void updateDeviceName(int deviceId, String name) {
         checkPermission(deviceId);
         Device device = new Device();

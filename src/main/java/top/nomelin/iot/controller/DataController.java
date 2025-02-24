@@ -73,7 +73,6 @@ public class DataController {
         );
         return Result.success(result);
     }
-    //TODO 同一个时间戳多个值，在前端怎么处理？
 
     /**
      * 获取所有存储模式

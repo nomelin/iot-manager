@@ -327,6 +327,8 @@ export default {
         } catch (error) {
           this.$message.error('删除失败')
         }
+      }).catch(() => {
+        this.$message.info('取消删除')
       })
     },
 
@@ -345,12 +347,34 @@ export default {
 <style scoped>
 .group-management {
   padding: 20px;
+  font-weight: bold;
+  height: 100%;
+  overflow: hidden; /* 关键样式 */
+}
+
+
+.card-row {
+  /*margin: 0 -10px;*/
+  background: #fff;
+  height: 90%;
+  border-radius: 1rem;
+  /*box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);*/
+  margin-top: 16px;
+  overflow: auto;
 }
 
 .group-card {
-  margin: 10px;
-  min-height: 120px;
   position: relative;
+  margin: 20px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  background: #f8f9fa;
+  border-radius: 1rem;
+  min-height: 150px;
+}
+
+.group-card:hover {
+  transform: translateY(-3px);
 }
 
 .card-content {
@@ -382,6 +406,8 @@ export default {
   position: absolute;
   right: 10px;
   bottom: 10px;
+  padding: 8px;
+  color: #f56c6c;
 }
 
 .device-option {

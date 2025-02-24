@@ -134,6 +134,12 @@ public interface IoTDBDao {
      */
     void deleteDatabase(String databasePath);
 
+    /**
+     * 清除设备的所有数据。不影响其他内容
+     * @param devicePath 设备路径
+     */
+    void clearDevice(String devicePath);
+
 
     /**
      * 查询一个时间戳下的属性及其json value值。

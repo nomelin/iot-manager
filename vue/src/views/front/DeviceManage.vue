@@ -34,8 +34,12 @@
               <!--                </el-tag>-->
               <!--              </div>-->
             </div>
+            <el-button class="clear-btn" icon="el-icon-delete" type="text"
+                       @click.stop="handleClear(device.id)">清空设备数据
+            </el-button>
             <el-button class="delete-btn" icon="el-icon-delete" type="text"
-                       @click.stop="handleDelete(device.id)"></el-button>
+                       @click.stop="handleDelete(device.id)">删除设备
+            </el-button>
           </div>
         </el-card>
       </el-col>
@@ -399,7 +403,7 @@ export default {
         type: 'warning'
       }).then(() => {
         console.log("delete device", deviceId)
-        this.$request.post(`/device/delete/${this.currentDevice.id}`)
+        this.$request.post(`/device/delete/${deviceId}`)
             .then((res) => {
               if (res.code === '200') {
                 this.$message.success('删除成功')
@@ -416,6 +420,29 @@ export default {
         this.$message.info('取消删除')
       })
     },
+    handleClear(deviceId) {
+      this.$confirm('此操作将永久清空该设备的所有数据！', '警告', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        console.log("clear device", deviceId)
+        this.$request.post(`/device/clear/${deviceId}`)
+            .then((res) => {
+              if (res.code === '200') {
+                this.$message.success('清空设备数据成功')
+              } else {
+                this.$message.error(res.msg)
+              }
+              // this.fetchDevices()
+            }).catch(() => {
+              this.$message.error('清空设备数据失败')
+            })
+      }).catch((e) => {
+        console.log(e)
+        this.$message.info('取消清空设备数据')
+      })
+    }
   }
 }
 </script>
@@ -450,6 +477,10 @@ export default {
   background: #f8f9fa;
   border-radius: 1rem;
   min-height: 150px;
+}
+
+.device-card:hover {
+  transform: translateY(-3px);
 }
 
 .device-id {
@@ -488,11 +519,15 @@ export default {
   margin-left: 10px;
 }
 
+.clear-btn {
+  color: #f56c6c;
+}
+
 .delete-btn {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  padding: 8px;
+  /*position: absolute;*/
+  /*right: 10px;*/
+  /*bottom: 10px;*/
+  /*padding: 8px;*/
   color: #f56c6c;
 }
 

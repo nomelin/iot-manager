@@ -247,6 +247,12 @@ public class IoTDBDaoImpl implements IoTDBDao {
     }
 
     @Override
+    public void clearDevice(String devicePath) {
+        String sql = "DELETE FROM " + devicePath + ".*";
+        executeNonQueryStatement(sql);
+    }
+
+    @Override
     public Map<String, String> getExistingMeasurements(String devicePath, long timestamp) {
         // 构造查询路径，查询设备所有测量（例如：devicePath.*）
         List<String> paths = List.of(devicePath + ".*");
