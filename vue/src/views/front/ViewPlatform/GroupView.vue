@@ -46,6 +46,7 @@ export default {
     async fetchData() {
       if (!this.selectedDeviceIds || !this.selectedDeviceIds.length || !this.dateRange) return
       try {
+        const queryStartTime = Date.now();
         const promises = this.selectedDeviceIds.map((deviceId) => {
           console.log("device: " + JSON.stringify(deviceId));
           const requestBody = {
@@ -53,11 +54,13 @@ export default {
             startTime: this.dateRange[0],
             endTime: this.dateRange[1],
           }
-          console.log("requestBody: " , JSON.stringify(requestBody));
+          console.log("requestBody: ", JSON.stringify(requestBody));
           return this.$request.post(`/data/query`, requestBody);
         });
         const responses = await Promise.all(promises); // 获取所有设备的查询结果
-        console.log("resp", JSON.stringify(responses));
+        const queryEndTime = Date.now();
+        this.$message.success("从服务器获取数据成功，耗时：" + (queryEndTime - queryStartTime) + "ms");
+        // console.log("resp", JSON.stringify(responses));
         responses.forEach((res) => {
           if (res.code !== "200") {
             this.$message.error("数据加载失败：" + res.msg);
@@ -66,47 +69,55 @@ export default {
         const rawData = responses.map((res) => res.data);
 
         this.processedData = this.organizeData(rawData);
+        const processEndTime = Date.now();
+        setTimeout(() => {
+          this.$message.success("数据处理成功，耗时：" + (processEndTime - queryEndTime) + "ms");
+        }, 1);//只是为了消息不重叠
       } catch (error) {
         console.log("数据加载失败：" + error.message);
       }
     },
     organizeData(rawData) {
       const fieldsMap = {};
-      console.log("rawData: " + JSON.stringify(rawData));
+      // console.log("rawData: " + JSON.stringify(rawData));
       rawData.forEach((deviceData) => {
-        const {devicePath, records} = deviceData;
+        const { devicePath, records } = deviceData;
         const deviceName = devicePath.split(".").pop();
 
-        // 遍历每个时间戳及其对应的Record列表
+        // 处理每个时间戳，只取第一个Record
         Object.entries(records).forEach(([timestamp, recordList]) => {
-          // 遍历每个时间戳下的所有Record对象
-          recordList.forEach(record => {
-            const {fields} = record;
-            const formattedTime = this.$options.filters.formatTime(timestamp);
+          if (!recordList.length) return;
+          const record = recordList[0]; // 只取第一个Record
+          const formattedTime = this.$options.filters.formatTime(timestamp);
 
-            // 处理每个字段
-            Object.entries(fields).forEach(([fieldName, value]) => {
-              if (!fieldsMap[fieldName]) {
-                fieldsMap[fieldName] = [];
-              }
+          Object.entries(record.fields).forEach(([fieldName, value]) => {
+            if (!fieldsMap[fieldName]) fieldsMap[fieldName] = [];
 
-              // 查找或创建当前设备的字段数据
-              let fieldData = fieldsMap[fieldName].find(
-                  (item) => item.deviceName === deviceName
-              );
-              if (!fieldData) {
-                fieldData = {deviceName, timestamps: [], values: []};
-                fieldsMap[fieldName].push(fieldData);
-              }
+            // 查找或创建当前设备的字段数据
+            let fieldData = fieldsMap[fieldName].find(
+                (item) => item.deviceName === deviceName
+            );
+            if (!fieldData) {
+              fieldData = { deviceName, data: [] };
+              fieldsMap[fieldName].push(fieldData);
+            }
 
-              // 添加时间戳和值
-              fieldData.timestamps.push(formattedTime);
-              fieldData.values.push(value);
-            });
+            // 添加时间和值到数据数组
+            fieldData.data.push([formattedTime, value]);
           });
         });
       });
-      console.log(fieldsMap);
+
+      // 对每个字段的每个设备数据进行时间排序
+      Object.keys(fieldsMap).forEach((fieldName) => {
+        fieldsMap[fieldName].forEach((fieldData) => {
+          // 按时间戳排序
+          fieldData.data.sort((a, b) => {
+            return new Date(a[0]) - new Date(b[0]);
+          });
+        });
+      });
+      // console.log("fieldsMap: " + JSON.stringify(fieldsMap));
       return fieldsMap;
     }
   },

@@ -54,13 +54,21 @@ export default {
         },
         tooltip: {
           trigger: "axis",
+          axisPointer: {
+            type: 'cross'
+          }
         },
         legend: {
           top: "10%",
+          data: this.data.map(item => item.deviceName) // 确保legend显示设备名
         },
         xAxis: {
-          type: "category",
-          data: this.data.length ? this.data[0].timestamps : [],
+          type: "time", // 使用时间轴
+          axisLabel: {
+            formatter: (value) => {
+              return echarts.format.formatTime('yyyy-MM-dd HH:mm', value);
+            }
+          }
         },
         yAxis: {
           type: "value",
@@ -80,8 +88,9 @@ export default {
         series: this.data.map((line) => ({
           name: line.deviceName,
           type: "line",
-          data: line.values,
+          data: line.data, // 直接使用排序后的数据
           smooth: true,
+          showSymbol: false // 数据点较多时可关闭折线图的折线点显示。鼠标悬浮时仍然显示折线点
         })),
       };
 
