@@ -411,7 +411,8 @@ export default {
             .catch(() => {
               this.$message.error('删除失败')
             })
-      }).catch(() => {
+      }).catch((e) => {
+        console.log(e)
         this.$message.info('取消删除')
       })
     },

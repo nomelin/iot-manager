@@ -12,7 +12,7 @@
           <div class="collapse-content">
             <el-form ref="formRef" :model="form" :rules="rules" label-position="left" label-width="100px">
               <!-- 多文件上传 -->
-              <el-form-item prop="files" label="数据文件">
+              <el-form-item label="数据文件" prop="files">
                 <el-upload
                     :auto-upload="false"
                     :file-list="fileList"
@@ -38,22 +38,28 @@
               </el-form-item>
 
               <!-- 设备ID -->
-              <el-form-item prop="deviceId" label="设备ID">
-                <el-input
-                    v-model.number="form.deviceId"
-                    min="0"
-                    placeholder="请输入设备ID"
-                    type="number"
-                    required
+              <el-form-item label="设备">
+                <el-select
+                    v-model="form.deviceId"
+                    placeholder="请选择设备"
                 >
-                  <template #prefix>
-                    <i class="el-icon-cpu"></i>
-                  </template>
-                </el-input>
+                  <el-option
+                      v-for="device in allDevices"
+                      :key="device.id"
+                      :label="device.name"
+                      :value="device.id"
+                  />
+                </el-select>
+                <!-- 显示设备缩略卡片 -->
+                <div v-if="form.deviceId" class="device_preview">
+                  <device-card-mini :device="selectedDevice"
+                                    :show-data-types="true"/>
+                </div>
+
               </el-form-item>
 
               <!-- 跳过行数 -->
-              <el-form-item prop="skipRows" label="跳过行数">
+              <el-form-item label="跳过行数" prop="skipRows">
                 <el-input
                     v-model.number="form.skipRows"
                     min="0"
@@ -66,7 +72,7 @@
                 </el-input>
               </el-form-item>
               <!--批次大小-->
-              <el-form-item prop="batchSize" label="批次大小">
+              <el-form-item label="批次大小" prop="batchSize">
                 <el-input
                     v-model.number="form.batchSize"
                     min="1"
@@ -79,7 +85,7 @@
                 </el-input>
               </el-form-item>
               <!--合并时间戳数量-->
-              <el-form-item prop="mergeTimeStampNum" label="每批次合并旧时间戳数量">
+              <el-form-item label="每批次合并旧时间戳数量" prop="mergeTimeStampNum">
                 <el-input
                     v-model.number="form.mergeTimeStampNum"
                     min="-1"
@@ -158,11 +164,17 @@
 
 <script>
 import dayjs from 'dayjs'
+import DeviceCardMini from "@/views/front/module/DeviceCardMini";
+
 
 export default {
   name: 'BatchUpload',
+  components: {
+    DeviceCardMini
+  },
   data() {
     return {
+      allDevices: [],                      // 全部设备信息
       activeCollapse: ['upload'], // 默认展开上传面板
       form: {
         deviceId: null,
@@ -186,8 +198,16 @@ export default {
       fileSet: new Set() // 用于文件名去重
     }
   },
+  created() {
+    this.fetchAllDevices()
+  },
   beforeUnmount() {
     this.clearAllPolling()
+  },
+  computed: {
+    selectedDevice() {
+      return this.allDevices.find(device => device.id === this.form.deviceId);
+    }
   },
   methods: {
     formatDateTime(datetime) {
@@ -326,7 +346,19 @@ export default {
     progressStatus(status) {
       return status === 'FAILED' ? 'exception' :
           status === 'COMPLETED' ? 'success' : null
-    }
+    },
+    async fetchAllDevices() {
+      try {
+        const res = await this.$request.get('/device/all');
+        if (res.code === '200') {
+          this.allDevices = res.data;
+        } else {
+          this.$message.error(res.msg);
+        }
+      } catch (error) {
+        this.$message.error('获取设备列表失败');
+      }
+    },
   }
 }
 </script>
