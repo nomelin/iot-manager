@@ -2,7 +2,7 @@
   <div class="chart-container">
     <div class="setting">
       <el-row>
-        <el-col :span="6" offset="18">
+        <el-col :span="6" :offset="18">
           <el-button>配置</el-button>
         </el-col>
       </el-row>

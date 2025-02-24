@@ -18,7 +18,7 @@
         <el-form>
           <el-form-item label="设备选择">
             <el-select
-                v-model="selectedDevices"
+                v-model="selectedDeviceIds"
                 :clearable="true"
                 collapse-tags
                 multiple
@@ -41,12 +41,13 @@
           <el-form-item label="时间段选择">
             <el-date-picker
                 v-model="dateRange"
-                :clearable="true"
-                end-placeholder="结束日期"
-                range-separator="-"
-                start-placeholder="开始日期"
-                type="daterange"
-            />
+                :default-time="['00:00:00', '23:59:59']"
+                end-placeholder="结束时间"
+                range-separator="至"
+                start-placeholder="开始时间"
+                type="datetimerange"
+                value-format="timestamp"
+            ></el-date-picker>
           </el-form-item>
           <el-form-item>
             <el-button @click="selectQuickRange('1m')">最近1分钟</el-button>
@@ -58,7 +59,11 @@
 
     <!-- 下侧数据展示 -->
     <div class="data-view">
-      <GroupView :devices="devices" :selected-devices="selectedDevices"/>
+      <GroupView
+          :date-range="dateRange"
+          :devices="devices"
+          :selected-device-ids="selectedDeviceIds "
+      />
     </div>
   </div>
 </template>
@@ -74,8 +79,8 @@ export default {
       groups: [], // 全部组信息
       devices: [], // 当前组设备
       selectedGroup: null, // 当前选择的组ID
-      selectedDevices: [], // 当前选择的设备ID
-      dateRange: null, // 时间段选择
+      selectedDeviceIds: [], // 当前选择的设备ID
+      dateRange: [1719072000000, 1719158400000], // 时间段选择
     };
   },
   methods: {
@@ -97,7 +102,7 @@ export default {
     fetchDevices() {
       if (!this.selectedGroup) {
         this.devices = [];
-        this.selectedDevices = [];
+        this.selectedDeviceIds = [];
         return;
       }
       this.$request
@@ -105,7 +110,7 @@ export default {
           .then((res) => {
             if (res.code === "200") {
               this.devices = res.data;
-              this.selectedDevices = []; // 重置设备选择
+              this.selectedDeviceIds = []; // 重置设备选择
             } else {
               this.$message.error("加载设备信息失败：" + res.msg);
             }
@@ -115,17 +120,18 @@ export default {
           });
     },
     selectQuickRange(type) {
-      const now = new Date();
-      let start, end;
-
-      if (type === "1m") {
-        start = new Date(now.getTime() - 60 * 1000);
-      } else if (type === "1h") {
-        start = new Date(now.getTime() - 60 * 60 * 1000);
+      const ranges = {
+        '1m': 60 * 1000,
+        '1h': 60 * 60 * 1000,
+        '1d': 24 * 60 * 60 * 1000
       }
-      end = now;
 
-      this.dateRange = [start, end];
+      if (ranges[type]) {
+        this.dateRange = [
+          new Date(Date.now() - ranges[type]),
+          new Date()
+        ]
+      }
     },
   },
   created() {

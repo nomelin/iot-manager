@@ -21,7 +21,7 @@ export default {
   name: "GroupView",
   components: {LineChart},
   props: {
-    selectedDevices: {
+    selectedDeviceIds: {
       type: Array,
       required: true,
       description: "选中的设备列表",//选中设备变化时不重新加载数据
@@ -31,6 +31,11 @@ export default {
       required: true,
       description: "当前组全部设备列表",//设备列表变化时重新加载数据
     },
+    dateRange: {
+      type: Array,
+      required: true,
+      description: "时间范围选择",//时间范围变化时重新加载数据
+    }
   },
   data() {
     return {
@@ -39,30 +44,44 @@ export default {
   },
   methods: {
     async fetchData() {
+      if (!this.selectedDeviceIds || !this.selectedDeviceIds.length || !this.dateRange) return
       try {
-        const promises = [1, 2, 3].map((deviceId) =>
-            this.$request.get(`/data/test/${deviceId}/3`)
-        );
-        const responses = await Promise.all(promises);
+        const promises = this.selectedDeviceIds.map((deviceId) => {
+          console.log("device: " + JSON.stringify(deviceId));
+          const requestBody = {
+            deviceId: deviceId,
+            startTime: this.dateRange[0],
+            endTime: this.dateRange[1],
+          }
+          console.log("requestBody: " , JSON.stringify(requestBody));
+          return this.$request.post(`/data/query`, requestBody);
+        });
+        const responses = await Promise.all(promises); // 获取所有设备的查询结果
+        console.log("resp", JSON.stringify(responses));
+        responses.forEach((res) => {
+          if (res.code !== "200") {
+            this.$message.error("数据加载失败：" + res.msg);
+          }
+        });
         const rawData = responses.map((res) => res.data);
 
         this.processedData = this.organizeData(rawData);
       } catch (error) {
-        this.$message.error("数据加载失败：" + error.message);
+        console.log("数据加载失败：" + error.message);
       }
     },
     organizeData(rawData) {
       const fieldsMap = {};
       console.log("rawData: " + JSON.stringify(rawData));
       rawData.forEach((deviceData) => {
-        const { devicePath, records } = deviceData;
+        const {devicePath, records} = deviceData;
         const deviceName = devicePath.split(".").pop();
 
         // 遍历每个时间戳及其对应的Record列表
         Object.entries(records).forEach(([timestamp, recordList]) => {
           // 遍历每个时间戳下的所有Record对象
           recordList.forEach(record => {
-            const { fields } = record;
+            const {fields} = record;
             const formattedTime = this.$options.filters.formatTime(timestamp);
 
             // 处理每个字段
@@ -76,7 +95,7 @@ export default {
                   (item) => item.deviceName === deviceName
               );
               if (!fieldData) {
-                fieldData = { deviceName, timestamps: [], values: [] };
+                fieldData = {deviceName, timestamps: [], values: []};
                 fieldsMap[fieldName].push(fieldData);
               }
 
@@ -94,6 +113,17 @@ export default {
   created() {
     this.fetchData();
   },
+  watch: {
+    selectedDeviceIds() {
+      this.fetchData();//TODO 选择设备变化时不需要重新加载数据
+    },
+    devices() {
+      this.fetchData();
+    },
+    dateRange() {
+      this.fetchData();
+    }
+  }
 };
 </script>
 

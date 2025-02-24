@@ -14,6 +14,7 @@ import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.dto.FileTask;
 import top.nomelin.iot.model.enums.FileTaskStatus;
+import top.nomelin.iot.model.enums.IotDataType;
 import top.nomelin.iot.service.DataService;
 import top.nomelin.iot.service.processor.FileProcessor;
 import top.nomelin.iot.util.TimestampConverter;
@@ -125,6 +126,16 @@ public class CsvProcessor implements FileProcessor {
         )) {
             List<String> measurements = headers.subList(1, headers.size()); // 跳过timestamp列
             log.info("CSV文件{}的属性列: {}", task.getFileName(), measurements);
+            // 获取每个测量项的数据类型配置
+            List<IotDataType> dataTypes = new ArrayList<>();
+            for (String measurement : measurements) {
+                IotDataType dataType = device.getConfig().getDataTypes().get(measurement);
+                if (dataType == null) {
+                    throw new SystemException(CodeMessage.PARAM_LOST_ERROR,
+                            "未找到测量项 '" + measurement + "' 的数据类型配置");
+                }
+                dataTypes.add(dataType);
+            }
 
             List<Long> timestamps = new ArrayList<>(batchSize);
             List<List<Object>> valuesBatch = new ArrayList<>(batchSize);
@@ -132,7 +143,7 @@ public class CsvProcessor implements FileProcessor {
             for (CSVRecord record : parser) {
                 checkTaskStatus(task); // 状态检查
 
-                processSingleRecord(record, timestamps, valuesBatch);
+                processSingleRecord(record, timestamps, valuesBatch, dataTypes); // 传入dataTypes
 
                 if (shouldFlushBatch(timestamps, batchSize)) {
                     flushBatch(device, measurements, timestamps, valuesBatch, task, mergeTimestampNum);
@@ -155,14 +166,22 @@ public class CsvProcessor implements FileProcessor {
     }
 
     // 解析单行数据，并将其添加到批次中
-    private void processSingleRecord(CSVRecord record, List<Long> timestamps, List<List<Object>> valuesBatch) {
+    private void processSingleRecord(CSVRecord record, List<Long> timestamps,
+                                     List<List<Object>> valuesBatch, List<IotDataType> dataTypes) {
         try {
             long timestamp = TimestampConverter.convertToMillis(record.get(0));
 //            log.info("timestamp: {}->{}", record.get(0), timestamp);
             List<Object> values = new ArrayList<>();
 
             for (int i = 1; i < record.size(); i++) {
-                values.add(parseValue(record.get(i)));
+                if (i - 1 >= dataTypes.size()) {
+                    throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
+                            String.format("第%d行数据列数超过配置的测量项数量", record.getRecordNumber()));
+                }
+                IotDataType dataType = dataTypes.get(i - 1);
+                String rawValue = record.get(i);
+                Object value = parseValue(rawValue, dataType);
+                values.add(value);
             }
 
             timestamps.add(timestamp);
@@ -173,16 +192,19 @@ public class CsvProcessor implements FileProcessor {
         }
     }
 
-    private Object parseValue(String rawValue) {
+    private Object parseValue(String rawValue, IotDataType dataType) {
         try {
-            // 优先尝试解析为数值类型
-            if (rawValue.contains(".")) {
-                return Double.parseDouble(rawValue);
-            }
-            return Long.parseLong(rawValue);
+            return switch (dataType) {
+                case INT -> Integer.parseInt(rawValue);
+                case LONG -> Long.parseLong(rawValue);
+                case FLOAT -> Float.parseFloat(rawValue);
+                case DOUBLE -> Double.parseDouble(rawValue);
+                default -> throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
+                        "不支持的Iot数据类型: " + dataType);
+            };
         } catch (NumberFormatException e) {
-            // 无法解析为数值则返回原始字符串
-            return rawValue;
+            throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
+                    String.format("无法将值 '%s' 解析为类型 %s", rawValue, dataType), e);
         }
     }
 
