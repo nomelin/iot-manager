@@ -12,14 +12,25 @@
         <div class="scrollable-container">
           <el-form :model="form" class="query-form" label-position="left" label-width="120px">
             <!-- 设备ID -->
-            <el-form-item label="设备ID">
-              <el-input-number
+            <el-form-item label="设备">
+              <el-select
                   v-model="form.deviceId"
-                  :min="1"
-                  placeholder="请输入设备ID"
+                  placeholder="请选择设备"
                   @change="handleDeviceChange"
-              ></el-input-number>
+              >
+                <el-option
+                    v-for="device in allDevices"
+                    :key="device.id"
+                    :label="device.name"
+                    :value="device.id"
+                />
+              </el-select>
+
             </el-form-item>
+            <!-- 显示设备缩略卡片 -->
+            <div v-if="form.deviceId" class="device_preview">
+              <device-card-mini :device="selectedDevice"  :show-data-types="true"/>
+            </div>
 
             <!-- 时间范围 -->
             <el-form-item label="时间范围">
@@ -214,8 +225,8 @@
       <div class="pagination-container">
         <el-pagination
             :current-page.sync="currentPage"
-            :page-sizes="[10, 50, 100]"
             :page-size="pageSize"
+            :page-sizes="[10, 50, 100]"
             :total="tableData.length"
             background
             layout="total, prev, pager, next, jumper, sizes"
@@ -231,10 +242,16 @@
 </template>
 
 <script>
+import DeviceCardMini from "@/views/front/module/DeviceCardMini";
+
 export default {
   name: 'BaseQuery',
+  components: {
+    DeviceCardMini
+  },
   data() {
     return {
+      allDevices: [],                      // 全部设备信息
       form: {
         deviceId: null,
         startTime: null,
@@ -277,6 +294,9 @@ export default {
     // 动态计算表格高度：假设分页区域高度为 50px
     tableHeight() {
       return 'calc(100% - 50px)';
+    },
+    selectedDevice() {
+      return this.allDevices.find(device => device.id === this.form.deviceId);
     }
   },
   watch: {
@@ -292,6 +312,7 @@ export default {
     }
   },
   created() {
+    this.fetchAllDevices();
     this.loadAggregateFunctions();
   },
   methods: {
@@ -347,6 +368,18 @@ export default {
     handleMeasurementsChange(selected) {
       // 保持选择的传感器顺序
       this.form.selectMeasurements = this.deviceMeasurements.filter(m => selected.includes(m));
+    },
+    async fetchAllDevices() {
+      try {
+        const res = await this.$request.get('/device/all');
+        if (res.code === '200') {
+          this.allDevices = res.data;
+        } else {
+          this.$message.error(res.msg);
+        }
+      } catch (error) {
+        this.$message.error('获取设备列表失败');
+      }
     },
     async loadAggregateFunctions() {
       try {
@@ -537,6 +570,13 @@ export default {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.device_preview{
+  /*margin-top: 10px;*/
+  /*padding: 10px;*/
+  /*border: 1px solid #ebeef5;*/
+  /*border-radius: 4px;*/
 }
 
 .empty-tip {
