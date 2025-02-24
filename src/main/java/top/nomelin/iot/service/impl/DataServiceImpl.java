@@ -38,7 +38,7 @@ public class DataServiceImpl implements DataService {
         this.storageStrategyManager = storageStrategyManager;
     }
 
-    @LogExecutionTime(logArgs = true)
+    @LogExecutionTime
     @Override
     public void insertBatchRecord(int deviceId, List<Long> timestamps,
                                   List<String> measurements, List<List<Object>> values, int mergeTimestampNum) {
@@ -50,7 +50,7 @@ public class DataServiceImpl implements DataService {
         batchInsert(timestamps, measurements, values, config, strategy, devicePath, mergeTimestampNum);
     }
 
-    @LogExecutionTime(logArgs = true)
+    @LogExecutionTime
     @Override
     public void insertBatchRecord(Device device, List<Long> timestamps,
                                   List<String> measurements, List<List<Object>> values, int mergeTimestampNum) {
@@ -91,6 +91,19 @@ public class DataServiceImpl implements DataService {
         aggregationTime = checkAggregationTime(device, aggregationTime);
         StorageStrategy strategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
+        return query(device, startTime, endTime, selectMeasurements, aggregationTime, queryAggregateFunc, thresholds, strategy, devicePath);
+    }
+
+    @LogExecutionTime(logArgs = true)
+    @Override
+    public DeviceTable queryRecord(Device device, long startTime, long endTime, List<String> selectMeasurements, Integer aggregationTime, QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds) {
+        aggregationTime = checkAggregationTime(device, aggregationTime);
+        StorageStrategy strategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
+        String devicePath = util.getDevicePath(device.getUserId(), device.getId());
+        return query(device, startTime, endTime, selectMeasurements, aggregationTime, queryAggregateFunc, thresholds, strategy, devicePath);
+    }
+
+    private DeviceTable query(Device device, long startTime, long endTime, List<String> selectMeasurements, Integer aggregationTime, QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds, StorageStrategy strategy, String devicePath) {
         if (ObjectUtil.isEmpty(selectMeasurements)) {
             selectMeasurements = device.getConfig().getMeasurements();
             log.info("queryRecord, selectMeasurements为空，使用设备的配置的所有物理量: {}", selectMeasurements);
@@ -130,9 +143,9 @@ public class DataServiceImpl implements DataService {
                 .map(m -> device.getConfig().getDataTypes().get(m).toString()).toList();
         aggregatedTable.setTypes(types);
 
-        log.info("queryRecord: deviceId={}, startTime={}, endTime={}, selectMeasurements={}, aggregationTime={}, " +
+        log.info("queryRecord: device={}, startTime={}, endTime={}, selectMeasurements={}, aggregationTime={}, " +
                         "QueryAggregateFunc={}, thresholds={}",
-                deviceId, startTime, endTime, selectMeasurements, aggregationTime,
+                device, startTime, endTime, selectMeasurements, aggregationTime,
                 queryAggregateFunc, thresholds);
         log.info("共查询到{}条时间戳（每个时间戳可能有多条记录，这里不统计）", aggregatedTable.getRecords().size());
 
