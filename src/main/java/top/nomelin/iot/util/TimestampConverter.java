@@ -24,6 +24,7 @@ public class TimestampConverter {
         DATE_FORMATTERS.add(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH:mm:ss").withZone(utc));
         DATE_FORMATTERS.add(DateTimeFormatter.ofPattern("yyyy-MM-dd-H:m:s").withZone(utc));
         DATE_FORMATTERS.add(DateTimeFormatter.ofPattern("yyyy-M-d-H:m:s").withZone(utc));
+        DATE_FORMATTERS.add(DateTimeFormatter.ofPattern("yyyy-M-d-H-m-s").withZone(utc));//前端导出文件的时间戳格式
         DATE_FORMATTERS.add(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").withZone(utc));
         DATE_FORMATTERS.add(DateTimeFormatter.ISO_INSTANT.withZone(utc));
         DATE_FORMATTERS.add(DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(utc));
@@ -40,7 +41,7 @@ public class TimestampConverter {
      */
     public static long convertToMillis(Object object) {
         if (object == null) {
-            throw new IllegalArgumentException("Input object cannot be null");
+            throw new IllegalArgumentException("时间对象不能为null");
         }
 
         if (object instanceof Date) {
@@ -54,7 +55,7 @@ public class TimestampConverter {
         } else if (object instanceof String) {
             return parseString((String) object);
         } else {
-            throw new IllegalArgumentException("Unsupported type: " + object.getClass().getName());
+            throw new IllegalArgumentException("不支持的时间类型: " + object.getClass().getName());
         }
     }
 
@@ -68,10 +69,11 @@ public class TimestampConverter {
             } else if (temporal instanceof LocalDate) {
                 return ((LocalDate) temporal).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
             }
-            throw new IllegalArgumentException("Unsupported temporal type: " + temporal.getClass().getName(), e);
+            throw new IllegalArgumentException("不支持的temporal时间类型: " + temporal.getClass().getName(), e);
         }
     }
 
+    //如果数字很小，则无法区分，都会解析为秒级时间戳。
     private static long parseNumber(long value) {
         if (value < 1_000_000_000_000L) { // 秒级时间戳（约1970-2001年）
             return value * 1_000L;
@@ -90,7 +92,7 @@ public class TimestampConverter {
             try {
                 return parseNumber(Long.parseLong(str));
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid numeric timestamp: " + str, e);
+                throw new IllegalArgumentException("无法处理的数字类型时间: " + str, e);
             }
         }
 
@@ -104,15 +106,6 @@ public class TimestampConverter {
             }
         }
 
-        throw new IllegalArgumentException("Unparseable date format: " + str);
-    }
-
-    // 示例用法
-    public static void main(String[] args) {
-        System.out.println(convertToMillis(new Date())); // 当前时间戳
-        System.out.println(convertToMillis("2023-10-01T12:34:56Z")); // ISO格式
-        System.out.println(convertToMillis("1678901234567")); // 数值字符串
-        System.out.println(convertToMillis(1678901234567L)); // 长整型数值
-        System.out.println(convertToMillis("2024-06-03-06:02:49"));
+        throw new IllegalArgumentException("无法处理的字符串类型时间: " + str);
     }
 }

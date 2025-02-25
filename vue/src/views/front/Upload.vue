@@ -16,7 +16,7 @@
                 <el-upload
                     :auto-upload="false"
                     :file-list="fileList"
-                    :limit="20"
+                    :limit="fileLimit"
                     :on-change="handleFileChange"
                     :on-exceed="handleExceed"
                     :on-remove="handleFileRemove"
@@ -28,7 +28,7 @@
                   <!--                  <el-button size="medium" type="primary">选择多个文件</el-button>-->
                   <i class="el-icon-upload"></i>
                   <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
-                  <div slot="tip" class="el-upload__tip">支持最多20个文件，单个文件不超过100MB</div>
+                  <div slot="tip" class="el-upload__tip">支持同时上传{{ this.fileLimit }}个文件，单个文件不超过100MB</div>
                   <!--                  <template #tip>-->
                   <!--                    <div class="el-upload__tip">-->
                   <!--                      支持最多20个文件，单个文件不超过100MB（自动过滤重复文件）-->
@@ -192,6 +192,7 @@ export default {
         ]
       },
       fileList: [],// 上传文件列表
+      fileLimit: 100,
       taskInfos: {},
       pollingMap: new Map(),
       isUploading: false,
@@ -239,7 +240,7 @@ export default {
       // console.log("fileSet:" + Array.from(this.fileSet) + "\nfileList:" + this.fileList.map(file => file.name))
     },
     handleExceed() {
-      this.$message.error("最多同时上传20个文件")
+      this.$message.error("最多同时上传" + this.fileLimit + "个文件")
     },
 
     async submitUpload() {
@@ -292,6 +293,7 @@ export default {
       }
 
       const interval = setInterval(async () => {
+        console.log(`轮询任务${taskId}...`)
         try {
           const res = await this.$request.get(`/task/get/${taskId}`)
           if (res.code === '200') {
@@ -304,6 +306,7 @@ export default {
 
             // 终止轮询条件
             if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(res.data.status)) {
+              console.log(`轮询任务${taskId}已完成`)
               clearInterval(interval)
               this.pollingMap.delete(taskId)
             }

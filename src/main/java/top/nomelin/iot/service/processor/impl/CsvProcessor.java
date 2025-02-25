@@ -106,7 +106,7 @@ public class CsvProcessor implements FileProcessor {
         //手动读取表头
         String line = reader.readLine();
         if (line == null) {
-            throw new IOException("文件行数不足，无法读取表头");
+            throw new IOException("文件行数不足，无法读取表头(时间戳与属性名行)");
         }
         String[] split = line.split(",");
         List<String> headers = new ArrayList<>(Arrays.asList(split));
@@ -137,6 +137,7 @@ public class CsvProcessor implements FileProcessor {
                 dataTypes.add(dataType);
             }
 
+            //时间戳和数据值的批次缓存列表
             List<Long> timestamps = new ArrayList<>(batchSize);
             List<List<Object>> valuesBatch = new ArrayList<>(batchSize);
 
@@ -169,6 +170,7 @@ public class CsvProcessor implements FileProcessor {
     private void processSingleRecord(CSVRecord record, List<Long> timestamps,
                                      List<List<Object>> valuesBatch, List<IotDataType> dataTypes) {
         try {
+            //将任意对象自动转换为毫秒时间戳
             long timestamp = TimestampConverter.convertToMillis(record.get(0));
 //            log.info("timestamp: {}->{}", record.get(0), timestamp);
             List<Object> values = new ArrayList<>();

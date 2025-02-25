@@ -7,6 +7,7 @@
             查询设置
             <el-button type="primary" @click="submitQuery">查询</el-button>
             <el-button @click="resetForm">重置</el-button>
+            <el-button :disabled="tableData.length === 0" type="success" @click="exportData">导出</el-button>
           </div>
         </template>
         <div class="scrollable-container">
@@ -492,9 +493,88 @@ export default {
     },
     handlePageChange(page) {
       this.currentPage = page;
-    }
+    },
+
+    // 导出文件
+    exportData() {
+      if (this.tableData.length === 0) {
+        this.$message.warning('没有数据可导出');
+        return;
+      }
+
+      const csvContent = this.generateCSV();
+      // 添加BOM标记，否则excel打开时中文会乱码。
+      const BOM = '\ufeff';
+      const csvContentWithBOM = BOM + csvContent;
+      const blob = new Blob([csvContentWithBOM], {type: 'text/csv;charset=utf-8;'});
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', this.generateFileName());
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    },
+
+    // 生成CSV内容
+    generateCSV() {
+      // 第一行：元信息
+      const device = this.selectedDevice ? this.selectedDevice.name : '未知设备';
+      const start = this.timeRange[0] ? new Date(this.timeRange[0]).toLocaleString() : '';
+      const end = this.timeRange[1] ? new Date(this.timeRange[1]).toLocaleString() : '';
+      const aggregation = this.form.aggregationTime === 0
+          ? '不聚合'
+          : `查询聚合时间粒度: ${this.aggregationTimeOptions.find(o => o.value === this.form.aggregationTime)?.label}
+          , 查询聚合函数: ${this.form.queryAggregateFunc}`;
+
+      const infoLine = `# 设备: ${device}, 查询时间范围: ${start} 至 ${end}, ${aggregation}, 生成于 ${new Date().toLocaleString()}`;
+
+      // 第二行：列头
+      const headers = ['#time', ...this.form.selectMeasurements].join(',');
+
+      // 数据行
+      const dataRows = this.tableData.map(row => {
+        const time = this.formatTimestamp(row.timestamp);
+        const values = this.form.selectMeasurements.map(m => {
+          const value = row[m];
+          return typeof value === 'number' ? value.toString() : '';
+        });
+        return [time, ...values].join(',');
+      }).join('\n');
+
+      return [infoLine, headers, dataRows].join('\n');
+    },
+
+    // 时间格式化方法
+    formatTimestamp(timestamp) {
+      const date = new Date(timestamp);
+      return [
+        date.getFullYear(),
+        date.getMonth() + 1,
+        date.getDate(),
+        date.getHours(),
+        date.getMinutes(),
+        date.getSeconds()
+      ].join('-');
+    },
+
+    // 生成文件名
+    generateFileName() {
+      const device = this.selectedDevice ? this.selectedDevice.name.replace(/\s+/g, '_') : 'unknown';
+      const now = new Date();
+      const timeStr = [
+        now.getFullYear(),
+        (now.getMonth() + 1).toString().padStart(2, '0'),
+        now.getDate().toString().padStart(2, '0'),
+        now.getHours().toString().padStart(2, '0'),
+        now.getMinutes().toString().padStart(2, '0'),
+        now.getSeconds().toString().padStart(2, '0')
+      ].join('');
+      return `${device}_${timeStr}.csv`;
+    },
   }
-};
+}
 </script>
 
 <style scoped>
@@ -573,7 +653,7 @@ export default {
   flex-direction: column;
 }
 
-.device_preview{
+.device_preview {
   /*margin-top: 10px;*/
   /*padding: 10px;*/
   /*border: 1px solid #ebeef5;*/
