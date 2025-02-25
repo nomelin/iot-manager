@@ -400,6 +400,10 @@ export default {
       }
     },
     async submitQuery() {
+      if (this.form.deviceId == null) {
+        this.$message.error('请选择设备');
+        return;
+      }
       if (this.form.aggregationTime !== 0 && this.form.queryAggregateFunc == null) {
         this.$message.error('请选择聚合函数');
         return;
@@ -444,6 +448,7 @@ export default {
 
           // 重置分页为第一页
           this.currentPage = 1;
+          //实际上点击按钮时就点击了上面这一栏,所以即便没有下面的代码，控制面板状态也会变化。
           document.activeElement.blur();//关闭面板前让按钮不是焦点，避免控制台报错
           this.settingsVisible = [] // 关闭设置面板
 
@@ -525,8 +530,7 @@ export default {
       const end = this.timeRange[1] ? new Date(this.timeRange[1]).toLocaleString() : '';
       const aggregation = this.form.aggregationTime === 0
           ? '不聚合'
-          : `查询聚合时间粒度: ${this.aggregationTimeOptions.find(o => o.value === this.form.aggregationTime)?.label}
-          , 查询聚合函数: ${this.form.queryAggregateFunc}`;
+          : `查询聚合时间粒度: ${this.aggregationTimeOptions.find(o => o.value === this.form.aggregationTime)?.label}, 查询聚合函数: ${this.form.queryAggregateFunc}`;
 
       const infoLine = `# 设备: ${device}, 查询时间范围: ${start} 至 ${end}, ${aggregation}, 生成于 ${new Date().toLocaleString()}`;
 
@@ -570,7 +574,7 @@ export default {
         now.getHours().toString().padStart(2, '0'),
         now.getMinutes().toString().padStart(2, '0'),
         now.getSeconds().toString().padStart(2, '0')
-      ].join('');
+      ].join('-');
       return `${device}_${timeStr}.csv`;
     },
   }
@@ -592,6 +596,7 @@ export default {
   border-radius: 1rem;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   min-height: 60px;
+  padding-bottom: 1rem;
 }
 
 .scrollable-container {

@@ -387,6 +387,7 @@ export default {
   border-radius: 1rem;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   min-height: 60px;
+  padding-bottom: 1rem;
 
 }
 
