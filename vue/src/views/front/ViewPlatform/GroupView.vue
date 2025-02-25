@@ -59,7 +59,13 @@ export default {
         });
         const responses = await Promise.all(promises); // 获取所有设备的查询结果
         const queryEndTime = Date.now();
-        this.$message.success("从服务器获取数据成功，耗时：" + (queryEndTime - queryStartTime) + "ms");
+        this.$notify({
+          title: "从服务器获取数据成功",
+          message: "耗时：" + (queryEndTime - queryStartTime) + "ms",
+          type: "success",
+          position: "bottom-right",
+          duration: 2000
+        })
         // console.log("resp", JSON.stringify(responses));
         responses.forEach((res) => {
           if (res.code !== "200") {
@@ -70,9 +76,14 @@ export default {
 
         this.processedData = this.organizeData(rawData);
         const processEndTime = Date.now();
-        setTimeout(() => {
-          this.$message.success("数据处理成功，耗时：" + (processEndTime - queryEndTime) + "ms");
-        }, 1);//只是为了消息不重叠
+        this.$notify({
+          title: "数据转换成功",
+          message: "耗时：" + (processEndTime - queryEndTime) + "ms",
+          type: "success",
+          position: "bottom-right",
+          duration: 2500,
+          offset: 80
+        })
       } catch (error) {
         console.log("数据加载失败：" + error.message);
       }
