@@ -52,6 +52,12 @@ const routes = [
                 name: 'groupManage',
                 meta: {name: '组管理'},
                 component: () => import('../views/front/GroupManage.vue')
+            },
+            {
+                path: 'third_party',
+                name: 'thirdParty',
+                meta: {name: '第三方接口'},
+                component: () => import('../views/front/ThirdParty.vue')
             }
         ]
 
