@@ -82,6 +82,19 @@
           </div>
           <el-button icon="el-icon-plus" type="text" @click="addDataType">添加数据类型</el-button>
         </el-form-item>
+        <!-- 文件上传，自动识别部分 -->
+        <el-form-item label="自动识别类型">
+          <el-upload
+              action=""
+              :auto-upload="false"
+              :on-change="handleCsvUpload"
+              :show-file-list="false"
+              accept=".csv"
+          >
+            <el-button plain type="primary" icon="el-icon-upload">上传CSV文件</el-button>
+<!--            <span slot="tip" class="upload-tip">（自动识别数据类型）</span>-->
+          </el-upload>
+        </el-form-item>
 
         <!-- 聚合时间 -->
         <el-form-item :rules="[{ required: true, message: '请选择聚合时间', trigger: 'change' }]" label="聚合时间"
@@ -313,8 +326,70 @@ export default {
       } catch (error) {
         this.$message.error('配置项加载失败');
       }
-    }
+    },
+
+
+    // CSV文件处理方法
+    async handleCsvUpload(file) {
+      try {
+        const content = await this.readFile(file.raw);
+        const { headers, dataRow } = this.parseCsv(content);
+        console.log("headers", JSON.stringify(headers));
+        console.log("dataRow", JSON.stringify(dataRow));
+
+        // 识别数据类型
+        const dataTypes = headers.map((header, index) => {
+          const value = dataRow[index];
+          return {
+            key: header,
+            value: this.detectDataType(value)
+          };
+        });
+
+        // 更新表单数据
+        this.newTemplate.config.dataTypes = dataTypes;
+
+        this.$message.success(`成功识别 ${dataTypes.length} 个传感器`);
+      } catch (error) {
+        this.$message.error(error.message || '文件处理失败');
+      }
+    },
+
+    // 文件读取方法
+    readFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsText(file);
+      });
+    },
+
+    // CSV解析方法
+    parseCsv(content) {
+      const lines = content.split('\n')
+          .map(line => line.trim())
+      if (lines.length < 3) {
+        this.$message.error('CSV文件需要包含表头和数据行(首行不包括)');
+      }
+
+      return {
+        headers: lines[1].split(',').map(h => h.trim()).slice(1),
+        dataRow: lines[2].split(',').map(d => d.trim()).slice(1)
+      };
+    },
+
+    // 数据类型检测方法
+    detectDataType(value) {
+      if (/^-?\d+$/.test(value)) return 'INT';
+      if (/^-?\d+\.\d+$/.test(value)) return 'FLOAT';
+      // if (/^(true|false)$/i.test(value)) return 'BOOL';
+      // return 'STRING';
+    },
   },
+
+
+
 
 }
 </script>
