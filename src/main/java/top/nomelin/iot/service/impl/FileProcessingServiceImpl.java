@@ -9,6 +9,7 @@ import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.dto.FileTask;
+import top.nomelin.iot.model.enums.FileTaskStatus;
 import top.nomelin.iot.service.FileProcessingService;
 import top.nomelin.iot.service.TaskService;
 import top.nomelin.iot.service.processor.FileProcessor;
@@ -55,6 +56,11 @@ public class FileProcessingServiceImpl implements FileProcessingService {
             task.complete();
             log.info("文件处理完成，任务ID:{}", taskId);
         } catch (Exception e) {
+            if (task.getStatus() == FileTaskStatus.CANCELLED) {
+                //此异常是由用户取消任务导致的，符合预期，无需继续抛出
+                log.info("任务已取消, taskId:{}", taskId);
+                return;
+            }
             log.error("文件处理失败，任务ID:{}, 错误信息:{}", taskId, e);
             task.fail("文件处理失败，error: " + e);
             throw new SystemException(CodeMessage.FILE_HANDLER_ERROR, "任务ID:" + taskId, e);

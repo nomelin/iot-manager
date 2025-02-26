@@ -312,7 +312,8 @@ public class IoTDBDaoImpl implements IoTDBDao {
 //                log.info("[batch]设备 {} 在时间戳 {} 没有查询到数据", devicePath, windowTs);
             }
         }
-        log.info("[batch]查询设备 {} 时间戳 {} 的数据成功, result: {}", devicePath, windowTimestamps, existingData);
+//        log.info("[batch]查询设备 {} 时间戳 {} 的数据成功, result: {}", devicePath, windowTimestamps, existingData);
+        log.info("[batch]查询设备 {} 时间戳 {} 的数据成功", devicePath, windowTimestamps);
         return existingData;
 
     }

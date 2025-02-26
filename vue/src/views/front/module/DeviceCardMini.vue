@@ -17,6 +17,14 @@
           {{ groupId }}
         </el-tag>
       </div>
+      <div v-else>所属组：不属于任何组</div>
+      <div v-if="device.tags">
+        标签：
+        <el-tag v-for="tag in device.tags" :key="tag" class="group-tag">
+          {{ tag }}
+        </el-tag>
+      </div>
+      <div v-else>标签：无标签</div>
     </div>
   </div>
 </template>

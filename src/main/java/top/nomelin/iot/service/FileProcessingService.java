@@ -1,6 +1,5 @@
 package top.nomelin.iot.service;
 
-import org.springframework.web.multipart.MultipartFile;
 import top.nomelin.iot.model.Device;
 
 /**
@@ -14,7 +13,7 @@ public interface FileProcessingService {
      * 异步处理文件写入
      *
      * @param taskId            任务ID
-     * @param filePath              文件路径
+     * @param filePath          文件路径
      * @param device            设备信息
      * @param skipRows          跳过的行数(不包括表头)
      * @param mergeTimestampNum 合并旧数据的时间戳数量(头尾)。如果等于0，则不进行合并。

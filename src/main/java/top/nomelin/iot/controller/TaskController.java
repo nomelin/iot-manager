@@ -1,10 +1,7 @@
 package top.nomelin.iot.controller;
 
 import cn.hutool.core.util.ObjectUtil;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import top.nomelin.iot.common.Result;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
@@ -33,9 +30,33 @@ public class TaskController {
             throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
         }
         FileTask task = taskService.getTask(taskId);
-        if (task == null) {
-            throw new BusinessException(CodeMessage.TASK_NOT_EXIST_ERROR, "找不到任务:taskId=" + taskId);
-        }
         return Result.success(task);
+    }
+
+    @PostMapping("/pause/{taskId}")
+    public Result pauseTask(@PathVariable String taskId) {
+        if (ObjectUtil.isNull(taskId)) {
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        taskService.pauseTask(taskId);
+        return Result.success();
+    }
+
+    @PostMapping("/resume/{taskId}")
+    public Result resumeTask(@PathVariable String taskId) {
+        if (ObjectUtil.isNull(taskId)) {
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        taskService.resumeTask(taskId);
+        return Result.success();
+    }
+
+    @PostMapping("/cancel/{taskId}")
+    public Result cancelTask(@PathVariable String taskId) {
+        if (ObjectUtil.isNull(taskId)) {
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        taskService.cancelTask(taskId);
+        return Result.success();
     }
 }

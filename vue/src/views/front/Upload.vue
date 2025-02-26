@@ -28,7 +28,10 @@
                   <!--                  <el-button size="medium" type="primary">选择多个文件</el-button>-->
                   <i class="el-icon-upload"></i>
                   <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
-                  <div slot="tip" class="el-upload__tip">支持同时上传{{ this.fileLimit }}个文件，单个文件不超过100MB</div>
+                  <div slot="tip" class="el-upload__tip">支持同时上传{{
+                      this.fileLimit
+                    }}个文件，单个文件不超过100MB
+                  </div>
                   <!--                  <template #tip>-->
                   <!--                    <div class="el-upload__tip">-->
                   <!--                      支持最多20个文件，单个文件不超过100MB（自动过滤重复文件）-->
@@ -128,12 +131,39 @@
           >
             <div class="task-meta">
               <span class="filename">{{ task.fileName }}</span>
-              <el-tag
-                  :type="statusTagType(task.status)"
-                  size="small"
-              >
-                {{ statusText(task.status) }}
-              </el-tag>
+              <div class="task-actions">
+                <el-tag :type="statusTagType(task.status)" size="small">
+                  {{ statusText(task.status) }}
+                </el-tag>
+                <el-button-group v-if="showActions(task.status)" class="action-buttons">
+                  <el-button
+                      v-if="task.status === 'PROCESSING'"
+                      :loading="task.pausing"
+                      size="mini"
+                      type="warning"
+                      @click="handlePause(taskId)"
+                  >
+                    <i class="el-icon-video-pause"></i>暂停
+                  </el-button>
+                  <el-button
+                      v-if="task.status === 'PAUSED'"
+                      :loading="task.resuming"
+                      size="mini"
+                      type="success"
+                      @click="handleResume(taskId)"
+                  >
+                    <i class="el-icon-video-play"></i>继续
+                  </el-button>
+                  <el-button
+                      :loading="task.cancelling"
+                      size="mini"
+                      type="danger"
+                      @click="handleCancel(taskId)"
+                  >
+                    <i class="el-icon-close"></i>取消
+                  </el-button>
+                </el-button-group>
+              </div>
             </div>
 
             <div class="time-info">
@@ -212,7 +242,7 @@ export default {
   },
   methods: {
     formatDateTime(datetime) {
-      return datetime ? dayjs(datetime).format('YYYY-MM-DD HH:mm') : '-'
+      return datetime ? dayjs(datetime).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     generateFileKey(file) {
       return `${file.name}_${file.size}`;//按文件名和文件大小来去重
@@ -244,6 +274,15 @@ export default {
     },
 
     async submitUpload() {
+      if (this.fileList.length === 0) {
+        this.$message.warning('请先选择文件')
+        return
+      }
+      console.log(this.form.deviceId)
+      if (!this.form.deviceId) {
+        this.$message.warning('请选择设备')
+        return
+      }
       try {
         await this.$refs.formRef.validate()
         this.isUploading = true
@@ -295,6 +334,9 @@ export default {
       const interval = setInterval(async () => {
         console.log(`轮询任务${taskId}...`)
         try {
+          if (this.taskInfos[taskId].status === 'PAUSED') {
+            return // 任务已暂停, 不再轮询
+          }
           const res = await this.$request.get(`/task/get/${taskId}`)
           if (res.code === '200') {
             // 合并后端返回的最新状态
@@ -316,7 +358,7 @@ export default {
           clearInterval(interval)
           this.pollingMap.delete(taskId)
         }
-      }, 100)
+      }, 500)
 
       this.pollingMap.set(taskId, interval)
     },
@@ -326,12 +368,57 @@ export default {
       this.pollingMap.clear()
     },
 
+    showActions(status) {
+      return ['PROCESSING', 'PAUSED'].includes(status)
+    },
+    async handlePause(taskId) {
+      try {
+        this.$set(this.taskInfos[taskId], 'pausing', true)//这些是原来显示前端的加载的
+        await this.$request.post(`/task/pause/${taskId}`)
+        this.$message.success('已发送暂停请求')
+      } catch (e) {
+        this.$message.error('暂停失败: ' + e.message)
+      } finally {
+        this.$set(this.taskInfos[taskId], 'pausing', false)
+      }
+    },
+    async handleResume(taskId) {
+      try {
+        this.$set(this.taskInfos[taskId], 'resuming', true)
+        const res = await this.$request.post(`/task/resume/${taskId}`)
+        this.$message.success('已发送继续请求')
+        if (res.code === '200') {
+          this.$set(this.taskInfos[taskId], 'status', 'PROCESSING')//为了让前端恢复轮询
+        }
+      } catch (e) {
+        this.$message.error('继续失败: ' + e.message)
+      } finally {
+        this.$set(this.taskInfos[taskId], 'resuming', false)
+      }
+    },
+    async handleCancel(taskId) {
+      try {
+        this.$set(this.taskInfos[taskId], 'cancelling', true)
+        const res = await this.$request.post(`/task/cancel/${taskId}`)
+        this.$message.success('已发送取消请求')
+        if (res.code === '200') {
+          this.$set(this.taskInfos[taskId], 'status', 'CANCELLED')//为了让前端恢复轮询
+        }
+      } catch (e) {
+        this.$message.error('取消失败: ' + e.message)
+      } finally {
+        this.$set(this.taskInfos[taskId], 'cancelling', false)
+      }
+    },
+
     statusTagType(status) {
       const map = {
         PROCESSING: 'info',
         COMPLETED: 'success',
         FAILED: 'danger',
-        PENDING: 'warning'
+        QUEUE: 'warning',
+        PAUSED: 'warning',
+        CANCELLED: 'warning'
       }
       return map[status] || 'info'
     },
@@ -341,14 +428,18 @@ export default {
         PROCESSING: '处理中',
         COMPLETED: '已完成',
         FAILED: '失败',
-        PENDING: '等待中'
+        QUEUE: '等待中',
+        PAUSED: '已暂停',
+        CANCELLED: '已取消'
       }
       return map[status] || '未知状态'
     },
 
     progressStatus(status) {
       return status === 'FAILED' ? 'exception' :
-          status === 'COMPLETED' ? 'success' : null
+          status === 'PAUSED' ? 'warning' :
+              status === 'CANCELLED' ? 'warning' :
+                  status === 'COMPLETED' ? 'success' : null
     },
     async fetchAllDevices() {
       try {

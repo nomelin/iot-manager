@@ -48,8 +48,8 @@ public class FileController {
     @PostMapping("/upload")
     public Result uploadFile(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("skipRows") int skipRows,
-            @RequestParam("deviceId") int deviceId,
+            @RequestParam("skipRows") Integer skipRows,
+            @RequestParam("deviceId") Integer deviceId,
             @RequestParam(value = "mergeTimestampNum", required = false,
                     defaultValue = Constants.DEFAULT_MERGE_TIMESTAMP_NUM_STR) int mergeTimestampNum,
             @RequestParam(value = "batchSize", required = false,
@@ -69,6 +69,7 @@ public class FileController {
         if (ObjectUtil.isNull(device)) {
             throw new BusinessException(CodeMessage.DEVICE_NOT_EXIST_ERROR, "设备不存在");
         }
+        // 创建任务。
         String taskId = taskService.createTask(file);
         // 创建非临时目录的持久化文件,解决异步文件处理时，临时文件被删除的问题
         File tempFile = new File(tempDir + UUID.randomUUID() + "_" + file.getOriginalFilename());

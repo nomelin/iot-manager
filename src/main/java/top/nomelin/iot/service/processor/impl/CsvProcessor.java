@@ -5,7 +5,6 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CodeMessage;
@@ -160,8 +159,29 @@ public class CsvProcessor implements FileProcessor {
     }
 
     private void checkTaskStatus(FileTask task) {
+        synchronized (task.lock) {
+            while (task.getStatus() == FileTaskStatus.PAUSED) {
+                try {
+                    log.info("任务已暂停，等待继续：taskId={}", task.getId());
+                    task.lock.wait(); // 释放锁并等待
+                    log.info("任务继续执行：taskId={}", task.getId());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new SystemException(
+                            CodeMessage.STATE_MACHINE_ERROR,
+                            "处理线程被中断",
+                            e
+                    );
+                }
+            }
+        }
+
         if (task.getStatus() == FileTaskStatus.CANCELLED) {
-            throw new SystemException(CodeMessage.TASK_CANCELLED, "任务已取消");
+            log.info("任务已被取消，不再处理，taskId={}", task.getId());
+            throw new SystemException(
+                    CodeMessage.TASK_CANCELLED,
+                    "任务已被取消"
+            );
         }
 
     }

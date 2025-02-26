@@ -14,5 +14,11 @@ public interface TaskService {
 
 //    void updateTaskProgress(String taskId, int processed);
 
+    void pauseTask(String taskId);
+
+    void resumeTask(String taskId);
+
+    void cancelTask(String taskId);
+
     FileTask getTask(String taskId);
 }
