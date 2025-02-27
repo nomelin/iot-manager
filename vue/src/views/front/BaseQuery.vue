@@ -672,33 +672,33 @@ export default {
 
 .result-container {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: auto;
-  /*max-height: 400px;*/
-  padding: 10px;
+  display: flex;
+  flex-direction: column;
   margin-top: 16px;
   background: #fff;
   border-radius: 1rem;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  padding: 10px;
+  min-height: 0; /* 关键：允许子元素压缩 */
 }
 
 .table-scroll {
-  overflow-x: auto; /* 横向溢出时滚动 */
-  min-width: 0; /* 允许在flex布局中缩小 */
-  max-width: 100%;
-  flex: 1; /* 填充剩余空间 */
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden; /* 禁止纵向滚动 */
+  min-width: 0;
+  min-height: 0; /* 允许在flex布局中压缩 */
+}
+
+/* 调整表格高度计算 */
+.el-table {
+  height: calc(100%) !important;
 }
 
 .pagination-container {
   flex-shrink: 0; /* 防止分页被压缩 */
   padding: 10px 0;
   text-align: center;
-}
-table {
-  max-width: 100%;
 }
 
 .device_preview {
