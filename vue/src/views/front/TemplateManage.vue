@@ -237,7 +237,7 @@ export default {
       this.newTemplate.config.dataTypes.splice(index, 1)
       // console.log("newTemplate", JSON.stringify(this.newTemplate));
     },
-    // 修改后的验证方法
+    // 验证方法
     validateCreate() {
       this.$refs.createForm.validate(valid => {
         if (valid) {
@@ -261,10 +261,19 @@ export default {
       })
     },
 
-    // 修改后的创建方法
+    // 创建方法
     async createTemplate() {
       try {
         // 转换数据类型格式为对象
+        //传感器名称不能为“tag”
+        for (let i = 0; i < this.newTemplate.config.dataTypes.length; i++) {
+          const item = this.newTemplate.config.dataTypes[i];
+          if (item.key === 'tag') {
+            this.$message.warning('传感器名称不能为“tag”');
+            return;
+          }
+        }
+
         const postData = {
           ...this.newTemplate,
           config: {

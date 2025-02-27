@@ -39,13 +39,14 @@ public class CompatibleStorageStrategy implements StorageStrategy {
     @LogExecutionTime
     @Override
     public List<MeasurementNode> preprocessTemplateNodes(List<MeasurementNode> originalNodes) {
-        List<MeasurementNode> resultNodes = originalNodes.stream()
+        //包装为可变list
+        List<MeasurementNode> resultNodes = new ArrayList<>(originalNodes.stream()
                 .map(node -> new MeasurementNode(
                         node.getName(),
                         TSDataType.TEXT,  // 强制转为TEXT
                         TSEncoding.PLAIN,// 强制转为PLAIN
                         Constants.COMPRESSION_TYPE))
-                .toList();
+                .toList());
         log.info("COMPATIBLE: 模板节点从 {} 转换为 {}",
                 originalNodes.stream().map(MeasurementNode::getName).toList(),
                 resultNodes.stream().map(MeasurementNode::getName).toList());
@@ -155,12 +156,13 @@ public class CompatibleStorageStrategy implements StorageStrategy {
 
             measurements.forEach((measurement, jsonValue) -> {
                 try {
+                    List<?> existingValues;
                     if (jsonValue == null) {
-                        log.info("!!!jsonValue is null!!!");
+                        existingValues = Collections.emptyList();
+                    }else {
+                        existingValues = objectMapper.readValue(jsonValue, List.class);
                     }
-                    List<?> existingValues = objectMapper.readValue(jsonValue, List.class);
                     List<Object> currentValues = currentMeasurements.get(measurement);
-
                     if (currentValues == null) {
                         currentMeasurements.put(measurement, new ArrayList<>(existingValues));
                     } else {
@@ -189,10 +191,12 @@ public class CompatibleStorageStrategy implements StorageStrategy {
             existingData.forEach((measurement, jsonValue) -> {
                 try {
 //                    log.info("currentMeasurements: {}, measurement: {}, jsonValue: {}", currentMeasurements, measurement, jsonValue);
+                    List<?> existingValues;
                     if (jsonValue == null) {
-                        log.info("!!!jsonValue is null!!!");
+                        existingValues = Collections.emptyList();
+                    }else {
+                        existingValues = objectMapper.readValue(jsonValue, List.class);
                     }
-                    List<?> existingValues = objectMapper.readValue(jsonValue, List.class);
                     List<Object> currentValues = currentMeasurements.get(measurement);
                     if (currentValues == null) {
                         //如果此物理量没有新数据，则直接使用旧数据回写。

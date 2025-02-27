@@ -4,6 +4,7 @@ import org.apache.iotdb.session.template.MeasurementNode;
 import org.apache.tsfile.enums.TSDataType;
 import top.nomelin.iot.model.dto.DeviceTable;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public interface StorageStrategy {
@@ -41,12 +42,13 @@ public interface StorageStrategy {
     /**
      * 对模板定义的物理量类型进行转换，以支持不同存储策略的需求。
      * 创建模板时会创建不同策略的专属模板，使用的名字后缀为 {@link #getTemplateSuffix()}。
+     * [重要]重写此方法，需要深拷贝，不能直接修改原始物理量定义。
      *
-     * @param originalNodes 原始的物理量定义
-     * @return 转换后的物理量定义
+     * @param originalNodes 原始的物理量定义，不会被修改
+     * @return 转换后的物理量定义，是原始物理量定义的副本(深拷贝)
      */
     default List<MeasurementNode> preprocessTemplateNodes(List<MeasurementNode> originalNodes) {
-        return originalNodes; // 默认不修改
+        return new ArrayList<>(originalNodes);
     }
 
     /**
