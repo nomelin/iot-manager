@@ -23,13 +23,15 @@ public interface DataService {
      * @param deviceId          设备ID
      * @param timestamps        时间戳列表
      * @param measurements      字段名列表。每个时间戳的字段都相同。
+     * @param tag               标签，每批次写入的数据都是相同的标签。如果为null，代表没有标签。
+     *                          限制：不能为"NO_TAG"，不能包含"||"
      * @param values            数据值列表，每行代表一个时间戳的记录。
      * @param mergeTimestampNum 合并旧数据的时间戳数量(头尾)。如果等于0，则不进行合并。
      *                          如果小于0，则全部合并旧数据；如果大于0，则合并头尾各mergeTimestampNum个时间戳。
      *                          合并需要查数据库，获取旧数据。对于在每个批次都连续的数据，建议使用1。
      *                          [此参数只对并存策略有效]
      */
-    void insertBatchRecord(int deviceId, List<Long> timestamps,
+    void insertBatchRecord(int deviceId, List<Long> timestamps, String tag,
                            List<String> measurements, List<List<Object>> values, int mergeTimestampNum);
 
     /**
@@ -38,6 +40,8 @@ public interface DataService {
      *
      * @param device            设备对象
      * @param timestamps        时间戳列表
+     * @param tag               标签，每批次写入的数据都是相同的标签。如果为null，代表没有标签。
+     *                          限制：不能为"NO_TAG"，不能包含"||"
      * @param measurements      字段名列表。每个时间戳的字段都相同。
      * @param values            数据值列表，每行代表一个时间戳的记录。
      * @param mergeTimestampNum 合并旧数据的时间戳数量(头尾)。如果等于0，则不进行合并。
@@ -45,7 +49,7 @@ public interface DataService {
      *                          合并需要查数据库，获取旧数据。对于在每个批次都连续的数据，建议使用1。
      *                          [此参数只对并存策略有效]
      */
-    void insertBatchRecord(Device device, List<Long> timestamps,
+    void insertBatchRecord(Device device, List<Long> timestamps, String tag,
                            List<String> measurements, List<List<Object>> values, int mergeTimestampNum);
 
     /**
@@ -56,6 +60,14 @@ public interface DataService {
      * @param startTime          开始时间戳
      * @param endTime            结束时间戳
      * @param selectMeasurements 选择的属性名列表。如果为null或空列表，则查询所有属性。
+     * @param tagQuery           用此标签过滤。如果为null，则不过滤。如果为"NO_TAG"，则筛选没有标签的数据。
+     *                           可以同时筛选多个标签，使用||分割。
+     *                           例如：
+     *                           null,表示不过滤。
+     *                           "tag1",表示筛选标签为tag1的数据。
+     *                           "tag1||tag2",表示筛选标签为tag1或tag2的数据。
+     *                           "NO_TAG",表示筛选没有标签的数据。
+     *                           "tag1||"NO_TAG",表示筛选没有标签或标签为tag1的数据。
      * @param aggregationTime    聚合时间粒度,单位：ms。读取粒度不能小于存储粒度。为null时，不聚合; 小于1时，不聚合。
      * @param queryAggregateFunc 查询聚合模式。为null时，不聚合。
      * @param thresholds         阈值列表。如果为null，则不进行阈值过滤。按照属性名顺序排列。如果查询模式为COUNT，则该参数无效。
@@ -69,7 +81,7 @@ public interface DataService {
      *                           [null,[100,200],[null,100]]，表示属性1不过滤,100<=属性2<=200，属性3<=100
      */
 
-    DeviceTable queryRecord(int deviceId, long startTime, long endTime, List<String> selectMeasurements,
+    DeviceTable queryRecord(int deviceId, long startTime, long endTime, List<String> selectMeasurements, String tagQuery,
                             Integer aggregationTime, QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds);
 
     /**
@@ -81,6 +93,8 @@ public interface DataService {
      * @param startTime          开始时间戳
      * @param endTime            结束时间戳
      * @param selectMeasurements 选择的属性名列表。如果为null或空列表，则查询所有属性。
+     * @param tagQuery           用此标签过滤。如果为null，则不过滤。如果为"NO_TAG"，则筛选没有标签的数据。
+     *                           可以同时筛选多个标签，使用||分割。
      * @param aggregationTime    聚合时间粒度,单位：ms。读取粒度不能小于存储粒度。为null时，不聚合; 小于1时，不聚合。
      * @param queryAggregateFunc 查询聚合模式。为null时，不聚合。
      * @param thresholds         阈值列表。如果为null，则不进行阈值过滤。按照属性名顺序排列。如果查询模式为COUNT，则该参数无效。
@@ -93,7 +107,7 @@ public interface DataService {
      *                           [[null, 100], [200,null],...],表示属性1<=100，属性2>=200，...
      *                           [null,[100,200],[null,100]]，表示属性1不过滤,100<=属性2<=200，属性3<=100
      */
-    DeviceTable queryRecord(Device device, long startTime, long endTime, List<String> selectMeasurements,
+    DeviceTable queryRecord(Device device, long startTime, long endTime, List<String> selectMeasurements, String tagQuery,
                             Integer aggregationTime, QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds);
 
 }

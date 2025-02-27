@@ -2,6 +2,8 @@ package top.nomelin.iot.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
 import org.apache.iotdb.session.template.MeasurementNode;
+import org.apache.tsfile.enums.TSDataType;
+import org.apache.tsfile.file.metadata.enums.TSEncoding;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 import top.nomelin.iot.cache.CurrentUserCache;
@@ -76,6 +78,7 @@ public class TemplateServiceImpl implements TemplateService {
         List<MeasurementNode> originalNodes = template.getConfig().convertToMeasurementNodes();
         for (StorageStrategy strategy : strategies) {
             List<MeasurementNode> processedNodes = strategy.preprocessTemplateNodes(originalNodes);
+            addTagNode(processedNodes);//增加tag属性，一定要在策略处理之后再添加。
             // 创建IoTDB模板
             iotDBDao.createSchema(
                     Constants.TEMPLATE_PREFIX + template.getId() + strategy.getTemplateSuffix(),
@@ -87,6 +90,18 @@ public class TemplateServiceImpl implements TemplateService {
         }
         log.info("全部策略创建iotdb模板成功，template: {}", template);
         return template;
+    }
+
+    private void addTagNode(List<MeasurementNode> nodes) {
+        // 默认会增加一个tag属性。
+        nodes.removeIf(node -> node.getName().equals(Constants.TAG));//删除策略中可能转换过的tag属性
+        MeasurementNode tagNode = new MeasurementNode(
+                Constants.TAG,
+                TSDataType.TEXT,
+                TSEncoding.PLAIN,
+                Constants.COMPRESSION_TYPE
+        );
+        nodes.add(tagNode);
     }
 
 

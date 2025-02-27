@@ -35,7 +35,7 @@ public class CsvProcessor implements FileProcessor {
     @LogExecutionTime
     @Override
     public void process(InputStream inputStream, Device device, FileTask task,
-                        int skipRows, int mergeTimestampNum, int batchSize) throws IOException {
+                        int skipRows, int mergeTimestampNum, int batchSize, String tag) throws IOException {
         // 包装为支持 mark/reset 的流
         BufferedInputStream bufferedStream = new BufferedInputStream(inputStream);
         bufferedStream.mark(Integer.MAX_VALUE);
@@ -52,7 +52,7 @@ public class CsvProcessor implements FileProcessor {
             log.info("流已重置到起始位置");
 
             // 第二阶段：数据处理
-            processData(bufferedStream, device, task, skipRows, mergeTimestampNum, batchSize);
+            processData(bufferedStream, device, task, skipRows, mergeTimestampNum, batchSize, tag);
             log.info("CSV文件处理完成: {}", task.getFileName());
         } catch (Exception e) {
             task.fail("CSV处理失败: " + e);
@@ -90,7 +90,8 @@ public class CsvProcessor implements FileProcessor {
     }
 
     @LogExecutionTime
-    private void processData(InputStream stream, Device device, FileTask task, int skipLines, int mergeTimestampNum, int batchSize)
+    private void processData(InputStream stream, Device device, FileTask task,
+                             int skipLines, int mergeTimestampNum, int batchSize, String tag)
             throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
         // 跳过指定行数
@@ -146,14 +147,14 @@ public class CsvProcessor implements FileProcessor {
                 processSingleRecord(record, timestamps, valuesBatch, dataTypes); // 传入dataTypes
 
                 if (shouldFlushBatch(timestamps, batchSize)) {
-                    flushBatch(device, measurements, timestamps, valuesBatch, task, mergeTimestampNum);
+                    flushBatch(device, measurements, timestamps, valuesBatch, task, mergeTimestampNum, tag);
                     updateProgress(task);
                 }
             }
 
             // 处理剩余批次
             if (!timestamps.isEmpty()) {
-                flushBatch(device, measurements, timestamps, valuesBatch, task, mergeTimestampNum);
+                flushBatch(device, measurements, timestamps, valuesBatch, task, mergeTimestampNum, tag);
             }
         }
     }
@@ -238,12 +239,13 @@ public class CsvProcessor implements FileProcessor {
     @LogExecutionTime
     private void flushBatch(Device device, List<String> measurements,
                             List<Long> timestamps, List<List<Object>> valuesBatch,
-                            FileTask task, int mergeTimestampNum) {
+                            FileTask task, int mergeTimestampNum, String tag) {
         try {
             dataService.insertBatchRecord(
                     device,
 //                    new ArrayList<>(timestamps),
                     timestamps,
+                    tag,
                     measurements,
 //                    new ArrayList<>(valuesBatch)
                     valuesBatch,

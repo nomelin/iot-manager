@@ -10,7 +10,7 @@
             </div>
           </template>
           <div class="collapse-content">
-            <el-form ref="formRef" :model="form" :rules="rules" label-position="left" label-width="100px">
+            <el-form ref="formRef" :model="form" :rules="rules" label-position="left" label-width="200px">
               <!-- 多文件上传 -->
               <el-form-item label="数据文件" prop="files">
                 <el-upload
@@ -61,6 +61,14 @@
 
               </el-form-item>
 
+              <el-form-item label="是否使用文件名作为数据标签">
+                <el-switch
+                    v-model="usingFileNameAsTag"
+                    active-text="是"
+                    inactive-text="否"
+                >
+                </el-switch>
+              </el-form-item>
               <!-- 跳过行数 -->
               <el-form-item label="跳过行数" prop="skipRows">
                 <el-input
@@ -88,7 +96,7 @@
                 </el-input>
               </el-form-item>
               <!--合并时间戳数量-->
-              <el-form-item label="每批次合并旧时间戳数量" prop="mergeTimeStampNum">
+              <el-form-item label="每批次合并旧时间戳数量(-1为全量)" prop="mergeTimeStampNum">
                 <el-input
                     v-model.number="form.mergeTimeStampNum"
                     min="-1"
@@ -226,7 +234,8 @@ export default {
       taskInfos: {},
       pollingMap: new Map(),
       isUploading: false,
-      fileSet: new Set() // 用于文件名去重
+      fileSet: new Set(), // 用于文件名去重
+      usingFileNameAsTag: true,// 是否使用文件名作为标签
     }
   },
   created() {
@@ -297,7 +306,10 @@ export default {
           formData.append('skipRows', this.form.skipRows)
           formData.append('mergeTimestampNum', this.form.mergeTimeStampNum)
           formData.append('batchSize', this.form.batchSize)
-
+          console.log("fileName", file.name)
+          if (this.usingFileNameAsTag) {
+            formData.append('tag', file.name.split('.')[0])
+          }
           try {
             const res = await this.$request.post('/files/upload', formData, {
               headers: {'Content-Type': 'multipart/form-data'}

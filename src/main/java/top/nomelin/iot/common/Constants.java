@@ -36,4 +36,9 @@ public class Constants {
     public static final int DEFAULT_MERGE_TIMESTAMP_NUM = -1;//默认全量合并
     public static final String DEFAULT_MERGE_TIMESTAMP_NUM_STR = "-1";//默认全量合并
 
+    //标签的属性值名称
+    public static final String TAG = "tag";
+    //没有标签的属性值
+    public static final String NO_TAG = "NO_TAG";
+
 }

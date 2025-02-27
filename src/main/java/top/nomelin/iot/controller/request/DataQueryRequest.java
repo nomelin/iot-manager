@@ -13,6 +13,8 @@ public class DataQueryRequest {
     private QueryAggregateFunc queryAggregateFunc;
     private List<List<Double>> thresholds;
 
+    private String tagQuery;
+
     // Getters and Setters
     public Integer getDeviceId() {
         return deviceId;
@@ -70,6 +72,14 @@ public class DataQueryRequest {
         this.thresholds = thresholds;
     }
 
+    public String getTagQuery() {
+        return tagQuery;
+    }
+
+    public void setTagQuery(String tagQuery) {
+        this.tagQuery = tagQuery;
+    }
+
     @Override
     public String toString() {
         return "DataQueryRequest{" +
@@ -80,6 +90,7 @@ public class DataQueryRequest {
                 ", aggregationTime=" + aggregationTime +
                 ", queryAggregateFunc=" + queryAggregateFunc +
                 ", thresholds=" + thresholds +
+                ", tagQuery='" + tagQuery + '\'' +
                 '}';
     }
 }

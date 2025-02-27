@@ -51,12 +51,16 @@ public class DeviceTable {
         return deviceTable;
     }
 
-    // 添加记录到指定时间戳
+    /**
+     * 添加记录到指定时间戳
+     */
     public void addRecord(long timestamp, Record record) {
         records.computeIfAbsent(timestamp, k -> new ArrayList<>()).add(record);
     }
 
-    // 清除没有Record的时间戳
+    /**
+     * 清除没有Record的时间戳
+     */
     public void purgeEmptyTimestamps() {
         records.entrySet().removeIf(entry -> entry.getValue().isEmpty());
     }

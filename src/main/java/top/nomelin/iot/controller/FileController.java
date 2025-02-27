@@ -53,7 +53,8 @@ public class FileController {
             @RequestParam(value = "mergeTimestampNum", required = false,
                     defaultValue = Constants.DEFAULT_MERGE_TIMESTAMP_NUM_STR) int mergeTimestampNum,
             @RequestParam(value = "batchSize", required = false,
-                    defaultValue = Constants.DEFAULT_FILE_BATCH_SIZE_STR) int batchSize
+                    defaultValue = Constants.DEFAULT_FILE_BATCH_SIZE_STR) int batchSize,
+            @RequestParam(value = "tag", required = false) String tag
     ) {
         if (file.isEmpty()) {
             throw new BusinessException(CodeMessage.PARAM_ERROR, "文件为空");
@@ -81,7 +82,8 @@ public class FileController {
         }
 
         //异步处理文件，必须先查询Device对象并传入异步方法，否则由于session用户缓存不存在，异步方法内无法获取到设备信息
-        processingService.processAsync(taskId, tempFile.getAbsolutePath(), device, skipRows, mergeTimestampNum, batchSize);
+        processingService.processAsync(taskId, tempFile.getAbsolutePath(), device,
+                skipRows, mergeTimestampNum, batchSize, tag);
         log.info("上传文件成功, 异步处理任务，直接返回。taskId: {}", taskId);
         return Result.success(taskId);
     }

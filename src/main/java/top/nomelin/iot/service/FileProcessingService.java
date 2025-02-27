@@ -21,7 +21,9 @@ public interface FileProcessingService {
      *                          合并需要查数据库，获取旧数据。对于在每个批次都连续的数据，建议使用1。
      *                          [此参数只对并存策略有效]
      * @param batchSize         每批次处理的文件行数。调下游服务写入数据时，一次处理的行数。
+     * @param tag               标签，每次写入的数据都是相同的标签。如果为null，代表没有标签。
      */
 
-    void processAsync(String taskId, String filePath, Device device, int skipRows, int mergeTimestampNum, int batchSize);
+    void processAsync(String taskId, String filePath, Device device, int skipRows, int mergeTimestampNum,
+                      int batchSize, String tag);
 }

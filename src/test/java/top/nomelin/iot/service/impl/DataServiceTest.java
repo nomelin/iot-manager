@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import top.nomelin.iot.cache.CurrentUserCache;
-import top.nomelin.iot.model.dto.DeviceTable;
 import top.nomelin.iot.model.User;
+import top.nomelin.iot.model.dto.DeviceTable;
 import top.nomelin.iot.service.DataService;
 import top.nomelin.iot.util.JsonUtil;
 
@@ -46,7 +46,7 @@ class DataServiceTest {
         values.add(List.of(25.5, 55));
         values.add(List.of(26.5, 56));
         values.add(List.of(27.5, 57));
-        dataService.insertBatchRecord(deviceId, timestamps, measurements, values, -1);
+        dataService.insertBatchRecord(deviceId, timestamps, null, measurements, values, -1);
 
     }
 
@@ -59,7 +59,7 @@ class DataServiceTest {
         int deviceId = 23;
         long startTime = 1611111111111L;
         long endTime = 1611111111119L;
-        DeviceTable deviceTable = dataService.queryRecord(deviceId, startTime, endTime,
+        DeviceTable deviceTable = dataService.queryRecord(deviceId, startTime, endTime, null,
                 null, null, null, null);
         System.out.println(JsonUtil.toJsonString(deviceTable));
         System.out.println(JsonUtil.toPrettyJsonString(deviceTable));

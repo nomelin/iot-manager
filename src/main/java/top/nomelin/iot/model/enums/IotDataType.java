@@ -10,7 +10,7 @@ import org.apache.tsfile.enums.TSDataType;
  * @since 2024/12/27 15:43
  **/
 public enum IotDataType {
-    INT, LONG, FLOAT, DOUBLE;
+    INT, LONG, FLOAT, DOUBLE, STRING;
 
     public static TSDataType convertToTsDataType(IotDataType iotDataType) {
         return switch (iotDataType) {
@@ -18,6 +18,7 @@ public enum IotDataType {
             case LONG -> TSDataType.INT64;
             case FLOAT -> TSDataType.FLOAT;
             case DOUBLE -> TSDataType.DOUBLE;
+            case STRING -> TSDataType.TEXT;
         };
     }
 }

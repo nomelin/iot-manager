@@ -40,7 +40,7 @@ public class FileProcessingServiceImpl implements FileProcessingService {
     @Async
     @Override
     public void processAsync(String taskId, String filePath, Device device,
-                             int skipRows, int mergeTimestampNum, int batchSize) {
+                             int skipRows, int mergeTimestampNum, int batchSize, String tag) {
         File file = new File(filePath);
         if (!file.exists() || file.length() == 0) {
             throw new BusinessException(CodeMessage.FILE_EMPTY_ERROR, "文件为空:" + taskId);
@@ -52,7 +52,7 @@ public class FileProcessingServiceImpl implements FileProcessingService {
         try (InputStream inputStream = new FileInputStream(file)) {
             FileProcessor processor = processorFactory.getProcessor(task.getFileType());
             log.info("使用{}处理器处理文件", processor.getClass().getSimpleName());
-            processor.process(inputStream, device, task, skipRows, mergeTimestampNum, batchSize);
+            processor.process(inputStream, device, task, skipRows, mergeTimestampNum, batchSize, tag);
             task.complete();
             log.info("文件处理完成，任务ID:{}", taskId);
         } catch (Exception e) {

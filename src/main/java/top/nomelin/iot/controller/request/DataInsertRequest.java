@@ -10,6 +10,8 @@ public class DataInsertRequest {
 
     private Integer mergeTimestampNum;
 
+    private String tag;
+
     // Getters and Setters
     public Integer getDeviceId() {
         return deviceId;
@@ -52,6 +54,14 @@ public class DataInsertRequest {
         this.mergeTimestampNum = mergeTimestampNum;
     }
 
+    public String getTag() {
+        return tag;
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
+    }
+
     @Override
     public String toString() {
         return "DataInsertRequest{" +
@@ -60,6 +70,7 @@ public class DataInsertRequest {
                 ", measurements=" + measurements +
                 ", values=" + values +
                 ", mergeTimestampNum=" + mergeTimestampNum +
+                ", tag='" + tag + '\'' +
                 '}';
     }
 }

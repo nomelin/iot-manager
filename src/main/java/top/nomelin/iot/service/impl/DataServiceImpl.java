@@ -5,6 +5,7 @@ import org.apache.tsfile.enums.TSDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
@@ -40,30 +41,54 @@ public class DataServiceImpl implements DataService {
 
     @LogExecutionTime
     @Override
-    public void insertBatchRecord(int deviceId, List<Long> timestamps,
+    public void insertBatchRecord(int deviceId, List<Long> timestamps, String tag,
                                   List<String> measurements, List<List<Object>> values, int mergeTimestampNum) {
+        List<String> measurementsCopy = addTagInMeasurementsAndValues(tag, measurements, values);
         Device device = deviceService.getDeviceById(deviceId);
         Config config = device.getConfig();
         StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
 
-        batchInsert(timestamps, measurements, values, config, strategy, devicePath, mergeTimestampNum);
+        batchInsert(timestamps, measurementsCopy, values, config, strategy, devicePath, mergeTimestampNum);
     }
+
 
     @LogExecutionTime
     @Override
-    public void insertBatchRecord(Device device, List<Long> timestamps,
+    public void insertBatchRecord(Device device, List<Long> timestamps, String tag,
                                   List<String> measurements, List<List<Object>> values, int mergeTimestampNum) {
+        List<String> measurementsCopy = addTagInMeasurementsAndValues(tag, measurements, values);
         Config config = device.getConfig();
         StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
         String devicePath = util.getDevicePath(device.getUserId(), device.getId());
 
-        batchInsert(timestamps, measurements, values, config, strategy, devicePath, mergeTimestampNum);
+        batchInsert(timestamps, measurementsCopy, values, config, strategy, devicePath, mergeTimestampNum);
+    }
+
+    private List<String> addTagInMeasurementsAndValues(String tag, List<String> measurements, List<List<Object>> values) {
+        //此方法会修改原始的values!!!
+        validateTagForInsert(tag);
+        List<String> measurementsCopy = new ArrayList<>(measurements);
+        if (tag != null) {
+            if (measurements.contains(Constants.TAG)) {
+                throw new BusinessException(CodeMessage.INVALID_TAG_ERROR, "物理量中不能包含TAG");
+            }
+            measurementsCopy.add(Constants.TAG);
+            for (List<Object> valueList : values) {
+                valueList.add(tag);
+            }
+        }
+        return measurementsCopy;
     }
 
     private void batchInsert(List<Long> timestamps, List<String> measurements,
                              List<List<Object>> values, Config config, StorageStrategy strategy, String devicePath,
                              int mergeTimestampNum) {
+        //对TAG参数特殊处理
+        config.getDataTypes().put(Constants.TAG, IotDataType.STRING);
+        // 对齐时间窗口
+        long[] alignedTimeRange = alignTimeRange(timestamps.get(0), timestamps.get(timestamps.size() - 1), config.getAggregationTime());
+        log.info("insertBatchRecord 原始时间范围:{}-{}, 对齐后:{}-{}", timestamps.get(0), timestamps.get(timestamps.size() - 1), alignedTimeRange[0], alignedTimeRange[1]);
         // 把config中的物理量的类型转换为TSDataType
         List<TSDataType> types = measurements.stream()
                 .map(m -> IotDataType.convertToTsDataType(config.getDataTypes().get(m))).toList();
@@ -85,38 +110,49 @@ public class DataServiceImpl implements DataService {
     @LogExecutionTime(logArgs = true)
     @Override
     public DeviceTable queryRecord(int deviceId, long startTime, long endTime,
-                                   List<String> selectMeasurements, Integer aggregationTime,
+                                   List<String> selectMeasurements, String tagQuery, Integer aggregationTime,
                                    QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds) {
         Device device = deviceService.getDeviceById(deviceId);
         aggregationTime = checkAggregationTime(device, aggregationTime);
         StorageStrategy strategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
-        return query(device, startTime, endTime, selectMeasurements, aggregationTime, queryAggregateFunc, thresholds, strategy, devicePath);
+        return query(device, startTime, endTime, selectMeasurements, aggregationTime,
+                queryAggregateFunc, thresholds, strategy, devicePath, tagQuery);
     }
 
     @LogExecutionTime(logArgs = true)
     @Override
-    public DeviceTable queryRecord(Device device, long startTime, long endTime, List<String> selectMeasurements, Integer aggregationTime, QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds) {
+    public DeviceTable queryRecord(Device device, long startTime, long endTime,
+                                   List<String> selectMeasurements, String tagQuery, Integer aggregationTime,
+                                   QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds) {
         aggregationTime = checkAggregationTime(device, aggregationTime);
         StorageStrategy strategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
         String devicePath = util.getDevicePath(device.getUserId(), device.getId());
-        return query(device, startTime, endTime, selectMeasurements, aggregationTime, queryAggregateFunc, thresholds, strategy, devicePath);
+        return query(device, startTime, endTime, selectMeasurements, aggregationTime,
+                queryAggregateFunc, thresholds, strategy, devicePath, tagQuery);
     }
 
-    private DeviceTable query(Device device, long startTime, long endTime, List<String> selectMeasurements, Integer aggregationTime, QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds, StorageStrategy strategy, String devicePath) {
+    private DeviceTable query(Device device, long startTime, long endTime,
+                              List<String> selectMeasurements, Integer aggregationTime,
+                              QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds,
+                              StorageStrategy strategy, String devicePath, String tagQuery) {
+        String[] tags = validateTagForQuery(tagQuery);
         if (ObjectUtil.isEmpty(selectMeasurements)) {
             selectMeasurements = device.getConfig().getMeasurements();
             log.info("queryRecord, selectMeasurements为空，使用设备的配置的所有物理量: {}", selectMeasurements);
         }
-
+        List<String> selectMeasurementsCopy = new ArrayList<>(selectMeasurements);
+        selectMeasurementsCopy.add(Constants.TAG);//添加TAG列
         // 对齐时间窗口
         long[] alignedTimeRange = alignTimeRange(startTime, endTime, aggregationTime);
         log.info("queryRecord 原始时间范围:{}-{}, 对齐后:{}-{}", startTime, endTime, alignedTimeRange[0], alignedTimeRange[1]);
 
         // 获取原始数据
         DeviceTable rawTable = strategy.retrieveData(
-                devicePath, alignedTimeRange[0], alignedTimeRange[1], selectMeasurements, aggregationTime
+                devicePath, alignedTimeRange[0], alignedTimeRange[1], selectMeasurementsCopy, aggregationTime
         );
+
+        applyTagFilter(rawTable, tags);
 
         // 阈值过滤（COUNT模式不处理）
         if (shouldApplyThreshold(queryAggregateFunc, thresholds)) {
@@ -125,9 +161,9 @@ public class DataServiceImpl implements DataService {
         } else {
             log.info("queryRecord 不应用阈值过滤, selectMeasurements={}, thresholds={}", selectMeasurements, thresholds);
         }
-
         DeviceTable aggregatedTable;
-        // 聚合处理
+
+        // 查询聚合处理
         if (aggregationTime == 0 || ObjectUtil.isNull(queryAggregateFunc)) {
             log.info("queryRecord 不聚合, selectMeasurements={}, aggregationTime={}, QueryAggregateFunc={}",
                     selectMeasurements, aggregationTime, queryAggregateFunc);
@@ -172,6 +208,44 @@ public class DataServiceImpl implements DataService {
                 util.alignToEast8Zone(start, aggregationTime),
                 util.alignToEast8Zone(end, aggregationTime)
         };
+    }
+
+    //应用标签过滤
+    private void applyTagFilter(DeviceTable table, String[] tags) {
+        if (tags == null) {
+            log.info("queryRecord 不应用标签过滤");
+            return;//不进行过滤
+        }
+        List<String> tagList = Arrays.asList(tags);
+        log.info("queryRecord 应用标签过滤, tags={}", tagList);
+
+        table.getRecords().replaceAll((timestamp, records) ->
+                records.stream()
+                        .filter(record -> meetsTagCondition(record, tagList))
+                        .collect(Collectors.toList())
+        );
+        table.purgeEmptyTimestamps();
+    }
+
+    private boolean meetsTagCondition(Record record, List<String> tags) {
+        Object tagValue = record.getFields().get(Constants.TAG);
+        if (tags.contains("NO_TAG")) {
+            // 如果标签列表中包含"NO_TAG"，并且该记录没有标签值，则符合条件
+            if (tagValue.toString().equals(Constants.NO_TAG)) {
+                return true;
+            }
+        }
+        // 检查是否符合任何标签条件
+        for (String tag : tags) {
+            if ("NO_TAG".equals(tag)) {
+                continue;// "NO_TAG"的情况已经在上面处理，不需要再次判断
+            }
+            if (tag.equals(tagValue)) {
+                return true;
+            }
+        }
+        // 如果没有匹配任何标签，则不符合条件
+        return false;
     }
 
     //按窗口聚合原始数据
@@ -239,7 +313,7 @@ public class DataServiceImpl implements DataService {
             case LAST -> values.get(values.size() - 1);
             default -> {
                 log.error("Illegal aggregation mode: {}", mode);
-                throw new SystemException(CodeMessage.ILLEGAL_AGGREGATION_ERROR, "Illegal aggregation mode: " + mode);
+                throw new SystemException(CodeMessage.ILLEGAL_AGGREGATION_ERROR, "不合法的聚合模式: " + mode);
             }
         };
     }
@@ -262,7 +336,7 @@ public class DataServiceImpl implements DataService {
     //和applyThresholdFilter一样，只是使用并行流处理提升性能
     //TODO 配置化开关,或者根据规模自动选择
     private void applyThresholdFilterParallel(DeviceTable table, List<String> measurements, List<List<Double>> thresholds) {
-        // 并行流处理提升性能
+        // parallelStream并行流处理提升性能
         Map<Long, List<Record>> filtered = table.getRecords().entrySet().parallelStream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
@@ -306,5 +380,34 @@ public class DataServiceImpl implements DataService {
         //左闭右闭
         return (min == null || numericValue >= min) &&
                 (max == null || numericValue <= max);
+    }
+
+    private String validateTagForInsert(String tag) {
+        if (tag == null) {
+            return Constants.NO_TAG;//null代表没有标签
+        }
+        if (Constants.NO_TAG.equals(tag)) {
+            throw new BusinessException(CodeMessage.INVALID_TAG_ERROR, "TAG不能为“NO_TAG”");
+        }
+        if (tag.contains("|")) {
+            throw new BusinessException(CodeMessage.INVALID_TAG_ERROR, "TAG包含不合法字符: |");
+        }
+        return tag;
+    }
+
+    private String[] validateTagForQuery(String tagQuery) {
+        if (tagQuery == null) {
+            return null;
+        }
+        if (Constants.NO_TAG.equals(tagQuery)) {
+            return new String[]{Constants.NO_TAG};
+        }
+        String[] tags = tagQuery.split("\\|\\|");
+        for (String t : tags) {
+            if (t.contains("|")) {
+                throw new BusinessException(CodeMessage.INVALID_TAG_ERROR, "TAG包含不合法字符: |");
+            }
+        }
+        return tags;
     }
 }
