@@ -93,6 +93,15 @@
               </el-select>
             </el-form-item>
 
+            <!-- 标签筛选 -->
+            <el-form-item label="标签筛选">
+              <el-input
+                  v-model="form.tagQuery"
+                  clearable
+                  placeholder="请输入标签查询条件"
+              ></el-input>
+            </el-form-item>
+
             <!-- 阈值设置区域 -->
             <el-form-item
                 v-if="form.selectMeasurements && form.selectMeasurements.length > 0"
@@ -180,49 +189,62 @@
 
     <!-- 结果展示区域，使用 el-table 前端分页 -->
     <div v-if="tableData.length > 0" class="result-container">
-      <el-table
-          :cell-style="getCellStyle"
-          :data="currentPageData"
-          border
-          height="tableHeight"
-          style="width: 100%"
-      >
-        <!-- 序号列 -->
-        <el-table-column
-            :index="indexMethod"
-            fixed="left"
-            label="序号"
-            type="index"
-            width="60"
-        ></el-table-column>
-        <!-- 时间戳列 -->
-        <el-table-column
-            fixed="left"
-            label="时间戳"
-            prop="timestamp"
-            width="180"
+      <div class="table-scroll">
+        <el-table
+            :cell-style="getCellStyle"
+            :data="currentPageData"
+            border
+            class="table"
+            height="tableHeight"
+            style="width: 100%"
         >
-          <template #default="{ row }">
-            {{ new Date(row.timestamp).toLocaleString() }}
-          </template>
-        </el-table-column>
-        <!-- 根据选中的传感器生成列 -->
-        <el-table-column
-            v-for="col in measurementsColumns"
-            :key="col"
-            :label="col"
-            :prop="col"
-        >
-          <template #default="{ row }">
-            {{
-              typeof row[col] === 'number'
-                  ? (Number.isInteger(row[col]) ? row[col] : row[col].toFixed(4))
-                  : row[col]
-            }}
-          </template>
-        </el-table-column>
-      </el-table>
-
+          <!-- 序号列 -->
+          <el-table-column
+              :index="indexMethod"
+              fixed="left"
+              label="序号"
+              type="index"
+              width="60"
+          ></el-table-column>
+          <!-- 标签列 -->
+          <el-table-column
+              fixed="left"
+              label="标签"
+              prop="tag"
+              width="120"
+          >
+            <template #default="{ row }">
+              {{ row.tag === "NO_TAG" ? "无" : row.tag }}
+            </template>
+          </el-table-column>
+          <!-- 时间戳列 -->
+          <el-table-column
+              fixed="left"
+              label="时间戳"
+              prop="timestamp"
+              width="180"
+          >
+            <template #default="{ row }">
+              {{ new Date(row.timestamp).toLocaleString() }}
+            </template>
+          </el-table-column>
+          <!-- 根据选中的传感器生成列 -->
+          <el-table-column
+              v-for="col in measurementsColumns"
+              :key="col"
+              :label="col"
+              :prop="col"
+          >
+            <template #default="{ row }">
+              {{
+                typeof row[col] === 'number'
+                    ? (Number.isInteger(row[col]) ? row[col] : row[col].toFixed(4))
+                    : row[col]
+              }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
       <!-- 分页控制 -->
       <div class="pagination-container">
         <el-pagination
@@ -235,6 +257,7 @@
             @current-change="handlePageChange"
             @size-change="handleSizeChange"
         ></el-pagination>
+
       </div>
     </div>
     <div v-else class="empty-tip">
@@ -261,6 +284,7 @@ export default {
         selectMeasurements: [],
         aggregationTime: 0,
         queryAggregateFunc: null,
+        tagQuery: '',
       },
       thresholdFilterEnabled: false,      // 阈值过滤开关
       thresholdHighlightEnabled: false,     // 阈值高亮开关
@@ -285,6 +309,7 @@ export default {
       // 分页相关数据
       currentPage: 1,                       // 当前页码，默认第1页
       pageSize: 100,                         // 每页显示数据数量，可根据需要调整
+
     };
   },
   computed: {
@@ -420,6 +445,7 @@ export default {
       // 构建请求参数
       const params = {
         ...this.form,
+        tagQuery: this.form.tagQuery,
         thresholds: this.thresholdFilterEnabled
             ? this.thresholds.map(t => [
               t[0] !== null ? Number(t[0]) : null,
@@ -585,10 +611,11 @@ export default {
 .container {
   display: flex;
   flex-direction: column;
-  height: 100%; /* 填满父容器 */
+  height: 100%;
   box-sizing: border-box;
   font-weight: bold;
-  padding: 20px;
+  padding: 15px;
+  min-width: 0; /* 允许子元素收缩 */
 }
 
 .query-collapse {
@@ -658,6 +685,22 @@ export default {
   flex-direction: column;
 }
 
+.table-scroll {
+  overflow-x: auto; /* 横向溢出时滚动 */
+  min-width: 0; /* 允许在flex布局中缩小 */
+  max-width: 100%;
+  flex: 1; /* 填充剩余空间 */
+}
+
+.pagination-container {
+  flex-shrink: 0; /* 防止分页被压缩 */
+  padding: 10px 0;
+  text-align: center;
+}
+table {
+  max-width: 100%;
+}
+
 .device_preview {
   /*margin-top: 10px;*/
   /*padding: 10px;*/
@@ -699,10 +742,10 @@ export default {
   overflow: hidden; /* 防止内部 el‑table 超出容器 */
 }
 
-/* 分页区域，固定高度 */
-.pagination-container {
-  flex: 0 0 50px; /* 分页区域高度 50px，可根据需要调整 */
-  padding: 10px 0;
-  text-align: center;
-}
+/*!* 分页区域，固定高度 *!*/
+/*.pagination-container {*/
+/*  flex: 0 0 50px; !* 分页区域高度 50px，可根据需要调整 *!*/
+/*  padding: 10px 0;*/
+/*  text-align: center;*/
+/*}*/
 </style>

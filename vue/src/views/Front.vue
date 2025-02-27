@@ -20,46 +20,48 @@
 
         </div>
 
-        <el-menu text-color="#565757" active-text-color="#0d53ff" router class="el-menu" :default-active="$route.path">
+        <el-menu :default-active="$route.path" active-text-color="#0d53ff" class="el-menu" router text-color="#565757">
           <el-menu-item class="el-menu-item" index="/front/view_platform">
             <i class="el-icon-folder-opened"></i>
-            <span class="words" slot="title">监测平台</span>
+            <span slot="title" class="words">监测平台</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/upload">
             <i class="el-icon-folder-opened"></i>
-            <span class="words" slot="title">文件上传</span>
+            <span slot="title" class="words">文件上传</span>
           </el-menu-item>
 
           <el-menu-item class="el-menu-item" index="/front/base_query">
             <i class="el-icon-folder-opened"></i>
-            <span class="words" slot="title">基础查询</span>
+            <span slot="title" class="words">基础查询</span>
           </el-menu-item>
 
           <el-menu-item class="el-menu-item" index="/front/template_manage">
             <i class="el-icon-folder-opened"></i>
-            <span class="words" slot="title">模板管理</span>
+            <span slot="title" class="words">模板管理</span>
           </el-menu-item>
 
           <el-menu-item class="el-menu-item" index="/front/device_manage">
             <i class="el-icon-folder-opened"></i>
-            <span class="words" slot="title">设备管理</span>
+            <span slot="title" class="words">设备管理</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/group_manage">
             <i class="el-icon-folder-opened"></i>
-            <span class="words" slot="title">组管理</span>
+            <span slot="title" class="words">组管理</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/third_party">
             <i class="el-icon-folder-opened"></i>
-            <span class="words" slot="title">第三方</span>
+            <span slot="title" class="words">第三方</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" @click="logout">
             <i class="el-icon-switch-button"></i>
-            <span class="words" slot="title">退出登录</span>
+            <span slot="title" class="words">退出登录</span>
           </el-menu-item>
         </el-menu>
       </div>
       <div class="main-right">
-        <router-view @update:user="updateUser"/>
+        <div class="content-scroll"> <!-- 滚动容器 -->
+          <router-view @update:user="updateUser"/>
+        </div>
       </div>
     </div>
   </div>
@@ -67,9 +69,8 @@
 </template>
 
 <script>
-import {setItemWithExpiry} from "@/App"
 import {getItemWithExpiry} from "@/App"
-import {updateItemWithExpiry} from "@/App"
+
 export default {
   name: "FrontLayout",
 
@@ -83,8 +84,7 @@ export default {
   },
   updated() {
   },
-  computed: {
-  },
+  computed: {},
   methods: {
 
     updateUser() {
@@ -103,8 +103,7 @@ export default {
             this.$message.success("退出成功")
             localStorage.removeItem("user");
             this.$router.push("/login");
-          }
-          else {
+          } else {
             this.$message.error(res.code + ": " + res.msg)
           }
         }).catch(error => {
@@ -134,6 +133,7 @@ export default {
   /*height: 100%;*/
   height: 92vh;
   /*flex-grow: 1;*/
+  overflow: hidden; /* 关键1：阻止外层滚动 */
 }
 
 
@@ -212,6 +212,15 @@ export default {
   background-color: #f9f9f9;
   border-radius: 1.5rem;
   margin-right: 1%;
+  min-width: 0; /* 关键2：允许在flex布局中收缩 */
+  display: flex; /* 新增 */
+}
+
+.content-scroll {
+  flex: 1;
+  overflow-x: auto; /* 关键3：内容区横向滚动 */
+  /*padding: 20px; !* 根据实际需求调整 *!*/
+  min-width: 0; /* 继承收缩特性 */
 }
 
 .front-layout {

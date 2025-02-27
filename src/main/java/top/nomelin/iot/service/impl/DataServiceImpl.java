@@ -67,17 +67,16 @@ public class DataServiceImpl implements DataService {
 
     private List<String> addTagInMeasurementsAndValues(String tag, List<String> measurements, List<List<Object>> values) {
         //此方法会修改原始的values!!!
-        validateTagForInsert(tag);
+        tag = validateTagForInsert(tag);
         List<String> measurementsCopy = new ArrayList<>(measurements);
-        if (tag != null) {
-            if (measurements.contains(Constants.TAG)) {
-                throw new BusinessException(CodeMessage.INVALID_TAG_ERROR, "物理量中不能包含TAG");
-            }
-            measurementsCopy.add(Constants.TAG);
-            for (List<Object> valueList : values) {
-                valueList.add(tag);
-            }
+        if (measurements.contains(Constants.TAG)) {
+            throw new BusinessException(CodeMessage.INVALID_TAG_ERROR, "物理量中不能包含TAG");
         }
+        measurementsCopy.add(Constants.TAG);
+        for (List<Object> valueList : values) {
+            valueList.add(tag);
+        }
+
         return measurementsCopy;
     }
 
@@ -152,6 +151,7 @@ public class DataServiceImpl implements DataService {
                 devicePath, alignedTimeRange[0], alignedTimeRange[1], selectMeasurementsCopy, aggregationTime
         );
 
+        // 应用标签过滤
         applyTagFilter(rawTable, tags);
 
         // 阈值过滤（COUNT模式不处理）
@@ -229,17 +229,8 @@ public class DataServiceImpl implements DataService {
 
     private boolean meetsTagCondition(Record record, List<String> tags) {
         Object tagValue = record.getFields().get(Constants.TAG);
-        if (tags.contains("NO_TAG")) {
-            // 如果标签列表中包含"NO_TAG"，并且该记录没有标签值，则符合条件
-            if (tagValue.toString().equals(Constants.NO_TAG)) {
-                return true;
-            }
-        }
-        // 检查是否符合任何标签条件
+        // 检查是否符合任何标签条件,包括NO_TAG
         for (String tag : tags) {
-            if ("NO_TAG".equals(tag)) {
-                continue;// "NO_TAG"的情况已经在上面处理，不需要再次判断
-            }
             if (tag.equals(tagValue)) {
                 return true;
             }
@@ -396,7 +387,7 @@ public class DataServiceImpl implements DataService {
     }
 
     private String[] validateTagForQuery(String tagQuery) {
-        if (tagQuery == null) {
+        if (tagQuery == null || tagQuery.isEmpty()) {
             return null;
         }
         if (Constants.NO_TAG.equals(tagQuery)) {
