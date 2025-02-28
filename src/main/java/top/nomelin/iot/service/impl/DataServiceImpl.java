@@ -43,8 +43,9 @@ public class DataServiceImpl implements DataService {
     @Override
     public void insertBatchRecord(int deviceId, List<Long> timestamps, String tag,
                                   List<String> measurements, List<List<Object>> values, int mergeTimestampNum) {
+        tag = validateTagForInsert(tag);
         List<String> measurementsCopy = addTagInMeasurementsAndValues(tag, measurements, values);
-        Device device = deviceService.getDeviceById(deviceId);
+        Device device = deviceService.addDataTags(deviceId, Collections.singleton(tag));
         Config config = device.getConfig();
         StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
@@ -57,7 +58,9 @@ public class DataServiceImpl implements DataService {
     @Override
     public void insertBatchRecord(Device device, List<Long> timestamps, String tag,
                                   List<String> measurements, List<List<Object>> values, int mergeTimestampNum) {
+        tag = validateTagForInsert(tag);
         List<String> measurementsCopy = addTagInMeasurementsAndValues(tag, measurements, values);
+        device = deviceService.addDataTagsWithOutCheck(device.getId(), Collections.singleton(tag));
         Config config = device.getConfig();
         StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
         String devicePath = util.getDevicePath(device.getUserId(), device.getId());
@@ -67,7 +70,6 @@ public class DataServiceImpl implements DataService {
 
     private List<String> addTagInMeasurementsAndValues(String tag, List<String> measurements, List<List<Object>> values) {
         //此方法会修改原始的values!!!
-        tag = validateTagForInsert(tag);
         List<String> measurementsCopy = new ArrayList<>(measurements);
         if (measurements.contains(Constants.TAG)) {
             throw new BusinessException(CodeMessage.INVALID_TAG_ERROR, "物理量中不能包含TAG");

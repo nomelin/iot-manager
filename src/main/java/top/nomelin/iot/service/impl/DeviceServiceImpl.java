@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjectUtil;
 import org.slf4j.Logger;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import top.nomelin.iot.cache.CurrentUserCache;
 import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.enums.CodeMessage;
@@ -23,7 +24,9 @@ import top.nomelin.iot.service.storage.StorageStrategyManager;
 import top.nomelin.iot.util.util;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * DeviceServiceImpl
@@ -135,6 +138,8 @@ public class DeviceServiceImpl implements DeviceService {
         //清空iotdb设备数据
         iotDBDao.clearDevice(util.getDevicePath(device.getUserId(), device.getId()));
         log.info("清空iotdb设备数据成功, deviceId: {}", deviceId);
+        removeAllDataTags(deviceId);
+        log.info("清空设备数据成功, deviceId: {}", deviceId);
     }
 
     @Override
@@ -189,8 +194,67 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    public Device addDataTags(int deviceId, Set<String> tags) {
+        Device device = checkPermission(deviceId);
+        Set<String> oldTags = device.getAllTags();
+        if (ObjectUtil.isNull(oldTags)) {
+            oldTags = new HashSet<>();
+        }
+        //取并集
+        oldTags.addAll(tags);
+        device.setAllTags(oldTags);
+        deviceMapper.update(device);
+        log.info("添加设备数据标签成功, deviceId: {}, tags: {}", deviceId, tags);
+        return device;
+    }
+
+    @Transactional(timeout = 5)
+    @Override
+    public Device addDataTagsWithOutCheck(int deviceId, Set<String> tags) {
+        Device device = getDeviceByIdWithoutCheck(deviceId);
+        Set<String> oldTags = device.getAllTags();
+        if (ObjectUtil.isNull(oldTags)) {
+            oldTags = new HashSet<>();
+        }
+        //取并集
+        oldTags.addAll(tags);
+        device.setAllTags(oldTags);
+        deviceMapper.update(device);
+        log.info("添加设备数据标签成功, deviceId: {}, tags: {}", device.getId(), tags);
+        return device;
+    }
+
+    @Override
+    public Device removeDataTags(int deviceId, Set<String> tags) {
+        Device device = checkPermission(deviceId);
+        Set<String> oldTags = device.getAllTags();
+        if (ObjectUtil.isNull(oldTags)) {
+            oldTags = new HashSet<>();
+        }
+        //取集合差
+        oldTags.removeAll(tags);
+        device.setAllTags(oldTags);
+        deviceMapper.update(device);
+        log.info("删除设备数据标签成功, deviceId: {}, tags: {}", deviceId, tags);
+        return device;
+    }
+
+    @Override
+    public Device removeAllDataTags(int deviceId) {
+        Device device = checkPermission(deviceId);
+        device.setAllTags(new HashSet<>());
+        deviceMapper.update(device);
+        log.info("删除设备所有数据标签成功, deviceId: {}", deviceId);
+        return device;
+    }
+
+    @Override
     public Device getDeviceById(int deviceId) {
         return checkPermission(deviceId);
+    }
+
+    private Device getDeviceByIdWithoutCheck(int deviceId) {
+        return deviceMapper.selectByIdForUpdate(deviceId);
     }
 
     @Override

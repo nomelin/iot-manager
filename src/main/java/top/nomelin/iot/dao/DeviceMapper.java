@@ -18,6 +18,8 @@ public interface DeviceMapper {
 
     Device selectById(int id);
 
+    Device selectByIdForUpdate(int id);
+
     List<Device> selectAll(Device device);
 
 

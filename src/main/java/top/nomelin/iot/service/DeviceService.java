@@ -4,6 +4,7 @@ import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.Group;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * DeviceService
@@ -31,6 +32,20 @@ public interface DeviceService {
     Device addTags(int deviceId, List<String> tags);
 
     Device removeTags(int deviceId, List<String> tags);
+
+    /**
+     * 添加数据行标签记录
+     */
+    Device addDataTags(int deviceId, Set<String> tags);
+
+    Device addDataTagsWithOutCheck(int deviceId, Set<String> tags);
+
+    /**
+     * 删除数据行标签记录
+     */
+    Device removeDataTags(int deviceId, Set<String> tags);
+
+    Device removeAllDataTags(int deviceId);
 
     Device getDeviceById(int deviceId);
 

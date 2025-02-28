@@ -1,6 +1,7 @@
 package top.nomelin.iot.model;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Device
@@ -13,7 +14,9 @@ public class Device {
     private String name;
     private Integer userId;
     private Integer templateId;
-    private List<String> tags;
+    private List<String> tags;//设备标签
+
+    private Set<String> allTags;//设备数据行的所有标签
 
     private List<Integer> groupIds;//这个字段不在device表中，而是通过中间表group_device关联。查表时通过left join group_device来获取。
 
@@ -50,6 +53,14 @@ public class Device {
 
     public void setTags(List<String> tags) {
         this.tags = tags;
+    }
+
+    public Set<String> getAllTags() {
+        return allTags;
+    }
+
+    public void setAllTags(Set<String> allTags) {
+        this.allTags = allTags;
     }
 
     public Config getConfig() {

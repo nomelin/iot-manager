@@ -10,6 +10,7 @@
         <result column="user_id" property="userId"/>
         <result column="template_id" property="templateId"/>
         <result column="tags" property="tags" typeHandler="top.nomelin.iot.common.handler.ListStringTypeHandler"/>
+        <result column="all_tags" property="allTags" typeHandler="top.nomelin.iot.common.handler.SetStringTypeHandler"/>
         <result column="config" property="config" typeHandler="top.nomelin.iot.common.handler.ConfigTypeHandler"/>
         <!-- 关联查询，获取设备所属的 groupIds -->
         <collection property="groupIds" ofType="java.lang.Integer">
@@ -20,9 +21,10 @@
     <!-- 插入设备 -->
     <insert id="insert" parameterType="top.nomelin.iot.model.Device"
             useGeneratedKeys="true" keyColumn="id" keyProperty="id">
-        INSERT INTO device (name, user_id, template_id, tags, config)
+        INSERT INTO device (name, user_id, template_id, tags, all_tags, config)
         VALUES (#{name}, #{userId}, #{templateId},
                 #{tags, typeHandler=top.nomelin.iot.common.handler.ListStringTypeHandler},
+                #{allTags, typeHandler=top.nomelin.iot.common.handler.SetStringTypeHandler},
                 #{config, typeHandler=top.nomelin.iot.common.handler.ConfigTypeHandler})
     </insert>
 
@@ -34,6 +36,9 @@
             <if test="userId != null">user_id = #{userId},</if>
             <if test="templateId != null">template_id = #{templateId},</if>
             <if test="tags != null">tags = #{tags, typeHandler=top.nomelin.iot.common.handler.ListStringTypeHandler},
+            </if>
+            <if test="allTags != null">all_tags =
+                #{allTags, typeHandler=top.nomelin.iot.common.handler.SetStringTypeHandler},
             </if>
             <if test="config != null">config =
                 #{config, typeHandler=top.nomelin.iot.common.handler.ConfigTypeHandler},
@@ -52,15 +57,38 @@
 
     <!-- 根据 ID 查询设备，包括所属组 -->
     <select id="selectById" parameterType="int" resultMap="deviceResultMap">
-        SELECT d.id, d.name, d.user_id, d.template_id, d.tags, d.config, gd.group_id
+        SELECT d.id,
+               d.name,
+               d.user_id,
+               d.template_id,
+               d.tags,
+               d.all_tags,
+               d.config,
+               gd.group_id
         FROM device d
                  LEFT JOIN group_device gd ON d.id = gd.device_id
         WHERE d.id = #{id}
     </select>
 
+    <!-- 根据 ID 查询设备并加锁（FOR UPDATE） -->
+    <select id="selectByIdForUpdate" parameterType="int" resultMap="deviceResultMap">
+        SELECT d.id,
+        d.name,
+        d.user_id,
+        d.template_id,
+        d.tags,
+        d.all_tags,
+        d.config,
+        gd.group_id
+        FROM device d
+        LEFT JOIN group_device gd ON d.id = gd.device_id
+        WHERE d.id = #{id}
+        FOR UPDATE <!-- 关键：锁定该行 -->
+    </select>
+
     <!-- 条件查询设备 -->
     <select id="selectAll" parameterType="top.nomelin.iot.model.Device" resultMap="deviceResultMap">
-        SELECT d.id, d.name, d.user_id, d.template_id, d.tags, d.config, gd.group_id
+        SELECT d.id, d.name, d.user_id, d.template_id, d.tags, d.all_tags, d.config, gd.group_id
         FROM device d
         LEFT JOIN group_device gd ON d.id = gd.device_id
         <where>
@@ -73,7 +101,14 @@
 
     <!-- 根据用户 ID 查询设备 -->
     <select id="selectByUserId" parameterType="int" resultMap="deviceResultMap">
-        SELECT d.id, d.name, d.user_id, d.template_id, d.tags, d.config, gd.group_id
+        SELECT d.id,
+               d.name,
+               d.user_id,
+               d.template_id,
+               d.tags,
+               d.all_tags,
+               d.config,
+               gd.group_id
         FROM device d
                  LEFT JOIN group_device gd ON d.id = gd.device_id
         WHERE d.user_id = #{userId}
@@ -81,7 +116,14 @@
 
     <!-- 根据模板 ID 查询设备 -->
     <select id="selectByTemplateId" parameterType="int" resultMap="deviceResultMap">
-        SELECT d.id, d.name, d.user_id, d.template_id, d.tags, d.config, gd.group_id
+        SELECT d.id,
+               d.name,
+               d.user_id,
+               d.template_id,
+               d.tags,
+               d.all_tags,
+               d.config,
+               gd.group_id
         FROM device d
                  LEFT JOIN group_device gd ON d.id = gd.device_id
         WHERE d.template_id = #{templateId}
