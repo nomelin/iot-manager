@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import top.nomelin.iot.model.dto.DeviceTable;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -96,6 +97,20 @@ class IoTDBDaoTest {
 /*        // 12. 删除数据库 root.test
         dao.deleteDatabase(databasePath);
         System.out.println("Database 'root.test' deleted successfully.");*/
+    }
+
+    @Test
+    void testDelete(){
+        String device="root.data.user_1.device_43";
+        dao.deleteData(device, 1719093773000L, 1719093776000L);
+        List<Long> timestamps = new ArrayList<>();
+        timestamps.add(1719093778000L);
+        timestamps.add(1719093779000L);
+        timestamps.add(1719093780000L);
+        timestamps.add(1719093782000L);
+        timestamps.add(1719093784000L);
+        timestamps.add(1719093785000L);
+        dao.deleteData(device, timestamps);
     }
 
     // 格式化查询结果为 JSON 字符串

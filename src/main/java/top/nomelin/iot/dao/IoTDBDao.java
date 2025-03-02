@@ -32,8 +32,8 @@ public interface IoTDBDao {
      * 在指定设备上挂载并激活元数据模板。激活同时会实例化设备和设备下的时间序列。
      * 注意，创建模板只需要一次，可以被多个设备使用。每次创建设备时，都需要挂载激活模板。
      *
-     * @param schemaName   元数据模板名称
-     * @param devicePath   设备路径
+     * @param schemaName 元数据模板名称
+     * @param devicePath 设备路径
      */
 
     void setAndActivateSchema(String schemaName, String devicePath);
@@ -41,6 +41,7 @@ public interface IoTDBDao {
     /**
      * 从指定设备解除并卸载元数据模板。解除的同时会删除设备，设备下的时间序列，时间序列下的数据。
      * 注意，不是删除模板。一个模板可以被多个设备使用。
+     *
      * @param schemaName 元数据模板名称
      * @param devicePath 设备路径
      */
@@ -49,6 +50,7 @@ public interface IoTDBDao {
     /**
      * 删除模板。全部解除->全部卸载->删除模板。同时，删除所有使用该模板的设备，并清空所有数据。
      * 注意，删除模板会先多次解除，卸载，然后会删除模板。
+     *
      * @param schemaName 模板名称
      */
     void deleteSchema(String schemaName);
@@ -136,9 +138,14 @@ public interface IoTDBDao {
 
     /**
      * 清除设备的所有数据。不影响其他内容
+     *
      * @param devicePath 设备路径
      */
     void clearDevice(String devicePath);
+
+    void deleteData(String devicePath, long startTime, long endTime);
+
+    void deleteData(String devicePath, List<Long> timestamps);
 
 
     /**

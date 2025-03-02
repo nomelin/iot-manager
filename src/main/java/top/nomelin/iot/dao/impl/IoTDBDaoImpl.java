@@ -253,6 +253,46 @@ public class IoTDBDaoImpl implements IoTDBDao {
     }
 
     @Override
+    public void deleteData(String devicePath, long startTime, long endTime) {
+        String sql = String.format("DELETE FROM %s.* WHERE time >= %d AND time <= %d", devicePath, startTime, endTime);
+        executeNonQueryStatement(sql);
+    }
+
+    @Override
+    public void deleteData(String devicePath, List<Long> timestamps) {
+        //IoTDB的DELETE语句在WHERE子句中的时间条件限制比较严格
+        // 不允许使用OR连接多个时间戳，只允许使用比较操作符（比如=, >, <, >=, <=）以及用AND连接的两个条件。
+        if (timestamps.isEmpty()) {
+            log.warn("deleteData 被调用，但时间戳列表为空");
+            return;
+        }
+        // 1. 排序时间戳
+        Collections.sort(timestamps);
+        // 2. 合并连续时间戳为时间范围
+        List<long[]> ranges = new ArrayList<>();
+        long start = timestamps.get(0);
+        long end = start;
+
+        for (int i = 1; i < timestamps.size(); i++) {
+            if (timestamps.get(i) == end + 1) {
+                end++;
+            } else {
+                ranges.add(new long[]{start, end});
+                start = timestamps.get(i);
+                end = start;
+            }
+        }
+        ranges.add(new long[]{start, end});//循环后总会剩一个范围
+        log.info("合并要删除的离散时间戳{}个为时间范围成功，共 {} 个范围", timestamps.size(), ranges.size());
+        // 3. 生成范围删除语句
+        for (long[] range : ranges) {
+            String sql = String.format("DELETE FROM %s.* WHERE time >= %d AND time <= %d",
+                    devicePath, range[0], range[1]);
+            executeNonQueryStatement(sql);
+        }
+    }
+
+    @Override
     public Map<String, String> getExistingMeasurements(String devicePath, long timestamp) {
         // 构造查询路径，查询设备所有测量（例如：devicePath.*）
         List<String> paths = List.of(devicePath + ".*");
