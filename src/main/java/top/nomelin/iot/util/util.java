@@ -32,7 +32,10 @@ public class util {
     }
 
     // 对齐到东八区时间窗口
-    public static long alignToEast8Zone(long timestamp, int granularity) {
+    public static Long alignToEast8Zone(Long timestamp, int granularity) {
+        if (timestamp == null) {
+            return null;
+        }
         if (granularity == 1 || granularity == 0) {
             return timestamp;// 1ms或者不聚合，提前返回，以便提高性能
         }

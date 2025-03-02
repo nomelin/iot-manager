@@ -36,15 +36,29 @@
 
             <!-- 时间范围 -->
             <el-form-item label="时间范围">
-              <el-date-picker
-                  v-model="timeRange"
-                  :default-time="['00:00:00', '23:59:59']"
-                  end-placeholder="结束时间"
-                  range-separator="至"
-                  start-placeholder="开始时间"
-                  type="datetimerange"
-                  value-format="timestamp"
-              ></el-date-picker>
+              <div class="time-range-container">
+                <el-date-picker
+                    v-model="form.startTime"
+                    :default-time="['00:00:00']"
+                    clearable
+                    format="yyyy-MM-dd HH:mm:ss"
+                    placeholder="开始时间（不限制）"
+                    style="width: 220px;"
+                    type="datetime"
+                    value-format="yyyy-MM-dd HH:mm:ss"
+                />
+                <span class="time-separator">至</span>
+                <el-date-picker
+                    v-model="form.endTime"
+                    :default-time="['23:59:59']"
+                    clearable
+                    format="yyyy-MM-dd HH:mm:ss"
+                    placeholder="结束时间（不限制）"
+                    style="width: 220px;"
+                    type="datetime"
+                    value-format="yyyy-MM-dd HH:mm:ss"
+                />
+              </div>
             </el-form-item>
 
             <!-- 传感器选择 -->
@@ -279,8 +293,8 @@ export default {
       allDevices: [],                      // 全部设备信息
       form: {
         deviceId: null,
-        startTime: null,
-        endTime: null,
+        startTime: null,  // 初始化为 null
+        endTime: null,    // 初始化为 null
         selectMeasurements: [],
         aggregationTime: 0,
         queryAggregateFunc: null,
@@ -289,7 +303,7 @@ export default {
       thresholdFilterEnabled: false,      // 阈值过滤开关
       thresholdHighlightEnabled: false,     // 阈值高亮开关
       highlightThresholds: [],              // 高亮阈值配置
-      timeRange: [1719072000000, 1719158400000],
+      // timeRange: [1719072000000, 1719158400000],
       deviceMeasurements: [],
       thresholds: [],                       // 阈值过滤配置
       aggregateFuncOptions: [],             // 聚合函数选项
@@ -365,7 +379,7 @@ export default {
     },
     // 高亮单元格方法（保持原有逻辑）
     getCellStyle({row, column, rowIndex, columnIndex}) {
-      console.log(`row: ${JSON.stringify(row)}, column: ${JSON.stringify(column)}, rowIndex: ${rowIndex}, columnIndex: ${columnIndex}`)
+      // console.log(`row: ${JSON.stringify(row)}, column: ${JSON.stringify(column)}, rowIndex: ${rowIndex}, columnIndex: ${columnIndex}`)
       if (!this.thresholdHighlightEnabled) return {};
       // 序号列和时间戳列不高亮
       if (columnIndex === 0 || columnIndex === 1) return {};
@@ -433,10 +447,10 @@ export default {
         this.$message.error('请选择聚合函数');
         return;
       }
-      if (this.timeRange && this.timeRange.length === 2) {
-        this.form.startTime = this.timeRange[0];
-        this.form.endTime = this.timeRange[1];
-      }
+      // if (this.timeRange && this.timeRange.length === 2) {
+      //   this.form.startTime = this.timeRange[0];
+      //   this.form.endTime = this.timeRange[1];
+      // }
       if (!this.form.selectMeasurements || this.form.selectMeasurements.length === 0) {
         // 如果没有选择属性，则自动选择全部属性
         this.form.selectMeasurements = this.deviceMeasurements;
@@ -445,6 +459,8 @@ export default {
       // 构建请求参数
       const params = {
         ...this.form,
+        startTime: this.form.startTime ? new Date(this.form.startTime).getTime() : null,
+        endTime: this.form.endTime ? new Date(this.form.endTime).getTime() : null,
         tagQuery: this.form.tagQuery,
         thresholds: this.thresholdFilterEnabled
             ? this.thresholds.map(t => [
@@ -486,7 +502,7 @@ export default {
       }
     },
     transformData(deviceTable) {
-      // console.log("deviceTable: " + JSON.stringify(deviceTable))
+      console.log("deviceTable: " + JSON.stringify(deviceTable))
       this.tableData = []
 
       this.measurementsColumns = this.form.selectMeasurements;
@@ -514,7 +530,7 @@ export default {
         queryAggregateFunc: null,
       };
       this.thresholdFilterEnabled = false;
-      this.timeRange = [];
+      // this.timeRange = [];
       this.thresholds = [];
       this.tableData = [];
       this.currentPage = 1;
@@ -552,13 +568,19 @@ export default {
     generateCSV() {
       // 第一行：元信息
       const device = this.selectedDevice ? this.selectedDevice.name : '未知设备';
-      const start = this.timeRange[0] ? new Date(this.timeRange[0]).toLocaleString() : '';
-      const end = this.timeRange[1] ? new Date(this.timeRange[1]).toLocaleString() : '';
+      const start = this.form.startTime
+          ? new Date(this.form.startTime).toLocaleString()
+          : '无限制';
+      const end = this.form.endTime
+          ? new Date(this.form.endTime).toLocaleString()
+          : '无限制';
+      const selectMeasurements = this.form.selectMeasurements.join('/');
+      const tagQuery = this.form.tagQuery ? `标签筛选: ${this.form.tagQuery}` : '所有标签';
       const aggregation = this.form.aggregationTime === 0
           ? '不聚合'
           : `查询聚合时间粒度: ${this.aggregationTimeOptions.find(o => o.value === this.form.aggregationTime)?.label}, 查询聚合函数: ${this.form.queryAggregateFunc}`;
 
-      const infoLine = `# 设备: ${device}, 查询时间范围: ${start} 至 ${end}, ${aggregation}, 生成于 ${new Date().toLocaleString()}`;
+      const infoLine = `# 设备: ${device}; 选择传感器：${selectMeasurements}; ${tagQuery} 查询时间范围: ${start} 至 ${end}; ${aggregation}; 生成于 ${new Date().toLocaleString()}`;
 
       // 第二行：列头
       const headers = ['#time', ...this.form.selectMeasurements].join(',');
@@ -649,6 +671,17 @@ export default {
 .query-form {
   max-width: 90%;
   margin: 20px auto;
+}
+
+.time-range-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.time-separator {
+  color: #666;
+  font-size: 14px;
 }
 
 .threshold-item {

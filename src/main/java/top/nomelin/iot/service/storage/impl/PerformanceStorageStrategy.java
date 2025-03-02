@@ -54,7 +54,7 @@ public class PerformanceStorageStrategy implements StorageStrategy {
     }
 
     @Override
-    public DeviceTable retrieveData(String devicePath, long startTime, long endTime,
+    public DeviceTable retrieveData(String devicePath, Long startTime, Long endTime,
                                     List<String> selectedMeasurements, int aggregationTime) {
         //
         // 直接返回原始存储结构（每个窗口时间戳对应多个记录）

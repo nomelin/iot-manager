@@ -88,7 +88,7 @@ public class DataServiceImpl implements DataService {
         //对TAG参数特殊处理
         config.getDataTypes().put(Constants.TAG, IotDataType.STRING);
         // 对齐时间窗口
-        long[] alignedTimeRange = alignTimeRange(timestamps.get(0), timestamps.get(timestamps.size() - 1), config.getAggregationTime());
+        Long[] alignedTimeRange = alignTimeRange(timestamps.get(0), timestamps.get(timestamps.size() - 1), config.getAggregationTime());
         log.info("insertBatchRecord 原始时间范围:{}-{}, 对齐后:{}-{}", timestamps.get(0), timestamps.get(timestamps.size() - 1), alignedTimeRange[0], alignedTimeRange[1]);
         // 把config中的物理量的类型转换为TSDataType
         List<TSDataType> types = measurements.stream()
@@ -110,7 +110,7 @@ public class DataServiceImpl implements DataService {
 
     @LogExecutionTime(logArgs = true)
     @Override
-    public DeviceTable queryRecord(int deviceId, long startTime, long endTime,
+    public DeviceTable queryRecord(int deviceId, Long startTime, Long endTime,
                                    List<String> selectMeasurements, String tagQuery, Integer aggregationTime,
                                    QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds) {
         Device device = deviceService.getDeviceById(deviceId);
@@ -123,7 +123,7 @@ public class DataServiceImpl implements DataService {
 
     @LogExecutionTime(logArgs = true)
     @Override
-    public DeviceTable queryRecord(Device device, long startTime, long endTime,
+    public DeviceTable queryRecord(Device device, Long startTime, Long endTime,
                                    List<String> selectMeasurements, String tagQuery, Integer aggregationTime,
                                    QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds) {
         aggregationTime = checkAggregationTime(device, aggregationTime);
@@ -133,7 +133,7 @@ public class DataServiceImpl implements DataService {
                 queryAggregateFunc, thresholds, strategy, devicePath, tagQuery);
     }
 
-    private DeviceTable query(Device device, long startTime, long endTime,
+    private DeviceTable query(Device device, Long startTime, Long endTime,
                               List<String> selectMeasurements, Integer aggregationTime,
                               QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds,
                               StorageStrategy strategy, String devicePath, String tagQuery) {
@@ -145,7 +145,7 @@ public class DataServiceImpl implements DataService {
         List<String> selectMeasurementsCopy = new ArrayList<>(selectMeasurements);
         selectMeasurementsCopy.add(Constants.TAG);//添加TAG列
         // 对齐时间窗口
-        long[] alignedTimeRange = alignTimeRange(startTime, endTime, aggregationTime);
+        Long[] alignedTimeRange = alignTimeRange(startTime, endTime, aggregationTime);
         log.info("queryRecord 原始时间范围:{}-{}, 对齐后:{}-{}", startTime, endTime, alignedTimeRange[0], alignedTimeRange[1]);
 
         // 获取原始数据
@@ -205,8 +205,8 @@ public class DataServiceImpl implements DataService {
         return aggregationTime;
     }
 
-    private long[] alignTimeRange(long start, long end, int aggregationTime) {
-        return new long[]{
+    private Long[] alignTimeRange(Long start, Long end, int aggregationTime) {
+        return new Long[]{
                 util.alignToEast8Zone(start, aggregationTime),
                 util.alignToEast8Zone(end, aggregationTime)
         };

@@ -57,8 +57,8 @@ public interface DataService {
      * 查询时会先应用阈值过滤，然后再聚合数据。
      *
      * @param deviceId           设备ID
-     * @param startTime          开始时间戳
-     * @param endTime            结束时间戳
+     * @param startTime          开始时间戳，可以为null，表示不限制
+     * @param endTime            结束时间戳，可以为null，表示不限制
      * @param selectMeasurements 选择的属性名列表。如果为null或空列表，则查询所有属性。
      * @param tagQuery           用此标签过滤。如果为null或空字符串，则不过滤。如果为"NO_TAG"，则筛选没有标签的数据。
      *                           可以同时筛选多个标签，使用||分割。
@@ -82,7 +82,7 @@ public interface DataService {
      *                           [null,[100,200],[null,100]]，表示属性1不过滤,100<=属性2<=200，属性3<=100
      */
 
-    DeviceTable queryRecord(int deviceId, long startTime, long endTime, List<String> selectMeasurements, String tagQuery,
+    DeviceTable queryRecord(int deviceId, Long startTime, Long endTime, List<String> selectMeasurements, String tagQuery,
                             Integer aggregationTime, QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds);
 
     /**
@@ -91,8 +91,8 @@ public interface DataService {
      * 查询时会先应用阈值过滤，然后再聚合数据。
      *
      * @param device             设备对象
-     * @param startTime          开始时间戳
-     * @param endTime            结束时间戳
+     * @param startTime          开始时间戳，可以为null，表示不限制
+     * @param endTime            结束时间戳，可以为null，表示不限制
      * @param selectMeasurements 选择的属性名列表。如果为null或空列表，则查询所有属性。
      * @param tagQuery           用此标签过滤。如果为null或空字符串，则不过滤。如果为"NO_TAG"，则筛选没有标签的数据。
      *                           可以同时筛选多个标签，使用||分割。
@@ -115,7 +115,7 @@ public interface DataService {
      *                           [[null, 100], [200,null],...],表示属性1<=100，属性2>=200，...
      *                           [null,[100,200],[null,100]]，表示属性1不过滤,100<=属性2<=200，属性3<=100
      */
-    DeviceTable queryRecord(Device device, long startTime, long endTime, List<String> selectMeasurements, String tagQuery,
+    DeviceTable queryRecord(Device device, Long startTime, Long endTime, List<String> selectMeasurements, String tagQuery,
                             Integer aggregationTime, QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds);
 
 }

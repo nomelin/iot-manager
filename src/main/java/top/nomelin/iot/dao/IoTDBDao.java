@@ -108,25 +108,25 @@ public interface IoTDBDao {
                                               List<List<TSDataType>> typesList, List<List<Object>> valuesList);
 
     /**
-     * 指定的查询时间范围为左闭右开区间
+     * 指定的查询时间范围为左闭右开区间，支持 start 或 end 为 null
      *
      * @param devicePath 设备路径
-     * @param startTime  起始时间戳
-     * @param endTime    结束时间戳
+     * @param startTime  起始时间戳（可为 null）
+     * @param endTime    结束时间戳（可为 null）
      * @return 查询结果
      */
-    DeviceTable queryRecords(String devicePath, long startTime, long endTime);
+    DeviceTable queryRecords(String devicePath, Long startTime, Long endTime);
 
     /**
-     * 指定的查询时间范围为左闭右开区间
+     * 指定的查询时间范围为左闭右开区间，支持 start 或 end 为 null
      *
      * @param devicePath   设备路径
-     * @param startTime    起始时间戳
-     * @param endTime      结束时间戳
+     * @param startTime    起始时间戳（可为 null）
+     * @param endTime      结束时间戳（可为 null）
      * @param selectFields 需要查询的字段（物理量名称）
      * @return 查询结果
      */
-    DeviceTable queryRecords(String devicePath, long startTime, long endTime, List<String> selectFields);
+    DeviceTable queryRecords(String devicePath, Long startTime, Long endTime, List<String> selectFields);
 
 
     /**

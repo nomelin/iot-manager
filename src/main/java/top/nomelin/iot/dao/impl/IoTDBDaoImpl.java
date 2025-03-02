@@ -220,20 +220,19 @@ public class IoTDBDaoImpl implements IoTDBDao {
 
     @LogExecutionTime
     @Override
-    public DeviceTable queryRecords(String devicePath, long startTime, long endTime) {
-        List<String> paths = List.of(devicePath + ".*");//devicePath.*
-        return queryRecordsByPaths(devicePath, startTime, endTime, paths);
+    public DeviceTable queryRecords(String devicePath, Long startTime, Long endTime) {
+        List<String> paths = List.of(devicePath + ".*");
+        return queryRecordsByPaths(devicePath, startTime, endTime, paths, null);
     }
 
     @LogExecutionTime
     @Override
-    public DeviceTable queryRecords(String devicePath, long startTime, long endTime, List<String> selectFields) {
+    public DeviceTable queryRecords(String devicePath, Long startTime, Long endTime, List<String> selectFields) {
         //构造查询路径列表。device.measurement1, device.measurement2, ...
-        List<String> paths = new ArrayList<>();
-        for (String measurement : selectFields) {
-            paths.add(devicePath + "." + measurement);
-        }
-        return queryRecordsByPaths(devicePath, startTime, endTime, paths);
+        List<String> paths = selectFields.stream()
+                .map(measurement -> devicePath + "." + measurement)
+                .collect(Collectors.toList());
+        return queryRecordsByPaths(devicePath, startTime, endTime, paths, selectFields);
     }
 
     @Override
@@ -297,7 +296,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
         // 构造查询路径，查询设备所有测量（例如：devicePath.*）
         List<String> paths = List.of(devicePath + ".*");
         // 使用 queryRecordsByPaths 方法查询 [timestamp, timestamp+1) 的数据，确保只获取该时刻的数据记录
-        DeviceTable deviceTable = queryRecordsByPaths(devicePath, timestamp, timestamp + 1, paths);
+        DeviceTable deviceTable = queryRecordsByPaths(devicePath, timestamp, timestamp + 1, paths, null);
 
         Map<String, String> existingData = new HashMap<>();
         // 从 DeviceTable 中获取指定 timestamp 对应的记录列表
@@ -359,19 +358,52 @@ public class IoTDBDaoImpl implements IoTDBDao {
     }
 
 
-    private DeviceTable queryRecordsByPaths(String devicePath, long startTime, long endTime, List<String> paths) {
+    private DeviceTable queryRecordsByPaths(String devicePath, Long startTime, Long endTime,
+                                            List<String> paths, List<String> selectedMeasurements) {
         SessionDataSet sessionDataSet;
         DeviceTable deviceTable;
         try {
-            sessionDataSet = getSession().executeRawDataQuery(paths, startTime, endTime, queryTimeout);
+            //如果是完整时间范围，使用java api，否则使用原生API
+            if (startTime == null || endTime == null) {
+                String sql = getQuerySql(devicePath, selectedMeasurements, startTime, endTime);
+                sessionDataSet = executeQueryStatement(sql);
+            } else {
+                long start = startTime;
+                long end = endTime;
+                sessionDataSet = getSession().executeRawDataQuery(paths, start, end, queryTimeout);
+            }
             deviceTable = DeviceTable.convertToDeviceTable(sessionDataSet, devicePath);
         } catch (StatementExecutionException | IoTDBConnectionException e) {
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
         log.info("查询设备 {} , 时间范围 {} 至 {} 的数据成功, 共 {} 条记录",
-                devicePath, TimeUtil.timestampToDateString(startTime), TimeUtil.timestampToDateString(endTime),
+                devicePath,
+                (startTime != null ? TimeUtil.timestampToDateString(startTime) : "无限制"),
+                (endTime != null ? TimeUtil.timestampToDateString(endTime) : "无限制"),
                 deviceTable.getRecords().size());
         return deviceTable;
+    }
+
+    private String getQuerySql(String devicePath, List<String> selectedMeasurements, Long startTime, Long endTime) {
+        String sql;
+        if (selectedMeasurements == null || selectedMeasurements.isEmpty()) {
+            sql = String.format("SELECT * FROM %s", devicePath);
+        } else {
+            sql = String.format("SELECT %s FROM %s", String.join(",", selectedMeasurements), devicePath);
+        }
+        if (startTime != null && endTime != null) {
+            sql += String.format(" WHERE time >= %d AND time < %d", startTime, endTime);
+        }
+        if (startTime != null && endTime == null) {
+            sql += String.format(" WHERE time >= %d", startTime);
+        }
+        if (startTime == null && endTime != null) {
+            sql += String.format(" WHERE time < %d", endTime);
+        }
+        if (startTime == null && endTime == null) {
+            // 不加时间条件
+        }
+        return sql;
     }
 
     @LogExecutionTime

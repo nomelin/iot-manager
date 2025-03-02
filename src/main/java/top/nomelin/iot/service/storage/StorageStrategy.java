@@ -30,13 +30,13 @@ public interface StorageStrategy {
      * 按和存储时相同的策略查询数据
      *
      * @param devicePath           设备路径
-     * @param startTime            起始时间戳
-     * @param endTime              结束时间戳
+     * @param startTime            起始时间戳, 可以为null
+     * @param endTime              结束时间戳, 可以为null
      * @param selectedMeasurements 要查询的物理量
      * @param aggregationTime      聚合时间粒度，必须是10的整数次幂，比如1，10，100，单位为ms。
      * @return 查询到的数据
      */
-    DeviceTable retrieveData(String devicePath, long startTime, long endTime, List<String> selectedMeasurements,
+    DeviceTable retrieveData(String devicePath, Long startTime, Long endTime, List<String> selectedMeasurements,
                              int aggregationTime);
 
     /**

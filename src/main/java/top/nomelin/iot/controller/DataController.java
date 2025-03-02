@@ -56,10 +56,10 @@ public class DataController {
 
     @PostMapping("/query")
     public Result queryData(@RequestBody DataQueryRequest request) {
-        if (request.getDeviceId() == null || request.getStartTime() == null || request.getEndTime() == null) {
+        if (request.getDeviceId() == null) {
             throw new BusinessException(CodeMessage.PARAM_LOST_ERROR, "参数缺失,request:" + request);
         }
-        if (request.getStartTime() > request.getEndTime()) {
+        if (request.getStartTime() != null && request.getEndTime() != null && request.getStartTime() > request.getEndTime()) {
             throw new BusinessException(CodeMessage.PARAM_ERROR, "开始时间不能大于结束时间");
         }
         DeviceTable result = dataService.queryRecord(

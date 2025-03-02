@@ -1,6 +1,7 @@
 package top.nomelin.iot.service.storage.impl;
 
 import org.apache.tsfile.enums.TSDataType;
+import org.apache.tsfile.utils.Binary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -10,6 +11,7 @@ import top.nomelin.iot.model.dto.DeviceTable;
 import top.nomelin.iot.service.storage.StorageStrategy;
 import top.nomelin.iot.util.util;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Component
@@ -44,11 +46,26 @@ public class CoverStorageStrategy implements StorageStrategy {
 
     @LogExecutionTime
     @Override
-    public DeviceTable retrieveData(String devicePath, long startTime, long endTime,
+    public DeviceTable retrieveData(String devicePath, Long startTime, Long endTime,
                                     List<String> selectedMeasurements, int aggregationTime) {
         //直接查询即可
-        return selectedMeasurements == null ?
+        DeviceTable table = selectedMeasurements == null ?
                 iotDBDao.queryRecords(devicePath, startTime, endTime) :
                 iotDBDao.queryRecords(devicePath, startTime, endTime, selectedMeasurements);
+        // 后处理二进制字段
+        if (table != null) {
+            table.getRecords().forEach((timestamp, records) ->
+                    records.forEach(record ->
+                            record.getFields().replaceAll((key, value) ->
+                                    value instanceof Binary ?
+                                            ((Binary) value).getStringValue(StandardCharsets.UTF_8) :
+                                            value
+                            )
+                    )
+            );
+        }
+
+        return table;
+
     }
 }

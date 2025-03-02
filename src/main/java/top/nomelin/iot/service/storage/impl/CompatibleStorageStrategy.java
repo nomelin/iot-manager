@@ -252,7 +252,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
 
     @LogExecutionTime
     @Override
-    public DeviceTable retrieveData(String devicePath, long startTime, long endTime,
+    public DeviceTable retrieveData(String devicePath, Long startTime, Long endTime,
                                     List<String> selectedMeasurements, int aggregationTime) {
         DeviceTable resultTable = new DeviceTable();
         DeviceTable rawTable = selectedMeasurements == null ?
