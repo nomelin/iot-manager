@@ -211,7 +211,7 @@ public class CsvProcessor implements FileProcessor {
             valuesBatch.add(values);
         } catch (Exception e) {
             throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
-                    String.format("第%d行数据格式错误", record.getRecordNumber()), e);
+                    String.format("第%d行数据格式错误", record.getRecordNumber()) + 2, e);
         }
     }
 
@@ -222,12 +222,15 @@ public class CsvProcessor implements FileProcessor {
                 case LONG -> Long.parseLong(rawValue);
                 case FLOAT -> Float.parseFloat(rawValue);
                 case DOUBLE -> Double.parseDouble(rawValue);
+                case STRING -> rawValue;
                 default -> throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
                         "不支持的Iot数据类型: " + dataType);
             };
         } catch (NumberFormatException e) {
-            throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
-                    String.format("无法将值 '%s' 解析为类型 %s", rawValue, dataType), e);
+//            throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
+//                    String.format("无法将值 '%s' 解析为类型 %s", rawValue, dataType), e);
+            log.warn("无法将值 '{}' 解析为类型 {}", rawValue, dataType);
+            return null;
         }
     }
 
