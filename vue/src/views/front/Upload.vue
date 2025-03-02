@@ -30,7 +30,8 @@
                   <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
                   <div slot="tip" class="el-upload__tip">支持同时上传{{
                       this.fileLimit
-                    }}个文件，单个文件不超过100MB
+                    }}个文件
+                    <!--                    ，单个文件不超过100MB-->
                   </div>
                   <!--                  <template #tip>-->
                   <!--                    <div class="el-upload__tip">-->
@@ -129,11 +130,26 @@
       <div class="task-list-container">
         <div class="task-list-header">
           任务列表（{{ Object.keys(taskInfos).length }}）
-          <el-tag size="mini" type="info">点击上方折叠面板管理上传任务</el-tag>
+          <el-button
+              size="mini"
+              style="margin: 5px"
+              type="info"
+              @click="clearCompleted"
+          >
+            清除已成功完成任务
+          </el-button>
+          <el-button
+              size="mini"
+              style="margin: 5px"
+              type="warning"
+              @click="clearAllTask"
+          >
+            清除所有任务
+          </el-button>
         </div>
         <div class="task-list">
           <div
-              v-for="[taskId, task] in Object.entries(taskInfos)"
+              v-for="[taskId, task] in sortedTasks"
               :key="taskId"
               class="task-item"
           >
@@ -230,7 +246,7 @@ export default {
         ]
       },
       fileList: [],// 上传文件列表
-      fileLimit: 100,
+      fileLimit: 1000,
       taskInfos: {},
       pollingMap: new Map(),
       isUploading: false,
@@ -240,6 +256,7 @@ export default {
   },
   created() {
     this.fetchAllDevices()
+    this.restoreFailedTasks();
   },
   beforeUnmount() {
     this.clearAllPolling()
@@ -247,11 +264,24 @@ export default {
   computed: {
     selectedDevice() {
       return this.allDevices.find(device => device.id === this.form.deviceId);
-    }
+    },
+    sortedTasks() {
+      return Object.entries(this.taskInfos).sort((a, b) => {
+        const taskA = a[1];
+        const taskB = b[1];
+
+        // FAILED 状态置顶
+        if (taskA.status === 'FAILED' && taskB.status !== 'FAILED') return -1;
+        if (taskB.status === 'FAILED' && taskA.status !== 'FAILED') return 1;
+
+        // 其他状态按开始时间倒序排列
+        return new Date(taskB.startTime) - new Date(taskA.startTime);
+      });
+    },
   },
   methods: {
     formatDateTime(datetime) {
-      return datetime ? dayjs(datetime).format('YYYY-MM-DD HH:mm:ss') : '-'
+      return datetime ? dayjs(datetime).format('YYYY-MM-DD HH:mm:ss.SSS') : '-'
     },
     generateFileKey(file) {
       return `${file.name}_${file.size}`;//按文件名和文件大小来去重
@@ -357,6 +387,14 @@ export default {
               ...res.data,               // 覆盖后端数据
               fileName: this.taskInfos[taskId].fileName // 保持文件名不变
             })
+
+            // 处理状态变化
+            if (res.data.status === 'FAILED') {
+              this.saveFailedTask(taskId); // 新增存储逻辑
+            } else if (this.taskInfos[taskId]?.status === 'FAILED') {
+              this.removeFailedTask(taskId); // 状态不再是失败时移除
+            }
+
 
             // 终止轮询条件
             if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(res.data.status)) {
@@ -464,6 +502,77 @@ export default {
       } catch (error) {
         this.$message.error('获取设备列表失败');
       }
+    },
+    clearCompleted() {
+      // 过滤掉 COMPLETED 状态的任务
+      const filtered = Object.entries(this.taskInfos).reduce((acc, [taskId, task]) => {
+        if (task.status !== 'COMPLETED') {
+          acc[taskId] = task;
+        }
+        return acc;
+      }, {});
+
+      this.taskInfos = {...filtered};
+
+      // 同时清理本地存储中的已完成任务
+      const stored = localStorage.getItem('failedTasks') || '[]';
+      const failedTasks = JSON.parse(stored).filter(item =>
+          this.taskInfos[item.taskId]?.status === 'FAILED'
+      );
+      localStorage.setItem('failedTasks', JSON.stringify(failedTasks));
+    },
+    clearAllTask() {
+      this.taskInfos = {};
+    },
+    // 从存储恢复失败任务
+    async restoreFailedTasks() {
+      const stored = localStorage.getItem('failedTasks');
+      if (!stored) return;
+
+      try {
+        const failedTasks = JSON.parse(stored).filter(item => {
+          // 过滤超过1天的记录
+          return Date.now() - item.timestamp < 24 * 60 * 60 * 1000;
+        });
+
+        // 更新存储（移除过期记录）
+        localStorage.setItem('failedTasks', JSON.stringify(failedTasks));
+
+        // 获取任务详情
+        for (const {taskId} of failedTasks) {
+          if (!this.taskInfos[taskId]) { // 避免重复显示
+            const res = await this.$request.get(`/task/get/${taskId}`);
+            if (res.code === '200') {
+              this.$set(this.taskInfos, taskId, res.data);
+              this.startPolling(taskId); // 重启轮询
+            }
+          }
+        }
+      } catch (error) {
+        console.error('恢复失败任务出错:', error);
+      }
+    },
+
+    //保存失败任务到 localStorage
+    saveFailedTask(taskId) {
+      const stored = localStorage.getItem('failedTasks') || '[]';
+      const failedTasks = JSON.parse(stored);
+
+      // 避免重复添加
+      if (!failedTasks.some(item => item.taskId === taskId)) {
+        failedTasks.push({
+          taskId,
+          timestamp: Date.now()
+        });
+        localStorage.setItem('failedTasks', JSON.stringify(failedTasks));
+      }
+    },
+
+    //从存储移除任务
+    removeFailedTask(taskId) {
+      const stored = localStorage.getItem('failedTasks') || '[]';
+      const failedTasks = JSON.parse(stored).filter(item => item.taskId !== taskId);
+      localStorage.setItem('failedTasks', JSON.stringify(failedTasks));
     },
   }
 }

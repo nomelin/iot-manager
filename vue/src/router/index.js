@@ -20,8 +20,14 @@ const routes = [
             {
                 path: 'view_platform',
                 name: 'viewPlatform',
-                meta: {name: '监测平台'},
+                meta: {name: '可视平台'},
                 component: () => import('../views/front/ViewPlatform.vue')
+            },
+            {
+                path: 'device_view',
+                name: 'deviceView',
+                meta: {name: '设备视图'},
+                component: () => import('../views/front/DeviceView.vue')
             },
             {
                 path: 'upload',
