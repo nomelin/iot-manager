@@ -74,7 +74,7 @@ export default {
       deviceTags: [],
       selectedTags: [],
       rawData: null,
-      processedData: null
+      preprocessedData: null
     }
   },
   computed: {
@@ -114,13 +114,37 @@ export default {
         // 普通字符串按字母顺序排序
         return a.localeCompare(b)
       })
-    }
+    },
+    processedData() {
+      if (!this.preprocessedData) return null
+
+      const processStart = Date.now()
+      const selectedTagsSet = new Set(this.selectedTags)
+      const result = {}
+
+      for (const [field, tags] of Object.entries(this.preprocessedData)) {
+        const series = []
+        for (const [tag, tagData] of Object.entries(tags)) {
+          if (selectedTagsSet.has(tag)) {
+            series.push({
+              name: tagData.name,
+              data: tagData.data
+            })
+          }
+        }
+        result[field] = {series}
+      }
+
+      const res = Object.entries(result).map(([field, data]) => ({
+        field,
+        ...data
+      }))
+      const processEnd = Date.now()
+      console.log('切换tag处理时间:' + (processEnd - processStart) + 'ms')
+      return res
+    },
   },
-  watch: {
-    selectedTags() {
-      this.processChartData()
-    }
-  },
+  watch: {},
   methods: {
     async fetchAllDevices() {
       try {
@@ -141,6 +165,7 @@ export default {
     },
 
     async fetchDeviceData(deviceId) {
+      this.$message.info('请稍候...')
       try {
         const queryStart = Date.now()
         const res = await this.$request.post('/data/query', {
@@ -159,21 +184,18 @@ export default {
             duration: 2000
           })
 
-          // 处理原始数据
-          const processStart = Date.now()
+          // 直接存储预处理数据，计算属性会自动更新
           this.preprocessedData = this.preprocessData(res.data)
           const processEnd = Date.now()
 
           this.$notify({
             title: "数据处理完成",
-            message: `处理耗时：${processEnd - processStart}ms`,
+            message: `处理耗时：${processEnd - queryEnd}ms`,
             type: "success",
             position: "bottom-right",
             duration: 2000,
             offset: 80
           })
-
-          this.processChartData()
         }
       } catch (error) {
         this.$message.error('数据加载失败')
@@ -194,15 +216,19 @@ export default {
 
       const fieldMap = {}
 
-      sortedRecords.forEach(({records}, seq) => {
+      // 优化后的预处理逻辑
+      sortedRecords.forEach(({records}) => {
         records.forEach(record => {
           const tag = record.tag
+          const formattedTag = tag === 'NO_TAG' ? '无标签' : tag
+
           Object.entries(record.fields).forEach(([field, value]) => {
-            if (field === 'tag') return // 跳过tag字段本身
+            if (field === 'tag') return
 
             if (!fieldMap[field]) fieldMap[field] = {}
             if (!fieldMap[field][tag]) {
               fieldMap[field][tag] = {
+                name: formattedTag, // 预处理显示名称
                 data: [],
                 sequence: 1
               }
@@ -217,29 +243,6 @@ export default {
       })
 
       return fieldMap
-    },
-
-
-    processChartData() {
-      if (!this.preprocessedData) return
-
-      const result = {}
-
-      Object.entries(this.preprocessedData).forEach(([field, tags]) => {
-        result[field] = {
-          series: Object.entries(tags)
-              .filter(([tag]) => this.selectedTags.includes(tag))
-              .map(([tag, data]) => ({
-                name: this.formatTagDisplay(tag),
-                data: data.data
-              }))
-        }
-      })
-
-      this.processedData = Object.entries(result).map(([field, data]) => ({
-        field,
-        ...data
-      }))
     },
 
     formatTagDisplay(tag) {
@@ -261,6 +264,8 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%; /* 填满父容器 */
+  overflow: hidden;
 }
 
 .control-panel {
@@ -272,6 +277,7 @@ export default {
   flex: 1;
   display: flex;
   overflow: hidden;
+  width: 100%; /* 填满父容器 */
 }
 
 .tag-sidebar {

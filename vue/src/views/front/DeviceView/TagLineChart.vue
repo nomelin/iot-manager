@@ -61,13 +61,26 @@ export default {
             type: 'cross'
           }
         },
+        toolbox:{
+          show: true,
+          feature:{
+            saveAsImage: {
+              title: '保存为图片'
+            },
+            dataZoom: {
+              show: true,
+              yAxisIndex: 0,
+              xAxisIndex: 0,
+            }
+          }
+        },
         legend: {
           data: data.series.map(s => s.name),
           bottom: 0
         },
         xAxis: {
           type: 'value',
-          name: '数据序号'
+          name: '序号'
         },
         yAxis: {
           type: 'value',
@@ -80,10 +93,20 @@ export default {
             filterMode: 'none'
           },
           {
+            type: 'inside',
+            xAxisIndex: 0,
+            filterMode: 'none'
+          },
+          {
             type: 'slider',
             yAxisIndex: 0,
             filterMode: 'none'
-          }
+          },
+          {
+            type: 'inside',
+            yAxisIndex: 0,
+            filterMode: 'none'
+          },
         ],
         series: data.series.map(series => ({
           name: series.name,
