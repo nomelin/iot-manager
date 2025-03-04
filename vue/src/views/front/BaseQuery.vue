@@ -109,11 +109,20 @@
 
             <!-- 标签筛选 -->
             <el-form-item label="标签筛选">
-              <el-input
-                  v-model="form.tagQuery"
-                  clearable
-                  placeholder="请输入标签查询条件"
-              ></el-input>
+              <el-tooltip
+                  content="支持查询语法：NO_TAG||tag2||tag3"
+                  placement="top"
+              >
+                <el-input
+                    v-model="form.tagQuery"
+                    clearable
+                    placeholder="请输入标签查询条件"
+                >
+                  <template #suffix>
+                    <i class="el-icon-info" style="cursor: help"/>
+                  </template>
+                </el-input>
+              </el-tooltip>
             </el-form-item>
 
             <!-- 阈值设置区域 -->
