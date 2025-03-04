@@ -22,6 +22,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Component
 public class CsvProcessor implements FileProcessor {
@@ -42,8 +43,9 @@ public class CsvProcessor implements FileProcessor {
 
         try {
             log.info("开始处理CSV文件: {}", task.getFileName());
-            // 第一阶段：计算总行数
-            int totalRows = calculateTotalRows(bufferedStream, skipRows);
+            // 第一阶段：前置校验并计算总行数
+            List<String> headers = new ArrayList<>();
+            int totalRows = preCheckAndCalculateTotalRows(bufferedStream, device, skipRows, headers);
             task.setTotalRows(totalRows);
             log.info("文件总数据行数: {}", totalRows);
 
@@ -72,21 +74,77 @@ public class CsvProcessor implements FileProcessor {
         return "csv";
     }
 
-    private int calculateTotalRows(InputStream stream, int skipLines) throws IOException {
-        int count = 0;
-        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));//此处不关闭流，后续还要用到。
-        // 跳过指定行数
+    private int preCheckAndCalculateTotalRows(InputStream stream, Device device,
+                                              int skipLines, List<String> headers) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+        // 跳过指定的skipLines行
         for (int i = 0; i < skipLines; i++) {
             String line = reader.readLine();
             if (line == null) {
-                break;
+                throw new IOException("文件行数不足，无法跳过" + skipLines + "行");
             }
         }
-        reader.readLine(); // 跳过标题行
-        while (reader.readLine() != null) {
-            count++;
+
+        // 读取表头行
+        String headerLine = reader.readLine();
+        if (headerLine == null) {
+            throw new IOException("无法读取表头行");
         }
-        return count;
+
+        // 解析表头
+        CSVFormat format = CSVFormat.DEFAULT.builder()
+                .setIgnoreEmptyLines(true)
+                .setTrim(true)
+                .build();
+        CSVParser headerParser = CSVParser.parse(headerLine, format);
+        CSVRecord headerRecord;
+        try {
+            headerRecord = headerParser.iterator().next();
+        } catch (NoSuchElementException e) {
+            throw new IOException("表头行解析失败", e);
+        } finally {
+            headerParser.close();
+        }
+
+        headers.clear();
+        for (String header : headerRecord) {
+            headers.add(header.trim());
+        }
+
+        // 检查measurements的数据类型配置
+        List<String> measurements = headers.subList(1, headers.size());
+        for (String measurement : measurements) {
+            if (!device.getConfig().getDataTypes().containsKey(measurement)) {
+                throw new SystemException(CodeMessage.PARAM_LOST_ERROR,
+                        "未找到测量项 '" + measurement + "' 的数据类型配置");
+            }
+        }
+
+        // 创建CSVParser来读取剩余数据行
+        CSVParser parser = new CSVParser(reader, format);
+        int totalRows = 0;
+        try {
+            for (CSVRecord record : parser) {
+                totalRows++;
+                // 检查时间戳
+                try {
+                    TimestampConverter.convertToMillis(record.get(0));
+                } catch (Exception e) {
+                    throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
+                            "第" + (totalRows + skipLines + 1) + "行时间戳格式错误", e);
+                }
+                // 检查列数
+                if (record.size() != headers.size()) {
+                    throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
+                            "第" + (totalRows + skipLines + 1) + "行列数与表头不符，预期" + headers.size() +
+                                    "列，实际" + record.size() + "列");
+                }
+            }
+        } finally {
+            //不关闭流
+        }
+
+        return totalRows;
     }
 
     @LogExecutionTime
