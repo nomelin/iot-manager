@@ -45,7 +45,7 @@
       <el-col :span="6">
         <el-form label-position="left" label-width="auto"
                  @submit.native.prevent>
-          <el-form-item label="属性模糊筛选">
+          <el-form-item label="属性模糊查询">
             <el-input
                 v-model="tempFilterText"
                 clearable
@@ -56,7 +56,7 @@
           </el-form-item>
         </el-form>
       </el-col>
-      <el-col :span="4" >
+      <el-col :span="4">
         <el-button type="primary" @click="exportData">导出CSV</el-button>
       </el-col>
     </el-row>
@@ -375,19 +375,32 @@ export default {
     },
     exportData() {
       const devices = []
+      // 预处理设备数据和筛选属性
       if (this.selectedDeviceId1) {
+        const sortedTags = this.sortTags([...this.selectedTags1]) // 使用已有排序方法
+        const fields = this.naturalSort(
+            Object.keys(this.preprocessedData1 || {}).filter(f =>
+                f.toLowerCase().includes(this.filterText.toLowerCase())
+            ))
         devices.push({
           id: this.selectedDeviceId1,
           name: this.device1Name,
-          tags: this.selectedTags1,
+          tags: sortedTags, // 使用排序后的标签
+          fields,
           data: this.preprocessedData1
         })
       }
       if (this.selectedDeviceId2) {
+        const sortedTags = this.sortTags([...this.selectedTags2]) // 使用已有排序方法
+        const fields = this.naturalSort(
+            Object.keys(this.preprocessedData2 || {}).filter(f =>
+                f.toLowerCase().includes(this.filterText.toLowerCase())
+            ))
         devices.push({
           id: this.selectedDeviceId2,
           name: this.device2Name,
-          tags: this.selectedTags2,
+          tags: sortedTags, // 使用排序后的标签
+          fields,
           data: this.preprocessedData2
         })
       }
@@ -397,13 +410,21 @@ export default {
         return
       }
 
-      this.$confirm(`确认导出以下内容：
-    当前选中的标签: ${[...this.selectedTags1, ...this.selectedTags2].map(t => this.formatTagDisplay(t)).join(', ')}
-    ; 当前筛选的属性: ${this.filterText || '无筛选'}
-    ; 将为每个设备生成单独文件`, '导出确认', {
+      // 构造确认信息
+      const confirmLines = []
+      devices.forEach((d, index) => {
+        confirmLines.push(`设备${index + 1}（${d.name}）`)
+        confirmLines.push(`- 选择标签：${d.tags.map(this.formatTagDisplay).join(', ') || '无'}`)
+        confirmLines.push(`- 选择属性：${d.fields.join(', ') || '无'}`)
+      })
+      confirmLines.push(`生成时间：${new Date().toISOString()}`)
+
+      this.$confirm(confirmLines.join('<br>'), '导出确认', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
-        type: 'warning'
+        type: 'warning',
+        customClass: 'export-confirm-dialog',
+        dangerouslyUseHTMLString: true
       }).then(async () => {
         for (const device of devices) {
           const csvContent = this.generateDeviceCSV(device)
@@ -417,24 +438,27 @@ export default {
             document.body.removeChild(link)
           }
         }
-      }).catch(() => {
+      }).catch((e) => {
+        console.log(e)
         this.$message.info('已取消导出')
       })
     },
 
     generateDeviceCSV(device) {
-      const { data, tags, name } = device
-      if (!data || tags.length === 0) return null
+      const { data, tags, name, fields } = device
+      if (!data || tags.length === 0 || fields.length === 0) return null
 
-      // 获取筛选后的字段
-      const filteredFields = Object.keys(data).filter(field =>
-          field.toLowerCase().includes(this.filterText.toLowerCase())
-      )
-
-      if (filteredFields.length === 0) return null
+      // 元信息行
+      const metaInfo = [
+        `# 设备名称: ${name}`,
+        `选择标签: ${tags.map(this.formatTagDisplay).join('/')}`,
+        `选择属性: ${fields.join('/')}`,
+        `生成时间: ${new Date().toISOString()}`
+      ].join('; ')
 
       const rows = []
-      const headers = ['标签', '序号', ...filteredFields]
+      // 表头
+      const headers = ['标签', '序号', ...fields]
 
       tags.forEach(tag => {
         const formattedTag = this.formatTagDisplay(tag)
@@ -442,7 +466,7 @@ export default {
 
         // 收集所有字段的数据并记录最大序号
         let maxSequence = 0
-        filteredFields.forEach(field => {
+        fields.forEach(field => {
           const tagData = data[field]?.[tag]
           if (tagData) {
             tagData.data.forEach(([seq, value]) => {
@@ -459,8 +483,8 @@ export default {
         // 生成从1到最大序号的行
         for (let seq = 1; seq <= maxSequence; seq++) {
           const row = [formattedTag, seq]
-          filteredFields.forEach(field => {
-            row.push(sequenceMap[seq]?.[field] ?? '')
+          fields.forEach(field => {
+            row.push(sequenceMap[seq]?.[field] ?? '')// 有值则使用，否则留空。csv中显示是空格
           })
           rows.push(row.join(','))
         }
@@ -470,7 +494,7 @@ export default {
 
       // 添加BOM头避免中文乱码
       const BOM = '\ufeff'
-      return BOM + [headers.join(','), ...rows].join('\n')
+      return BOM + [metaInfo, headers.join(','), ...rows].join('\n')
     },
 
     generateFileName(deviceName) {
@@ -484,6 +508,12 @@ export default {
         String(now.getSeconds()).padStart(2, '0')
       ].join('-')
       return `${deviceName}_导出_${timestamp}.csv`
+    },
+
+    naturalSort(arr) {
+      return arr.slice().sort((a, b) =>
+          a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'})
+      )
     }
 
 
@@ -546,5 +576,15 @@ export default {
   flex: 1;
   /*padding: 20px;*/
   overflow-y: auto;
+}
+
+::v-deep .el-message-box.export-confirm-dialog {
+  width: auto;
+  max-width: 80%;
+}
+::v-deep .el-message-box.export-confirm-dialog .el-message-box__content {
+  white-space: pre-wrap;
+  font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+  font-size: 0.9em;
 }
 </style>
