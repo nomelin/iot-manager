@@ -2,33 +2,61 @@
   <div class="tag-line-charts">
     <el-row :gutter="30">
       <el-col
-          v-for="chart in chartData"
+          v-for="(chart, index) in chartData"
           :key="chart.field"
           :span="12"
           class="chart-container"
       >
-        <div class="chart-title">{{ chart.field }}</div>
         <div
-            ref="chart"
-            :style="{ height: '400px' }"
-            class="chart"
-        ></div>
+            class="chart-title"
+        >
+          {{ chart.field }}
+          <el-button
+              @click="handleOpenFullscreen(index)"
+          ><i class="el-icon-full-screen"></i>全屏显示
+          </el-button>
+
+        </div>
+        <div ref="chart" :style="{ height: '400px' }" class="chart"></div>
       </el-col>
     </el-row>
+
+    <!-- 全屏图表对话框 -->
+    <el-dialog
+        :close-on-click-modal="false"
+        :title="currentChartTitle"
+        :visible.sync="fullscreenVisible"
+        fullscreen
+    >
+      <FullScreenChart
+          v-if="fullscreenVisible"
+          :chart-option="currentChartOption"
+          :device1-name="device1Name"
+          :device2-name="device2Name"
+          @close="fullscreenVisible = false"
+      />
+    </el-dialog>
   </div>
 </template>
 
 <script>
 import * as echarts from 'echarts'
+import FullScreenChart from './FullScreenChart.vue'
 
 export default {
+  components: {FullScreenChart},
   name: 'TagLineChart',
   props: {
-    chartData: Array
+    chartData: Array,
+    device1Name: String,
+    device2Name: String,
   },
   data() {
     return {
-      charts: []
+      charts: [],
+      fullscreenVisible: false,
+      currentChartOption: null,
+      currentChartTitle: ''
     }
   },
   watch: {
@@ -54,16 +82,16 @@ export default {
 
     getChartOption(data) {
       return {
-        title: { show: false },
+        title: {show: false},
         tooltip: {
           trigger: 'axis',
           axisPointer: {
             type: 'cross'
           }
         },
-        toolbox:{
+        toolbox: {
           show: true,
-          feature:{
+          feature: {
             saveAsImage: {
               title: '保存为图片'
             },
@@ -113,7 +141,10 @@ export default {
           type: 'line',
           smooth: true,
           showSymbol: false,
-          data: series.data
+          data: series.data,
+          animation: false,
+          lineStyle: series.lineStyle, // 应用不同的线型
+
         })),
         grid: {
           top: 40,
@@ -126,7 +157,19 @@ export default {
     clearCharts() {
       this.charts.forEach(chart => chart.dispose())
       this.charts = []
-    }
+    },
+
+    handleOpenFullscreen(chartIndex) {
+      console.log("打开全屏图表, chartIndex: ", chartIndex)
+      this.currentChartOption = this.getChartOption(this.chartData[chartIndex])
+      this.currentChartTitle = this.chartData[chartIndex].field
+      this.fullscreenVisible = true
+    },
+
+    handleResize() {
+      this.charts.forEach(chart => chart.resize())
+    },
+
   },
 
   mounted() {
@@ -155,6 +198,7 @@ export default {
   background: #fff;
   padding: 15px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
+
 </style>

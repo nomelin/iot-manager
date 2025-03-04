@@ -3,13 +3,31 @@
     <!-- 上侧控制区域 -->
     <el-row :gutter="20" class="control-panel">
       <!-- 设备选择 -->
-      <el-col :span="6">
+      <el-col :span="5">
         <el-form>
-          <el-form-item label="设备选择">
+          <el-form-item label="设备一">
             <el-select
-                v-model="selectedDeviceId"
+                v-model="selectedDeviceId1"
                 placeholder="选择设备"
-                @change="handleDeviceChange"
+                @change="handleDevice1Change"
+            >
+              <el-option
+                  v-for="device in allDevices"
+                  :key="device.id"
+                  :label="device.name"
+                  :value="device.id"
+              />
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </el-col>
+      <el-col :span="5">
+        <el-form>
+          <el-form-item label="设备二">
+            <el-select
+                v-model="selectedDeviceId2"
+                placeholder="选择设备"
+                @change="handleDevice2Change"
             >
               <el-option
                   v-for="device in allDevices"
@@ -25,29 +43,57 @@
 
     <!-- 主体内容 -->
     <div class="main-content">
-      <!-- 标签选择侧边栏 -->
+      <!-- 双列标签选择 -->
       <div class="tag-sidebar">
-        <div class="tag-header">
-          <el-checkbox
-              v-model="allTagsSelected"
-              :indeterminate="isIndeterminate"
-              @change="handleSelectAll"
-          >
-            全选
-          </el-checkbox>
-        </div>
-        <el-scrollbar class="tag-list">
-          <el-checkbox-group v-model="selectedTags">
+        <!-- 设备一标签 -->
+        <div class="tag-column">
+          <div class="tag-header">
             <el-checkbox
-                v-for="tag in sortedDeviceTags"
-                :key="tag"
-                :label="tag"
-                class="tag-item"
+                v-model="allTags1Selected"
+                :indeterminate="isIndeterminate1"
+                @change="handleSelectAll1"
             >
-              {{ formatTagDisplay(tag) }}
+              全选<br>({{ device1Name || '设备一' }})
             </el-checkbox>
-          </el-checkbox-group>
-        </el-scrollbar>
+          </div>
+          <el-scrollbar class="tag-list">
+            <el-checkbox-group v-model="selectedTags1">
+              <el-checkbox
+                  v-for="tag in sortedDevice1Tags"
+                  :key="tag"
+                  :label="tag"
+                  class="tag-item"
+              >
+                {{ formatTagDisplay(tag) }}
+              </el-checkbox>
+            </el-checkbox-group>
+          </el-scrollbar>
+        </div>
+
+        <!-- 设备二标签 -->
+        <div class="tag-column">
+          <div class="tag-header">
+            <el-checkbox
+                v-model="allTags2Selected"
+                :indeterminate="isIndeterminate2"
+                @change="handleSelectAll2"
+            >
+              全选<br>({{ device2Name || '设备二' }})
+            </el-checkbox>
+          </div>
+          <el-scrollbar class="tag-list">
+            <el-checkbox-group v-model="selectedTags2">
+              <el-checkbox
+                  v-for="tag in sortedDevice2Tags"
+                  :key="tag"
+                  :label="tag"
+                  class="tag-item"
+              >
+                {{ formatTagDisplay(tag) }}
+              </el-checkbox>
+            </el-checkbox-group>
+          </el-scrollbar>
+        </div>
       </div>
 
       <!-- 图表展示区域 -->
@@ -55,6 +101,8 @@
         <TagLineChart
             v-if="processedData"
             :chart-data="processedData"
+            :device1-name="device1Name"
+            :device2-name="device2Name"
         />
       </div>
     </div>
@@ -70,30 +118,92 @@ export default {
   data() {
     return {
       allDevices: [],
-      selectedDeviceId: null,
-      deviceTags: [],
-      selectedTags: [],
-      rawData: null,
-      preprocessedData: null
+      selectedDeviceId1: null,
+      selectedDeviceId2: null,
+      device1Tags: [],
+      device2Tags: [],
+      selectedTags1: [],
+      selectedTags2: [],
+      preprocessedData1: null,
+      preprocessedData2: null,
     }
   },
   computed: {
-    allTagsSelected: {
-      get() {
-        return this.deviceTags.length > 0 &&
-            this.selectedTags.length === this.deviceTags.length
-      },
-      set(value) {
-        this.selectedTags = value ? [...this.deviceTags] : []
+    device1Name() {
+      return this.allDevices.find(d => d.id === this.selectedDeviceId1)?.name
+    },
+    device2Name() {
+      return this.allDevices.find(d => d.id === this.selectedDeviceId2)?.name
+    },
+    // 设备一相关计算属性
+    allTags1Selected: {
+      get() { return this.device1Tags.length > 0 && this.selectedTags1.length === this.device1Tags.length },
+      set(val) { this.selectedTags1 = val ? [...this.device1Tags] : [] }
+    },
+    isIndeterminate1() {
+      return this.selectedTags1.length > 0 && this.selectedTags1.length < this.device1Tags.length
+    },
+    sortedDevice1Tags() {
+      return this.sortTags([...this.device1Tags])
+    },
+    // 设备二相关计算属性
+    allTags2Selected: {
+      get() { return this.device2Tags.length > 0 && this.selectedTags2.length === this.device2Tags.length },
+      set(val) { this.selectedTags2 = val ? [...this.device2Tags] : [] }
+    },
+    isIndeterminate2() {
+      return this.selectedTags2.length > 0 && this.selectedTags2.length < this.device2Tags.length
+    },
+    sortedDevice2Tags() {
+      return this.sortTags([...this.device2Tags])
+    },
+    processedData() {
+      const processStart = Date.now()
+      const processDevice = (data, tags, deviceName, lineStyle) => {
+        if (!data) return []
+        const selected = new Set(tags)
+        return Object.entries(data).map(([field, tagsData]) => ({
+          field,
+          series: Object.entries(tagsData)
+              .filter(([tag]) => selected.has(tag))
+              .map(([tag, { name, data }]) => ({
+                name: `${deviceName}-${name}`,
+                data,
+                lineStyle: { type: lineStyle }
+              }))
+        }))
+      }
+
+      const data1 = processDevice(this.preprocessedData1, this.selectedTags1, this.device1Name, 'solid')
+      const data2 = processDevice(this.preprocessedData2, this.selectedTags2, this.device2Name, 'dashed')
+
+      // 合并相同field的数据
+      const merged = {}
+      ;[...data1, ...data2].forEach(({ field, series }) => {
+        if (!merged[field]) merged[field] = { field, series: [] }
+        merged[field].series.push(...series)
+      })
+      const processEnd = Date.now()
+      console.log('切换tag处理时间:' + (processEnd - processStart) + 'ms')
+
+
+      return Object.values(merged)
+    }
+  },
+  methods: {
+    async fetchAllDevices() {
+      try {
+        const res = await this.$request.get('/device/all')
+        if (res.code === '200') {
+          this.allDevices = res.data
+        }
+      } catch (error) {
+        this.$message.error('设备加载失败')
       }
     },
-    isIndeterminate() {
-      return this.selectedTags.length > 0 &&
-          this.selectedTags.length < this.deviceTags.length
-    },
-    sortedDeviceTags() {
+    sortTags(tags) {
       //NO_TAG放第一个，其次是整数类字符串从小到大排序，最后是其他字符串，按字母顺序排序
-      return [...this.deviceTags].sort((a, b) => {
+      return [...tags].sort((a, b) => {
         // 优先处理NO_TAG
         if (a === 'NO_TAG') return -1
         if (b === 'NO_TAG') return 1
@@ -115,56 +225,20 @@ export default {
         return a.localeCompare(b)
       })
     },
-    processedData() {
-      if (!this.preprocessedData) return null
-
-      const processStart = Date.now()
-      const selectedTagsSet = new Set(this.selectedTags)
-      const result = {}
-
-      for (const [field, tags] of Object.entries(this.preprocessedData)) {
-        const series = []
-        for (const [tag, tagData] of Object.entries(tags)) {
-          if (selectedTagsSet.has(tag)) {
-            series.push({
-              name: tagData.name,
-              data: tagData.data
-            })
-          }
-        }
-        result[field] = {series}
-      }
-
-      const res = Object.entries(result).map(([field, data]) => ({
-        field,
-        ...data
-      }))
-      const processEnd = Date.now()
-      console.log('切换tag处理时间:' + (processEnd - processStart) + 'ms')
-      return res
-    },
-  },
-  watch: {},
-  methods: {
-    async fetchAllDevices() {
-      try {
-        const res = await this.$request.get('/device/all')
-        if (res.code === '200') {
-          this.allDevices = res.data
-        }
-      } catch (error) {
-        this.$message.error('设备加载失败')
-      }
-    },
-
-    async handleDeviceChange(deviceId) {
+    async handleDevice1Change(deviceId) {
       const device = this.allDevices.find(d => d.id === deviceId)
-      this.deviceTags = device.allTags || []
-      this.selectedTags = []
-      await this.fetchDeviceData(deviceId)
+      this.device1Tags = device?.allTags || []
+      this.selectedTags1 = []
+      await this.fetchDeviceData(deviceId, 'preprocessedData1')
     },
-
-    async fetchDeviceData(deviceId) {
+    async handleDevice2Change(deviceId) {
+      const device = this.allDevices.find(d => d.id === deviceId)
+      this.device2Tags = device?.allTags || []
+      this.selectedTags2 = []
+      await this.fetchDeviceData(deviceId, 'preprocessedData2')
+    },
+    async fetchDeviceData(deviceId, target) {
+      if (!deviceId) return
       this.$message.info('请稍候...')
       try {
         const queryStart = Date.now()
@@ -185,7 +259,7 @@ export default {
           })
 
           // 直接存储预处理数据，计算属性会自动更新
-          this.preprocessedData = this.preprocessData(res.data)
+          this[target] = this.preprocessData(res.data)
           const processEnd = Date.now()
 
           this.$notify({
@@ -248,9 +322,11 @@ export default {
     formatTagDisplay(tag) {
       return tag === 'NO_TAG' ? '无标签' : tag
     },
-
-    handleSelectAll(val) {
-      this.selectedTags = val ? [...this.deviceTags] : []
+    handleSelectAll1(val) {
+      this.selectedTags1 = val ? [...this.device1Tags] : []
+    },
+    handleSelectAll2(val) {
+      this.selectedTags2 = val ? [...this.device2Tags] : []
     }
   },
   created() {
@@ -281,6 +357,10 @@ export default {
 }
 
 .tag-sidebar {
+  display: flex;
+  width: auto;
+}
+.tag-column {
   width: auto;
   border-right: 1px solid #e8e8e8;
   display: flex;
