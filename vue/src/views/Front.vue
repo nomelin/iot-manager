@@ -22,27 +22,27 @@
 
         <el-menu :default-active="$route.path" active-text-color="#0d53ff" class="el-menu" router text-color="#565757">
           <el-menu-item class="el-menu-item" index="/front/view_platform">
-            <i class="el-icon-folder-opened"></i>
-            <span slot="title" class="words">可视平台</span>
+            <i class="el-icon-monitor"></i>
+            <span slot="title" class="words">监测平台</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/device_view">
-            <i class="el-icon-folder-opened"></i>
+            <i class="el-icon-data-line"></i>
             <span slot="title" class="words">设备视图</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/base_query">
-            <i class="el-icon-folder-opened"></i>
+            <i class="el-icon-postcard"></i>
             <span slot="title" class="words">基础查询</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/upload">
-            <i class="el-icon-folder-opened"></i>
+            <i class="el-icon-upload2"></i>
             <span slot="title" class="words">文件上传</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/template_manage">
-            <i class="el-icon-folder-opened"></i>
+            <i class="el-icon-document-copy"></i>
             <span slot="title" class="words">模板管理</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/device_manage">
-            <i class="el-icon-folder-opened"></i>
+            <i class="el-icon-menu"></i>
             <span slot="title" class="words">设备管理</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/group_manage">
@@ -50,7 +50,7 @@
             <span slot="title" class="words">组管理</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/third_party">
-            <i class="el-icon-folder-opened"></i>
+            <i class="el-icon-link"></i>
             <span slot="title" class="words">第三方</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" @click="logout">

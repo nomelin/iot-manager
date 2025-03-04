@@ -20,7 +20,7 @@ const routes = [
             {
                 path: 'view_platform',
                 name: 'viewPlatform',
-                meta: {name: '可视平台'},
+                meta: {name: '监测平台'},
                 component: () => import('../views/front/ViewPlatform.vue')
             },
             {
