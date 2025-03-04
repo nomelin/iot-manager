@@ -2,19 +2,13 @@
   <div class="fullscreen-chart">
     <!-- 控制栏 -->
     <div class="chart-controls">
-      <el-button-group>
-        <el-button @click="toggleDevice(0)">
-          {{ device1Name }} {{ deviceVisibility[0] ? '显示' : '隐藏' }}
-        </el-button>
-        <el-button @click="toggleDevice(1)">
-          {{ device2Name }} {{ deviceVisibility[1] ? '显示' : '隐藏' }}
-        </el-button>
-        <el-button @click="toggleColorMode">
-          双色模式（{{ isDualColor ? '开' : '关' }}）
-        </el-button>
-      </el-button-group>
+      <div class="chart-controls">
+        <el-switch v-model="deviceVisibility[0]" active-text="设备1" @change="updateChart" class="switch-item"/>
+        <el-switch v-model="deviceVisibility[1]" active-text="设备2" @change="updateChart" class="switch-item"/>
+        <el-switch v-model="isDualColor" active-text="双色模式" @change="updateChart" class="switch-item"/>
+        <el-switch v-model="showLegend" active-text="显示图例" @change="updateChart" class="switch-item"/>
+      </div>
     </div>
-
     <!-- 图表容器 -->
     <div ref="chart" class="chart-class"></div>
   </div>
@@ -39,7 +33,9 @@ export default {
     return {
       chartInstance: null,
       isDualColor: false,
-      deviceVisibility: [true, true]
+      deviceVisibility: [true, true],
+      showLegend: true // 默认显示图例
+
     }
   },
   watch: {
@@ -70,17 +66,17 @@ export default {
       if (this.isDualColor) {
         option.series = option.series.map(series => ({
           ...series,
-          itemStyle: { color: this.getDeviceColor(series.name) },
+          itemStyle: {color: this.getDeviceColor(series.name)},
           lineStyle: {
             ...series.lineStyle,
             color: this.getDeviceColor(series.name),
             type: 'solid'
           }
         }))
-      }else {
+      } else {
         option.series = option.series.map(series => ({
           ...series,
-          itemStyle: { color: COLOR_SCHEME[series.name] },
+          itemStyle: {color: COLOR_SCHEME[series.name]},
           lineStyle: {
             ...series.lineStyle,
             color: COLOR_SCHEME[series.name]
@@ -100,6 +96,7 @@ export default {
 
       // 布局配置&处理选择系列显示
       option.legend = {
+        show: this.showLegend, // 这里控制是否显示图例
         orient: 'vertical',
         left: 20,
         top: 'middle',
@@ -144,23 +141,23 @@ export default {
           : DUAL_COLORS[1]
     },
 
-    shouldShowSeries(seriesName) {
-      const isDevice1 = seriesName.startsWith(this.device1Name)
-      const res = isDevice1 ? this.deviceVisibility[0] : this.deviceVisibility[1]
-      console.log(seriesName + "是否可见：" + res)
-      return res
-    },
-
-    toggleDevice(deviceIndex) {
-      this.$set(this.deviceVisibility, deviceIndex, !this.deviceVisibility[deviceIndex]);
-      this.updateChart()
-    },
-
-    toggleColorMode() {
-      this.isDualColor = !this.isDualColor
-      this.updateChart()
-      // console.log("双色模式：", this.isDualColor)
-    },
+    // shouldShowSeries(seriesName) {
+    //   const isDevice1 = seriesName.startsWith(this.device1Name)
+    //   const res = isDevice1 ? this.deviceVisibility[0] : this.deviceVisibility[1]
+    //   console.log(seriesName + "是否可见：" + res)
+    //   return res
+    // },
+    //
+    // toggleDevice(deviceIndex) {
+    //   this.$set(this.deviceVisibility, deviceIndex, !this.deviceVisibility[deviceIndex]);
+    //   this.updateChart()
+    // },
+    //
+    // toggleColorMode() {
+    //   this.isDualColor = !this.isDualColor
+    //   this.updateChart()
+    //   // console.log("双色模式：", this.isDualColor)
+    // },
 
     handleResize() {
       this.chartInstance?.resize()
@@ -190,6 +187,10 @@ export default {
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+.switch-item {
+  margin-right: 5%; /* 设置开关之间的间隔 */
 }
 
 .chart-class {
