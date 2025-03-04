@@ -1,10 +1,10 @@
 <template>
   <div class="device-view">
     <!-- 上侧控制区域 -->
-    <el-row :gutter="20" class="control-panel">
+    <el-row :gutter="20" align="middle" class="control-panel">
       <!-- 设备选择 -->
-      <el-col :span="5">
-        <el-form>
+      <el-col :span="4">
+        <el-form label-position="left" label-width="auto">
           <el-form-item label="设备一">
             <el-select
                 v-model="selectedDeviceId1"
@@ -14,6 +14,7 @@
               <el-option
                   v-for="device in allDevices"
                   :key="device.id"
+                  :disabled="device.id === selectedDeviceId2"
                   :label="device.name"
                   :value="device.id"
               />
@@ -21,8 +22,8 @@
           </el-form-item>
         </el-form>
       </el-col>
-      <el-col :span="5">
-        <el-form>
+      <el-col :span="4">
+        <el-form label-position="left" label-width="auto">
           <el-form-item label="设备二">
             <el-select
                 v-model="selectedDeviceId2"
@@ -32,10 +33,26 @@
               <el-option
                   v-for="device in allDevices"
                   :key="device.id"
+                  :disabled="device.id === selectedDeviceId1"
                   :label="device.name"
                   :value="device.id"
               />
             </el-select>
+          </el-form-item>
+        </el-form>
+      </el-col>
+      <!-- 属性筛选输入框 -->
+      <el-col :span="6">
+        <el-form label-position="left" label-width="auto"
+                 @submit.native.prevent>
+          <el-form-item label="属性模糊筛选">
+            <el-input
+                v-model="tempFilterText"
+                clearable
+                placeholder="输入属性名称关键字"
+                @change="handleFilterChange"
+                @clear="handleClear"
+            />
           </el-form-item>
         </el-form>
       </el-col>
@@ -126,6 +143,8 @@ export default {
       selectedTags2: [],
       preprocessedData1: null,
       preprocessedData2: null,
+      filterText: '',
+      tempFilterText: '', // 临时变量
     }
   },
   computed: {
@@ -137,8 +156,12 @@ export default {
     },
     // 设备一相关计算属性
     allTags1Selected: {
-      get() { return this.device1Tags.length > 0 && this.selectedTags1.length === this.device1Tags.length },
-      set(val) { this.selectedTags1 = val ? [...this.device1Tags] : [] }
+      get() {
+        return this.device1Tags.length > 0 && this.selectedTags1.length === this.device1Tags.length
+      },
+      set(val) {
+        this.selectedTags1 = val ? [...this.device1Tags] : []
+      }
     },
     isIndeterminate1() {
       return this.selectedTags1.length > 0 && this.selectedTags1.length < this.device1Tags.length
@@ -148,8 +171,12 @@ export default {
     },
     // 设备二相关计算属性
     allTags2Selected: {
-      get() { return this.device2Tags.length > 0 && this.selectedTags2.length === this.device2Tags.length },
-      set(val) { this.selectedTags2 = val ? [...this.device2Tags] : [] }
+      get() {
+        return this.device2Tags.length > 0 && this.selectedTags2.length === this.device2Tags.length
+      },
+      set(val) {
+        this.selectedTags2 = val ? [...this.device2Tags] : []
+      }
     },
     isIndeterminate2() {
       return this.selectedTags2.length > 0 && this.selectedTags2.length < this.device2Tags.length
@@ -166,10 +193,10 @@ export default {
           field,
           series: Object.entries(tagsData)
               .filter(([tag]) => selected.has(tag))
-              .map(([tag, { name, data }]) => ({
+              .map(([tag, {name, data}]) => ({
                 name: `${deviceName}-${name}`,
                 data,
-                lineStyle: { type: lineStyle }
+                lineStyle: {type: lineStyle}
               }))
         }))
       }
@@ -179,18 +206,33 @@ export default {
 
       // 合并相同field的数据
       const merged = {}
-      ;[...data1, ...data2].forEach(({ field, series }) => {
-        if (!merged[field]) merged[field] = { field, series: [] }
+      ;[...data1, ...data2].forEach(({field, series}) => {
+        if (!merged[field]) merged[field] = {field, series: []}
         merged[field].series.push(...series)
       })
+
+      // 过滤逻辑
+      const filtered = Object.values(merged).filter(item => {
+        return item.field.toLowerCase().includes(this.filterText.toLowerCase())
+      })
+
       const processEnd = Date.now()
       console.log('切换tag处理时间:' + (processEnd - processStart) + 'ms')
-
-
-      return Object.values(merged)
+      console.log('最终展示图表数量:', filtered.length)
+      return filtered
     }
   },
   methods: {
+    // 处理筛选条件变化
+    handleFilterChange(value) {
+      this.filterText = value;
+    },
+
+    // 处理清除操作
+    handleClear() {
+      this.tempFilterText = '';
+      this.filterText = '';
+    },
     async fetchAllDevices() {
       try {
         const res = await this.$request.get('/device/all')
@@ -360,6 +402,7 @@ export default {
   display: flex;
   width: auto;
 }
+
 .tag-column {
   width: auto;
   border-right: 1px solid #e8e8e8;

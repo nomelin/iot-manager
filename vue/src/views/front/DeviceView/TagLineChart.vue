@@ -28,8 +28,8 @@
     <!-- 全屏图表对话框 -->
     <el-dialog
         :close-on-click-modal="false"
-        :title="currentChartTitle"
         :visible.sync="fullscreenVisible"
+        :center="true"
         fullscreen
     >
       <FullScreenChart
@@ -37,6 +37,7 @@
           :chart-option="currentChartOption"
           :device1-name="device1Name"
           :device2-name="device2Name"
+          :title="currentChartTitle"
           @close="fullscreenVisible = false"
       />
     </el-dialog>
@@ -122,6 +123,7 @@ export default {
               showSymbol: false,
               data: series.data,
               animation: false,
+              itemStyle: this.isDualColor ? { color: this.getDeviceColor(series.name) } : series.itemStyle,
               lineStyle: this.isDualColor ? { color: this.getDeviceColor(series.name) } : series.lineStyle
             })),
         grid: { top: 40, bottom: 60, containLabel: true }

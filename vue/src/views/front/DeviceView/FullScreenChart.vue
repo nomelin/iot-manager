@@ -2,12 +2,13 @@
   <div class="fullscreen-chart">
     <!-- 控制栏 -->
     <div class="chart-controls">
-      <div class="chart-controls">
-        <el-switch v-model="deviceVisibility[0]" active-text="设备1" @change="updateChart" class="switch-item"/>
-        <el-switch v-model="deviceVisibility[1]" active-text="设备2" @change="updateChart" class="switch-item"/>
-        <el-switch v-model="isDualColor" active-text="双色模式" @change="updateChart" class="switch-item"/>
-        <el-switch v-model="showLegend" active-text="显示图例" @change="updateChart" class="switch-item"/>
+      <div class="chart-title">
+        {{ title }}
       </div>
+      <el-switch v-model="deviceVisibility[0]" active-text="设备1" class="switch-item" @change="updateChart"/>
+      <el-switch v-model="deviceVisibility[1]" active-text="设备2" class="switch-item" @change="updateChart"/>
+      <el-switch v-model="isDualColor" active-text="双色模式" class="switch-item" @change="updateChart"/>
+      <el-switch v-model="showLegend" active-text="显示图例" class="switch-item" @change="updateChart"/>
     </div>
     <!-- 图表容器 -->
     <div ref="chart" class="chart-class"></div>
@@ -27,7 +28,8 @@ export default {
   props: {
     chartOption: Object,
     device1Name: String,
-    device2Name: String
+    device2Name: String,
+    title: String,
   },
   data() {
     return {
@@ -175,18 +177,25 @@ export default {
 
 <style scoped>
 .fullscreen-chart {
-  height: 80vh;
+  height: 90vh;
   display: flex;
   flex-direction: column;
 }
 
+
 .chart-controls {
-  padding: 15px;
+  padding: 5px;
   background: #fff;
   border-bottom: 1px solid #eee;
   position: sticky;
   top: 0;
   z-index: 100;
+  display: flex;
+}
+
+.chart-title {
+  font-weight: bold;
+  margin-right: 5%;
 }
 
 .switch-item {
