@@ -43,18 +43,22 @@
       </el-col>
       <!-- 属性筛选输入框 -->
       <el-col :span="6">
-        <el-form label-position="left" label-width="auto"
-                 @submit.native.prevent>
-          <el-form-item label="属性模糊查询">
-            <el-input
-                v-model="tempFilterText"
-                clearable
-                placeholder="输入属性名称关键字"
-                @change="handleFilterChange"
-                @clear="handleClear"
-            />
-          </el-form-item>
-        </el-form>
+        <el-tooltip
+            content="支持查询语法：直接输入关键词模糊匹配, 使用{sensor1|sensor2}精确匹配多个字段"
+            placement="top"
+        >
+          <el-input
+              v-model="tempFilterText"
+              clearable
+              placeholder="输入属性名称关键字"
+              @change="handleFilterChange"
+              @clear="handleClear"
+          >
+            <template #suffix>
+              <i class="el-icon-info" style="cursor: help"/>
+            </template>
+          </el-input>
+        </el-tooltip>
       </el-col>
       <el-col :span="4">
         <el-button type="primary" @click="exportData">导出CSV</el-button>
@@ -215,8 +219,9 @@ export default {
       })
 
       // 过滤逻辑
+      const filter = this.parseFilterSyntax(this.filterText)
       const filtered = Object.values(merged).filter(item => {
-        return item.field.toLowerCase().includes(this.filterText.toLowerCase())
+        return filter.regex ? filter.regex.test(item.field) : true
       })
 
       const processEnd = Date.now()
@@ -270,6 +275,34 @@ export default {
         return a.localeCompare(b)
       })
     },
+    // 新增方法：解析高级查询语法
+    parseFilterSyntax(input) {
+      // 辅助方法：转义正则特殊字符
+      function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      }
+
+      // 处理空值情况
+      if (!input) return {regex: null, isExact: false}
+
+      // 精确匹配模式 {条件1|条件2}
+      const exactMatch = input.match(/^{(.*)}$/)
+      if (exactMatch) {
+        const conditions = exactMatch[1].split('|').map(s => s.trim())
+        // 创建不区分大小写的正则表达式，匹配完整字段名
+        return {
+          regex: new RegExp(`^(${conditions.map(c => escapeRegExp(c)).join('|')})$`, 'i'),
+          isExact: true
+        }
+      }
+
+      // 普通模糊匹配（保留原有逻辑）
+      return {
+        regex: new RegExp(escapeRegExp(input), 'i'),
+        isExact: false
+      }
+    },
+
     async handleDevice1Change(deviceId) {
       const device = this.allDevices.find(d => d.id === deviceId)
       this.device1Tags = device?.allTags || []
@@ -378,10 +411,12 @@ export default {
       // 预处理设备数据和筛选属性
       if (this.selectedDeviceId1) {
         const sortedTags = this.sortTags([...this.selectedTags1]) // 使用已有排序方法
+        const filter = this.parseFilterSyntax(this.filterText)
         const fields = this.naturalSort(
             Object.keys(this.preprocessedData1 || {}).filter(f =>
-                f.toLowerCase().includes(this.filterText.toLowerCase())
-            ))
+                filter.regex ? filter.regex.test(f) : true
+            )
+        )
         devices.push({
           id: this.selectedDeviceId1,
           name: this.device1Name,
@@ -392,10 +427,12 @@ export default {
       }
       if (this.selectedDeviceId2) {
         const sortedTags = this.sortTags([...this.selectedTags2]) // 使用已有排序方法
+        const filter = this.parseFilterSyntax(this.filterText)
         const fields = this.naturalSort(
             Object.keys(this.preprocessedData2 || {}).filter(f =>
-                f.toLowerCase().includes(this.filterText.toLowerCase())
-            ))
+                filter.regex ? filter.regex.test(f) : true
+            )
+        )
         devices.push({
           id: this.selectedDeviceId2,
           name: this.device2Name,
@@ -429,7 +466,7 @@ export default {
         for (const device of devices) {
           const csvContent = this.generateDeviceCSV(device)
           if (csvContent) {
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+            const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'})
             const link = document.createElement('a')
             link.href = URL.createObjectURL(blob)
             link.download = this.generateFileName(device.name)
@@ -445,7 +482,7 @@ export default {
     },
 
     generateDeviceCSV(device) {
-      const { data, tags, name, fields } = device
+      const {data, tags, name, fields} = device
       if (!data || tags.length === 0 || fields.length === 0) return null
 
       // 元信息行
@@ -471,7 +508,7 @@ export default {
           if (tagData) {
             tagData.data.forEach(([seq, value]) => {
               if (!sequenceMap[seq]) {
-                sequenceMap[seq] = { [field]: value }
+                sequenceMap[seq] = {[field]: value}
                 if (seq > maxSequence) maxSequence = seq
               } else {
                 sequenceMap[seq][field] = value
@@ -582,6 +619,7 @@ export default {
   width: auto;
   max-width: 80%;
 }
+
 ::v-deep .el-message-box.export-confirm-dialog .el-message-box__content {
   white-space: pre-wrap;
   font-family: Menlo, Monaco, Consolas, Courier New, monospace;
