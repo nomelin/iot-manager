@@ -39,6 +39,13 @@
                   <!--                    </div>-->
                   <!--                  </template>-->
                 </el-upload>
+                <el-button
+                    :disabled="fileList.length === 0"
+                    type="warning"
+                    @click="clearAllFiles"
+                >
+                  清空所有文件
+                </el-button>
               </el-form-item>
 
               <!-- 设备ID -->
@@ -573,6 +580,12 @@ export default {
       const stored = localStorage.getItem('failedTasks') || '[]';
       const failedTasks = JSON.parse(stored).filter(item => item.taskId !== taskId);
       localStorage.setItem('failedTasks', JSON.stringify(failedTasks));
+    },
+
+    clearAllFiles() {
+      this.fileList = [];
+      this.fileSet.clear();
+      this.$message.success("已清空所有文件");
     },
   }
 }
