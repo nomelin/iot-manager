@@ -60,24 +60,28 @@ export default {
         const responses = await Promise.all(promises); // 获取所有设备的查询结果
         const queryEndTime = Date.now();
         this.$notify({
-          title: "从服务器获取数据成功",
+          title: `数据获取成功`,
           message: "耗时：" + (queryEndTime - queryStartTime) + "ms",
           type: "success",
           position: "bottom-right",
           duration: 2000
         })
         // console.log("resp", JSON.stringify(responses));
+        let totalLength = 0;
         responses.forEach((res) => {
           if (res.code !== "200") {
             this.$message.error("数据加载失败：" + res.msg);
+            return;
           }
+          const records = res.data.records;
+          totalLength += Object.values(records).reduce((sum, arr) => sum + arr.length, 0);
         });
         const rawData = responses.map((res) => res.data);
 
         this.processedData = this.organizeData(rawData);
         const processEndTime = Date.now();
         this.$notify({
-          title: "数据转换成功",
+          title: `数据转换成功，共 ${totalLength} 条数据`,
           message: "耗时：" + (processEndTime - queryEndTime) + "ms",
           type: "success",
           position: "bottom-right",
@@ -92,7 +96,7 @@ export default {
       const fieldsMap = {};
       // console.log("rawData: " + JSON.stringify(rawData));
       rawData.forEach((deviceData) => {
-        const { devicePath, records } = deviceData;
+        const {devicePath, records} = deviceData;
         const deviceName = devicePath.split(".").pop();
 
         // 处理每个时间戳，只取第一个Record
@@ -109,7 +113,7 @@ export default {
                 (item) => item.deviceName === deviceName
             );
             if (!fieldData) {
-              fieldData = { deviceName, data: [] };
+              fieldData = {deviceName, data: []};
               fieldsMap[fieldName].push(fieldData);
             }
 

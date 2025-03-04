@@ -328,8 +328,10 @@ export default {
         })
         if (res.code === '200') {
           const queryEnd = Date.now()
+          const records = res.data.records;
+          const totalRecords = Object.values(records).reduce((sum, arr) => sum + arr.length, 0);
           this.$notify({
-            title: "数据获取成功",
+            title: `数据获取成功，共 ${totalRecords} 条数据`,
             message: `服务器耗时：${queryEnd - queryStart}ms`,
             type: "success",
             position: "bottom-right",
@@ -341,7 +343,7 @@ export default {
           const processEnd = Date.now()
 
           this.$notify({
-            title: "数据处理完成",
+            title: `数据处理完成，共 ${totalRecords} 条数据`,
             message: `处理耗时：${processEnd - queryEnd}ms`,
             type: "success",
             position: "bottom-right",
