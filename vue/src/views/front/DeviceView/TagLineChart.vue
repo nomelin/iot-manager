@@ -2,10 +2,10 @@
   <div class="tag-line-charts">
     <!-- 统一控制所有小图的开关 -->
     <div class="chart-controls">
-      <el-switch v-model="deviceVisibility[0]" active-text="设备1" @change="updateCharts" class="switch-item"/>
-      <el-switch v-model="deviceVisibility[1]" active-text="设备2" @change="updateCharts" class="switch-item"/>
-      <el-switch v-model="isDualColor" active-text="双色模式" @change="updateCharts" class="switch-item"/>
-      <el-switch v-model="showLegend" active-text="显示图例" @change="updateCharts" class="switch-item"/>
+      <el-switch v-model="deviceVisibility[0]" active-text="设备1" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="deviceVisibility[1]" active-text="设备2" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isDualColor" active-text="双色模式" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="showLegend" active-text="显示图例" class="switch-item" @change="updateCharts"/>
     </div>
 
     <el-row :gutter="30">
@@ -27,9 +27,9 @@
 
     <!-- 全屏图表对话框 -->
     <el-dialog
+        :center="true"
         :close-on-click-modal="false"
         :visible.sync="fullscreenVisible"
-        :center="true"
         fullscreen
     >
       <FullScreenChart
@@ -49,7 +49,7 @@ import * as echarts from 'echarts'
 import FullScreenChart from './FullScreenChart.vue'
 
 export default {
-  components: { FullScreenChart },
+  components: {FullScreenChart},
   name: 'TagLineChart',
   props: {
     chartData: Array,
@@ -90,29 +90,46 @@ export default {
 
     getChartOption(data) {
       return {
-        title: { show: false },
+        title: {show: false},
         tooltip: {
           trigger: 'axis',
-          axisPointer: { type: 'cross' }
+          axisPointer: {type: 'cross'}
         },
         toolbox: {
           show: true,
           feature: {
-            saveAsImage: { title: '保存为图片' },
-            dataZoom: { show: true, yAxisIndex: 0, xAxisIndex: 0 }
+            saveAsImage: {title: '保存为PNG'},
+            dataZoom: {show: true, yAxisIndex: 0, xAxisIndex: 0},
+            dataView: {show: true, readOnly: false},
+            magicType: {
+              show: true,
+              type: ['line', 'bar']
+            },
+            restore: {show: true},
           }
         },
+        // brush: {
+        //   type: ['polygon', 'keep', 'clear'],
+        //   xAxisIndex: 'all',  // 允许在所有 x 轴上选取
+        //   yAxisIndex: 'all',  // 允许在所有 y 轴上选取
+        // },
         legend: this.showLegend ? {
           data: data.series.map(s => s.name),
-          bottom: 0
+          orient: 'vertical',
+          left: 0,
+          top: 'middle',
         } : undefined,
-        xAxis: { type: 'value', name: '序号' },
-        yAxis: { type: 'value', name: '数值' },
+        xAxis: [
+          {type: 'value', name: '序号', position: 'bottom'},
+        ],
+        yAxis: [
+          {type: 'value', name: '数值', position: 'left'},
+        ],
         dataZoom: [
-          { type: 'slider', xAxisIndex: 0, filterMode: 'none' },
-          { type: 'inside', xAxisIndex: 0, filterMode: 'none' },
-          { type: 'slider', yAxisIndex: 0, filterMode: 'none' },
-          { type: 'inside', yAxisIndex: 0, filterMode: 'none' }
+          {type: 'slider', xAxisIndex: 0, filterMode: 'none'},
+          {type: 'inside', xAxisIndex: 0, filterMode: 'none'},
+          {type: 'slider', yAxisIndex: 0, filterMode: 'none'},
+          {type: 'inside', yAxisIndex: 0, filterMode: 'none'}
         ],
         series: data.series
             .filter(series => this.shouldShowSeries(series.name))
@@ -123,10 +140,16 @@ export default {
               showSymbol: false,
               data: series.data,
               animation: false,
-              itemStyle: this.isDualColor ? { color: this.getDeviceColor(series.name) } : series.itemStyle,
-              lineStyle: this.isDualColor ? { color: this.getDeviceColor(series.name) } : series.lineStyle
+              itemStyle: this.isDualColor ? {color: this.getDeviceColor(series.name)} : series.itemStyle,
+              lineStyle: this.isDualColor ? {color: this.getDeviceColor(series.name)} : series.lineStyle
             })),
-        grid: { top: 40, bottom: 60, containLabel: true }
+        grid: {
+          show: true,
+          top: 40,
+          bottom: 60,
+          left: 80,
+          containLabel: true
+        },
       }
     },
 

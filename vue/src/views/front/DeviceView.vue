@@ -209,7 +209,7 @@ export default {
       }
 
       const data1 = processDevice(this.preprocessedData1, this.selectedTags1, this.device1Name, 'solid')
-      const data2 = processDevice(this.preprocessedData2, this.selectedTags2, this.device2Name, 'dashed')
+      const data2 = processDevice(this.preprocessedData2, this.selectedTags2, this.device2Name, 'dotted')
 
       // 合并相同field的数据
       const merged = {}
