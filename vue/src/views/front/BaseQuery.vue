@@ -580,10 +580,10 @@ export default {
           ? '不聚合'
           : `查询聚合时间粒度: ${this.aggregationTimeOptions.find(o => o.value === this.form.aggregationTime)?.label}, 查询聚合函数: ${this.form.queryAggregateFunc}`;
 
-      const infoLine = `# 设备: ${device}; 选择传感器：${selectMeasurements}; ${tagQuery} 查询时间范围: ${start} 至 ${end}; ${aggregation}; 生成于 ${new Date().toLocaleString()}`;
+      const infoLine = `# 设备: ${device}; 选择传感器:${selectMeasurements}; ${tagQuery}; 查询时间范围: ${start} 至 ${end}; ${aggregation}; 生成于 ${new Date().toLocaleString()}`;
 
       // 第二行：列头
-      const headers = ['#time', ...this.form.selectMeasurements].join(',');
+      const headers = ['#time', ...this.form.selectMeasurements, '标签'].join(',')
 
       // 数据行
       const dataRows = this.tableData.map(row => {
@@ -592,7 +592,8 @@ export default {
           const value = row[m];
           return typeof value === 'number' ? value.toString() : '';
         });
-        return [time, ...values].join(',');
+        const tag = row.tag ?? ''; // 确保标签存在，避免 undefined
+        return [time, ...values, tag].join(',');
       }).join('\n');
 
       return [infoLine, headers, dataRows].join('\n');

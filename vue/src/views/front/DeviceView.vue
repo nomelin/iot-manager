@@ -56,6 +56,9 @@
           </el-form-item>
         </el-form>
       </el-col>
+      <el-col :span="4" >
+        <el-button type="primary" @click="exportData">导出CSV</el-button>
+      </el-col>
     </el-row>
 
     <!-- 主体内容 -->
@@ -369,11 +372,125 @@ export default {
     },
     handleSelectAll2(val) {
       this.selectedTags2 = val ? [...this.device2Tags] : []
+    },
+    exportData() {
+      const devices = []
+      if (this.selectedDeviceId1) {
+        devices.push({
+          id: this.selectedDeviceId1,
+          name: this.device1Name,
+          tags: this.selectedTags1,
+          data: this.preprocessedData1
+        })
+      }
+      if (this.selectedDeviceId2) {
+        devices.push({
+          id: this.selectedDeviceId2,
+          name: this.device2Name,
+          tags: this.selectedTags2,
+          data: this.preprocessedData2
+        })
+      }
+
+      if (devices.length === 0) {
+        this.$message.warning('请先选择至少一个设备')
+        return
+      }
+
+      this.$confirm(`确认导出以下内容：
+    当前选中的标签: ${[...this.selectedTags1, ...this.selectedTags2].map(t => this.formatTagDisplay(t)).join(', ')}
+    ; 当前筛选的属性: ${this.filterText || '无筛选'}
+    ; 将为每个设备生成单独文件`, '导出确认', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        for (const device of devices) {
+          const csvContent = this.generateDeviceCSV(device)
+          if (csvContent) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+            const link = document.createElement('a')
+            link.href = URL.createObjectURL(blob)
+            link.download = this.generateFileName(device.name)
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+          }
+        }
+      }).catch(() => {
+        this.$message.info('已取消导出')
+      })
+    },
+
+    generateDeviceCSV(device) {
+      const { data, tags, name } = device
+      if (!data || tags.length === 0) return null
+
+      // 获取筛选后的字段
+      const filteredFields = Object.keys(data).filter(field =>
+          field.toLowerCase().includes(this.filterText.toLowerCase())
+      )
+
+      if (filteredFields.length === 0) return null
+
+      const rows = []
+      const headers = ['标签', '序号', ...filteredFields]
+
+      tags.forEach(tag => {
+        const formattedTag = this.formatTagDisplay(tag)
+        const sequenceMap = {}
+
+        // 收集所有字段的数据并记录最大序号
+        let maxSequence = 0
+        filteredFields.forEach(field => {
+          const tagData = data[field]?.[tag]
+          if (tagData) {
+            tagData.data.forEach(([seq, value]) => {
+              if (!sequenceMap[seq]) {
+                sequenceMap[seq] = { [field]: value }
+                if (seq > maxSequence) maxSequence = seq
+              } else {
+                sequenceMap[seq][field] = value
+              }
+            })
+          }
+        })
+
+        // 生成从1到最大序号的行
+        for (let seq = 1; seq <= maxSequence; seq++) {
+          const row = [formattedTag, seq]
+          filteredFields.forEach(field => {
+            row.push(sequenceMap[seq]?.[field] ?? '')
+          })
+          rows.push(row.join(','))
+        }
+      })
+
+      if (rows.length === 0) return null
+
+      // 添加BOM头避免中文乱码
+      const BOM = '\ufeff'
+      return BOM + [headers.join(','), ...rows].join('\n')
+    },
+
+    generateFileName(deviceName) {
+      const now = new Date()
+      const timestamp = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0'),
+        String(now.getHours()).padStart(2, '0'),
+        String(now.getMinutes()).padStart(2, '0'),
+        String(now.getSeconds()).padStart(2, '0')
+      ].join('-')
+      return `${deviceName}_导出_${timestamp}.csv`
     }
+
+
   },
   created() {
     this.fetchAllDevices()
-  }
+  },
 }
 </script>
 
