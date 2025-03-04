@@ -345,7 +345,7 @@ export default {
 }
 
 .control-panel {
-  padding: 15px;
+  padding: 10px;
   border-bottom: 1px solid #e8e8e8;
 }
 
@@ -368,7 +368,7 @@ export default {
 }
 
 .tag-header {
-  padding: 15px;
+  padding: 10px;
   border-bottom: 1px solid #e8e8e8;
 }
 
@@ -384,7 +384,7 @@ export default {
 
 .chart-area {
   flex: 1;
-  padding: 20px;
+  /*padding: 20px;*/
   overflow-y: auto;
 }
 </style>

@@ -5,7 +5,7 @@
       <el-switch v-model="deviceVisibility[0]" active-text="设备1" @change="updateCharts" class="switch-item"/>
       <el-switch v-model="deviceVisibility[1]" active-text="设备2" @change="updateCharts" class="switch-item"/>
       <el-switch v-model="isDualColor" active-text="双色模式" @change="updateCharts" class="switch-item"/>
-      <el-switch v-model="showLegend" active-text="显示图例" inactive-text="隐藏图例" @change="updateCharts" class="switch-item"/>
+      <el-switch v-model="showLegend" active-text="显示图例" @change="updateCharts" class="switch-item"/>
     </div>
 
     <el-row :gutter="30">
