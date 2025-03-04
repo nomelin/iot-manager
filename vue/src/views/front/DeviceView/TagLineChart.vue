@@ -137,9 +137,13 @@ export default {
               name: series.name,
               type: 'line',
               smooth: true,
-              showSymbol: false,
+              showSymbol: false,//不显示折线上的节点
               data: series.data,
-              animation: false,
+              animation: false,//关闭动画
+              silent: true,//图形不响应和触发鼠标事件
+              large: true,//启用大规模路径图的优化
+              largeThreshold: 1000,
+              sampling: 'lttb',//降采样，采用 Largest-Triangle-Three-Bucket 算法，可以最大程度保证采样后线条的趋势，形状和极值。
               itemStyle: this.isDualColor ? {color: this.getDeviceColor(series.name)} : series.itemStyle,
               lineStyle: this.isDualColor ? {color: this.getDeviceColor(series.name)} : series.lineStyle
             })),
