@@ -2,19 +2,19 @@
   <div class="device-view">
     <!-- 上侧控制区域 -->
     <el-row :gutter="20" align="middle" class="control-panel">
-      <!-- 设备选择 -->
-      <el-col :span="4">
+      <!-- 多设备选择 -->
+      <el-col :span="8">
         <el-form label-position="left" label-width="auto">
-          <el-form-item label="设备一">
+          <el-form-item label="选择设备">
             <el-select
-                v-model="selectedDeviceId1"
-                placeholder="选择设备"
-                @change="handleDevice1Change"
+                :value="selectedDeviceIds"
+                multiple
+                placeholder="选择设备（可多选）"
+                @change="handleDeviceChange"
             >
               <el-option
                   v-for="device in allDevices"
                   :key="device.id"
-                  :disabled="device.id === selectedDeviceId2"
                   :label="device.name"
                   :value="device.id"
               />
@@ -22,25 +22,7 @@
           </el-form-item>
         </el-form>
       </el-col>
-      <el-col :span="4">
-        <el-form label-position="left" label-width="auto">
-          <el-form-item label="设备二">
-            <el-select
-                v-model="selectedDeviceId2"
-                placeholder="选择设备"
-                @change="handleDevice2Change"
-            >
-              <el-option
-                  v-for="device in allDevices"
-                  :key="device.id"
-                  :disabled="device.id === selectedDeviceId1"
-                  :label="device.name"
-                  :value="device.id"
-              />
-            </el-select>
-          </el-form-item>
-        </el-form>
-      </el-col>
+
       <!-- 属性筛选输入框 -->
       <el-col :span="6">
         <el-tooltip
@@ -60,76 +42,61 @@
           </el-input>
         </el-tooltip>
       </el-col>
-      <el-col :span="4">
+
+      <!-- 操作按钮组 -->
+      <el-col :span="6">
+        <el-button type="primary" @click="showTagDialog = true">选择标签</el-button>
         <el-button type="primary" @click="exportData">导出CSV</el-button>
       </el-col>
     </el-row>
 
     <!-- 主体内容 -->
     <div class="main-content">
-      <!-- 双列标签选择 -->
-      <div class="tag-sidebar">
-        <!-- 设备一标签 -->
-        <div class="tag-column">
-          <div class="tag-header">
-            <el-checkbox
-                v-model="allTags1Selected"
-                :indeterminate="isIndeterminate1"
-                @change="handleSelectAll1"
-            >
-              全选<br>({{ device1Name || '设备一' }})
-            </el-checkbox>
-          </div>
-          <el-scrollbar class="tag-list">
-            <el-checkbox-group v-model="selectedTags1">
-              <el-checkbox
-                  v-for="tag in sortedDevice1Tags"
-                  :key="tag"
-                  :label="tag"
-                  class="tag-item"
-              >
-                {{ formatTagDisplay(tag) }}
-              </el-checkbox>
-            </el-checkbox-group>
-          </el-scrollbar>
-        </div>
-
-        <!-- 设备二标签 -->
-        <div class="tag-column">
-          <div class="tag-header">
-            <el-checkbox
-                v-model="allTags2Selected"
-                :indeterminate="isIndeterminate2"
-                @change="handleSelectAll2"
-            >
-              全选<br>({{ device2Name || '设备二' }})
-            </el-checkbox>
-          </div>
-          <el-scrollbar class="tag-list">
-            <el-checkbox-group v-model="selectedTags2">
-              <el-checkbox
-                  v-for="tag in sortedDevice2Tags"
-                  :key="tag"
-                  :label="tag"
-                  class="tag-item"
-              >
-                {{ formatTagDisplay(tag) }}
-              </el-checkbox>
-            </el-checkbox-group>
-          </el-scrollbar>
-        </div>
-      </div>
-
       <!-- 图表展示区域 -->
       <div class="chart-area">
         <TagLineChart
             v-if="processedData"
             :chart-data="processedData"
-            :device1-name="device1Name"
-            :device2-name="device2Name"
         />
       </div>
     </div>
+
+    <!-- 标签选择对话框 -->
+    <el-dialog
+        title="选择标签"
+        :visible.sync="showTagDialog"
+        width="60%"
+        top="5vh"
+    >
+      <div class="tag-dialog-content">
+        <el-scrollbar>
+          <div v-for="device in selectedDevices" :key="device.id" class="device-tag-section">
+            <h3>{{ device.name }} 标签</h3>
+            <div class="tag-selector">
+              <el-checkbox
+                  v-model="allTagsSelected[device.id]"
+                  :indeterminate="isIndeterminate[device.id]"
+                  @change="handleSelectAll(device.id, $event)"
+              >全选</el-checkbox>
+              <el-checkbox-group v-model="selectedTags[device.id]">
+                <el-checkbox
+                    v-for="tag in sortedDeviceTags[device.id]"
+                    :key="tag"
+                    :label="tag"
+                    class="tag-item"
+                >
+                  {{ formatTagDisplay(tag) }}
+                </el-checkbox>
+              </el-checkbox-group>
+            </div>
+          </div>
+        </el-scrollbar>
+      </div>
+      <div slot="footer">
+        <el-button @click="showTagDialog = false">取消</el-button>
+        <el-button type="primary" @click="showTagDialog = false">确定</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -142,78 +109,64 @@ export default {
   data() {
     return {
       allDevices: [],
-      selectedDeviceId1: null,
-      selectedDeviceId2: null,
-      device1Tags: [],
-      device2Tags: [],
-      selectedTags1: [],
-      selectedTags2: [],
-      preprocessedData1: null,
-      preprocessedData2: null,
+      selectedDeviceIds: [],
+      deviceTags: {}, // {deviceId: [...]}
+      selectedTags: {}, // {deviceId: [...]}
+      preprocessedData: {}, // {deviceId: preprocessedData}
       filterText: '',
-      tempFilterText: '', // 临时变量
+      tempFilterText: '',
+      showTagDialog: false,
     }
   },
   computed: {
-    device1Name() {
-      return this.allDevices.find(d => d.id === this.selectedDeviceId1)?.name
+    selectedDevices() {
+      return this.selectedDeviceIds
+          .map(id => this.allDevices.find(d => d.id === id))
+          .filter(Boolean)
     },
-    device2Name() {
-      return this.allDevices.find(d => d.id === this.selectedDeviceId2)?.name
+    sortedDeviceTags() {
+      const result = {}
+      this.selectedDeviceIds.forEach(deviceId => {
+        result[deviceId] = this.sortTags([...this.deviceTags[deviceId] || []])
+      })
+      return result
     },
-    // 设备一相关计算属性
-    allTags1Selected: {
-      get() {
-        return this.device1Tags.length > 0 && this.selectedTags1.length === this.device1Tags.length
-      },
-      set(val) {
-        this.selectedTags1 = val ? [...this.device1Tags] : []
-      }
+    allTagsSelected() {
+      const result = {}
+      this.selectedDeviceIds.forEach(deviceId => {
+        const tags = this.deviceTags[deviceId] || []
+        result[deviceId] = tags.length > 0 &&
+            this.selectedTags[deviceId]?.length === tags.length
+      })
+      return result
     },
-    isIndeterminate1() {
-      return this.selectedTags1.length > 0 && this.selectedTags1.length < this.device1Tags.length
-    },
-    sortedDevice1Tags() {
-      return this.sortTags([...this.device1Tags])
-    },
-    // 设备二相关计算属性
-    allTags2Selected: {
-      get() {
-        return this.device2Tags.length > 0 && this.selectedTags2.length === this.device2Tags.length
-      },
-      set(val) {
-        this.selectedTags2 = val ? [...this.device2Tags] : []
-      }
-    },
-    isIndeterminate2() {
-      return this.selectedTags2.length > 0 && this.selectedTags2.length < this.device2Tags.length
-    },
-    sortedDevice2Tags() {
-      return this.sortTags([...this.device2Tags])
+    isIndeterminate() {
+      const result = {}
+      this.selectedDeviceIds.forEach(deviceId => {
+        const selected = this.selectedTags[deviceId]?.length || 0
+        const total = this.deviceTags[deviceId]?.length || 0
+        result[deviceId] = selected > 0 && selected < total
+      })
+      return result
     },
     processedData() {
       const processStart = Date.now()
-      const processDevice = (data, tags, deviceName, lineStyle) => {
-        if (!data) return []
-        const selected = new Set(tags)
-        return Object.entries(data).map(([field, tagsData]) => ({
-          field,
-          series: Object.entries(tagsData)
-              .filter(([tag]) => selected.has(tag))
-              .map(([tag, {name, data}]) => ({
-                name: `${deviceName}-${name}`,
-                data,
-                lineStyle: {type: lineStyle}
-              }))
-        }))
-      }
 
-      const data1 = processDevice(this.preprocessedData1, this.selectedTags1, this.device1Name, 'solid')
-      const data2 = processDevice(this.preprocessedData2, this.selectedTags2, this.device2Name, 'dotted')
+      // 处理所有选中的设备数据
+      const allData = this.selectedDeviceIds.map(deviceId => {
+        const device = this.allDevices.find(d => d.id === deviceId)
+        if (!device || !this.preprocessedData[deviceId]) return []
+
+        return this.processDeviceData(
+            this.preprocessedData[deviceId],
+            this.selectedTags[deviceId] || [],
+            device.name
+        )
+      }).flat()
 
       // 合并相同field的数据
       const merged = {}
-      ;[...data1, ...data2].forEach(({field, series}) => {
+      allData.forEach(({field, series}) => {
         if (!merged[field]) merged[field] = {field, series: []}
         merged[field].series.push(...series)
       })
@@ -240,6 +193,19 @@ export default {
     handleClear() {
       this.tempFilterText = '';
       this.filterText = '';
+    },
+    processDeviceData(data, tags, deviceName) {
+      const selected = new Set(tags)
+      return Object.entries(data).map(([field, tagsData]) => ({
+        field,
+        series: Object.entries(tagsData)
+            .filter(([tag]) => selected.has(tag))
+            .map(([tag, {name, data}]) => ({
+              name: `${deviceName}-${name}`,
+              data,
+              lineStyle: {type: 'solid'}
+            }))
+      }))
     },
     async fetchAllDevices() {
       try {
@@ -303,19 +269,36 @@ export default {
       }
     },
 
-    async handleDevice1Change(deviceId) {
-      const device = this.allDevices.find(d => d.id === deviceId)
-      this.device1Tags = device?.allTags || []
-      this.selectedTags1 = []
-      await this.fetchDeviceData(deviceId, 'preprocessedData1')
+    async handleDeviceChange(deviceIds) {
+      // console.log("deviceIds", JSON.stringify(deviceIds))
+      // console.log("进入selectedDeviceIds", JSON.stringify(this.selectedDeviceIds))
+      // 移除已取消选择的设备数据
+      const removed = this.selectedDeviceIds.filter(id => !deviceIds.includes(id))
+      // console.log("removed",JSON.stringify(removed))
+      removed.forEach(id => {
+        delete this.preprocessedData[id]
+        delete this.selectedTags[id]
+        delete this.deviceTags[id]
+      })
+
+      // 加载新设备的标签和数据
+      const added = deviceIds.filter(id => !this.selectedDeviceIds.includes(id))
+      // console.log("added", JSON.stringify(added))
+      for (const deviceId of added) {
+        if (!this.deviceTags[deviceId]) {
+          const device = this.allDevices.find(d => d.id === deviceId)
+          // console.log("device", device)
+          this.deviceTags[deviceId] = device?.allTags || []
+          this.$set(this.selectedTags, deviceId, [])
+          await this.fetchDeviceData(deviceId)
+        }
+      }
+
+      this.selectedDeviceIds = deviceIds
+      console.log("selectedDeviceIds", JSON.stringify(this.selectedDeviceIds))
     },
-    async handleDevice2Change(deviceId) {
-      const device = this.allDevices.find(d => d.id === deviceId)
-      this.device2Tags = device?.allTags || []
-      this.selectedTags2 = []
-      await this.fetchDeviceData(deviceId, 'preprocessedData2')
-    },
-    async fetchDeviceData(deviceId, target) {
+
+    async fetchDeviceData(deviceId) {
       if (!deviceId) return
       this.$message.info('请稍候...')
       try {
@@ -338,8 +321,8 @@ export default {
             duration: 2000
           })
 
-          // 直接存储预处理数据，计算属性会自动更新
-          this[target] = this.preprocessData(res.data)
+          // 存储预处理数据
+          this.$set(this.preprocessedData, deviceId, this.preprocessData(res.data))
           const processEnd = Date.now()
 
           this.$notify({
@@ -402,47 +385,29 @@ export default {
     formatTagDisplay(tag) {
       return tag === 'NO_TAG' ? '无标签' : tag
     },
-    handleSelectAll1(val) {
-      this.selectedTags1 = val ? [...this.device1Tags] : []
+
+    handleSelectAll(deviceId, val) {
+      this.$set(this.selectedTags, deviceId,
+          val ? [...this.deviceTags[deviceId]] : []
+      )
     },
-    handleSelectAll2(val) {
-      this.selectedTags2 = val ? [...this.device2Tags] : []
-    },
+
     exportData() {
-      const devices = []
-      // 预处理设备数据和筛选属性
-      if (this.selectedDeviceId1) {
-        const sortedTags = this.sortTags([...this.selectedTags1]) // 使用已有排序方法
+      const devices = this.selectedDeviceIds.map(deviceId => {
+        const device = this.allDevices.find(d => d.id === deviceId)
         const filter = this.parseFilterSyntax(this.filterText)
-        const fields = this.naturalSort(
-            Object.keys(this.preprocessedData1 || {}).filter(f =>
-                filter.regex ? filter.regex.test(f) : true
-            )
-        )
-        devices.push({
-          id: this.selectedDeviceId1,
-          name: this.device1Name,
-          tags: sortedTags, // 使用排序后的标签
-          fields,
-          data: this.preprocessedData1
-        })
-      }
-      if (this.selectedDeviceId2) {
-        const sortedTags = this.sortTags([...this.selectedTags2]) // 使用已有排序方法
-        const filter = this.parseFilterSyntax(this.filterText)
-        const fields = this.naturalSort(
-            Object.keys(this.preprocessedData2 || {}).filter(f =>
-                filter.regex ? filter.regex.test(f) : true
-            )
-        )
-        devices.push({
-          id: this.selectedDeviceId2,
-          name: this.device2Name,
-          tags: sortedTags, // 使用排序后的标签
-          fields,
-          data: this.preprocessedData2
-        })
-      }
+        return {
+          id: deviceId,
+          name: device.name,
+          tags: this.sortTags([...this.selectedTags[deviceId] || []]),
+          fields: this.naturalSort(
+              Object.keys(this.preprocessedData[deviceId] || {}).filter(f =>
+                  filter.regex ? filter.regex.test(f) : true
+              )
+          ),
+          data: this.preprocessedData[deviceId]
+        }
+      })
 
       if (devices.length === 0) {
         this.$message.warning('请先选择至少一个设备')
@@ -450,12 +415,11 @@ export default {
       }
 
       // 构造确认信息
-      const confirmLines = []
-      devices.forEach((d, index) => {
-        confirmLines.push(`设备${index + 1}（${d.name}）`)
-        confirmLines.push(`- 选择标签：${d.tags.map(this.formatTagDisplay).join(', ') || '无'}`)
-        confirmLines.push(`- 选择属性：${d.fields.join(', ') || '无'}`)
-      })
+      const confirmLines = devices.map((d, index) => [
+        `设备${index + 1}（${d.name}）`,
+        `- 选择标签：${d.tags.map(this.formatTagDisplay).join(', ') || '无'}`,
+        `- 选择属性：${d.fields.join(', ') || '无'}`
+      ]).flat()
       confirmLines.push(`生成时间：${new Date().toISOString()}`)
 
       this.$confirm(confirmLines.join('<br>'), '导出确认', {
@@ -567,64 +531,49 @@ export default {
 .device-view {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%; /* 填满父容器 */
-  overflow: hidden;
+  height: 100vh;
+  padding: 20px;
 }
 
 .control-panel {
-  padding: 10px;
-  border-bottom: 1px solid #e8e8e8;
+  margin-bottom: 20px;
 }
 
 .main-content {
   flex: 1;
-  display: flex;
   overflow: hidden;
-  width: 100%; /* 填满父容器 */
-}
-
-.tag-sidebar {
-  display: flex;
-  width: auto;
-}
-
-.tag-column {
-  width: auto;
-  border-right: 1px solid #e8e8e8;
-  display: flex;
-  flex-direction: column;
-}
-
-.tag-header {
-  padding: 10px;
-  border-bottom: 1px solid #e8e8e8;
-}
-
-.tag-list {
-  flex: 1;
-  padding: 10px;
-}
-
-.tag-item {
-  display: block;
-  margin: 8px 0;
 }
 
 .chart-area {
-  flex: 1;
-  /*padding: 20px;*/
-  overflow-y: auto;
+  height: 100%;
 }
 
-::v-deep .el-message-box.export-confirm-dialog {
-  width: auto;
-  max-width: 80%;
+.tag-dialog-content {
+  max-height: 60vh;
 }
 
-::v-deep .el-message-box.export-confirm-dialog .el-message-box__content {
-  white-space: pre-wrap;
-  font-family: Menlo, Monaco, Consolas, Courier New, monospace;
-  font-size: 0.9em;
+.device-tag-section {
+  margin-bottom: 24px;
+}
+
+.tag-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+
+.tag-item {
+  margin: 4px 0;
+}
+
+::v-deep .el-dialog__body {
+  padding: 10px 20px;
+}
+
+::v-deep .el-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 </style>

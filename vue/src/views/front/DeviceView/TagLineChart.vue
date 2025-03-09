@@ -2,9 +2,7 @@
   <div class="tag-line-charts">
     <!-- 统一控制所有小图的开关 -->
     <div class="chart-controls">
-      <el-switch v-model="deviceVisibility[0]" active-text="设备1" class="switch-item" @change="updateCharts"/>
-      <el-switch v-model="deviceVisibility[1]" active-text="设备2" class="switch-item" @change="updateCharts"/>
-      <el-switch v-model="isDualColor" active-text="双色模式" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isSolidColor" active-text="纯色模式" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="showLegend" active-text="显示图例" class="switch-item" @change="updateCharts"/>
     </div>
 
@@ -35,8 +33,6 @@
       <FullScreenChart
           v-if="fullscreenVisible"
           :chart-option="currentChartOption"
-          :device1-name="device1Name"
-          :device2-name="device2Name"
           :title="currentChartTitle"
           @close="fullscreenVisible = false"
       />
@@ -48,13 +44,16 @@
 import * as echarts from 'echarts'
 import FullScreenChart from './FullScreenChart.vue'
 
+const COLOR_SCHEME = [
+  '#5470C6', '#91CC75', '#FAC858', '#EE6666',
+  '#73C0DE', '#3BA272', '#FC8452', '#9A60B4'
+]
+
 export default {
   components: {FullScreenChart},
   name: 'TagLineChart',
   props: {
     chartData: Array,
-    device1Name: String,
-    device2Name: String,
   },
   data() {
     return {
@@ -62,9 +61,9 @@ export default {
       fullscreenVisible: false,
       currentChartOption: null,
       currentChartTitle: '',
-      deviceVisibility: [true, true], // 控制设备1和设备2的可见性
-      isDualColor: false, // 双色模式开关
+      isSolidColor: false, // 纯色模式开关
       showLegend: true, // 控制是否显示图例
+      deviceColors: new Map() // 存储设备颜色映射
     }
   },
   watch: {
@@ -76,6 +75,7 @@ export default {
   methods: {
     renderCharts() {
       this.clearCharts()
+      this.generateDeviceColors()
 
       this.$nextTick(() => {
         if (!this.$refs.chart) return
@@ -86,6 +86,23 @@ export default {
           this.charts.push(chart)
         })
       })
+    },
+
+    generateDeviceColors() {
+      const devices = new Set()
+      this.chartData.forEach(chart => {
+        chart.series.forEach(series => {
+          const device = this.extractDeviceName(series.name)
+          devices.add(device)
+        })
+      })
+      Array.from(devices).forEach((device, index) => {
+        this.deviceColors.set(device, COLOR_SCHEME[index % COLOR_SCHEME.length])
+      })
+    },
+
+    extractDeviceName(seriesName) {
+      return seriesName.split('-')[0]
     },
 
     getChartOption(data) {
@@ -131,22 +148,25 @@ export default {
           {type: 'slider', yAxisIndex: 0, filterMode: 'none'},
           {type: 'inside', yAxisIndex: 0, filterMode: 'none'}
         ],
-        series: data.series
-            .filter(series => this.shouldShowSeries(series.name))
-            .map(series => ({
-              name: series.name,
-              type: 'line',
-              smooth: true,
-              showSymbol: false,//不显示折线上的节点
-              data: series.data,
-              animation: false,//关闭动画
-              silent: true,//图形不响应和触发鼠标事件
-              large: true,//启用大规模路径图的优化
-              largeThreshold: 1000,
-              sampling: 'lttb',//降采样，采用 Largest-Triangle-Three-Bucket 算法，可以最大程度保证采样后线条的趋势，形状和极值。
-              itemStyle: this.isDualColor ? {color: this.getDeviceColor(series.name)} : series.itemStyle,
-              lineStyle: this.isDualColor ? {color: this.getDeviceColor(series.name)} : series.lineStyle
-            })),
+        series: data.series.map(series => ({
+          name: series.name,
+          type: 'line',
+          smooth: true,
+          showSymbol: false,//不显示折线上的节点
+          data: series.data,
+          animation: false,//关闭动画
+          silent: true,//图形不响应和触发鼠标事件
+          large: true,//启用大规模路径图的优化
+          largeThreshold: 1000,
+          sampling: 'lttb',//降采样，采用 Largest-Triangle-Three-Bucket 算法，可以最大程度保证采样后线条的趋势，形状和极值。
+          itemStyle: this.isSolidColor ?
+              {color: this.deviceColors.get(this.extractDeviceName(series.name))} :
+              series.itemStyle,
+          lineStyle: this.isSolidColor ? {
+            color: this.deviceColors.get(this.extractDeviceName(series.name)),
+            type: 'solid'
+          } : series.lineStyle
+        })),
         grid: {
           show: true,
           top: 40,
@@ -155,16 +175,6 @@ export default {
           containLabel: true
         },
       }
-    },
-
-    shouldShowSeries(seriesName) {
-      const isDevice1 = seriesName.startsWith(this.device1Name)
-      return isDevice1 ? this.deviceVisibility[0] : this.deviceVisibility[1]
-    },
-
-    getDeviceColor(seriesName) {
-      if (!this.isDualColor) return null
-      return seriesName.startsWith(this.device1Name) ? '#1890FF' : '#FF4D4F'
     },
 
     clearCharts() {
@@ -203,7 +213,7 @@ export default {
 .chart-controls {
   display: flex;
   align-items: center;
-  gap: 15px; /* 控制开关间距 */
+  gap: 15px;
   padding: 10px;
   background: #fff;
   border-bottom: 1px solid #eee;
@@ -213,7 +223,7 @@ export default {
 }
 
 .switch-item {
-  margin-right: 10px; /* 单独设置开关间距 */
+  margin-right: 10px;
 }
 
 .chart-container {
