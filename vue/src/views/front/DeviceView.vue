@@ -1,9 +1,9 @@
 <template>
-  <div class="device-view">
+  <div class="device-view" v-loading="isLoading">
     <!-- 上侧控制区域 -->
     <el-row :gutter="20" align="middle" class="control-panel">
       <!-- 多设备选择 -->
-      <el-col :span="8">
+      <el-col :span="10">
         <el-form label-position="left" label-width="auto">
           <el-form-item label="选择设备">
             <el-select
@@ -21,6 +21,10 @@
             </el-select>
           </el-form-item>
         </el-form>
+      </el-col>
+
+      <el-col :span="4">
+        <el-button type="primary" @click="showTagDialog = true">选择标签</el-button>
       </el-col>
 
       <!-- 属性筛选输入框 -->
@@ -44,8 +48,7 @@
       </el-col>
 
       <!-- 操作按钮组 -->
-      <el-col :span="6">
-        <el-button type="primary" @click="showTagDialog = true">选择标签</el-button>
+      <el-col :span="4">
         <el-button type="primary" @click="exportData">导出CSV</el-button>
       </el-col>
     </el-row>
@@ -62,41 +65,57 @@
     </div>
 
     <!-- 标签选择对话框 -->
-    <el-dialog
+    <!-- 标签选择抽屉 -->
+    <el-drawer
         title="选择标签"
         :visible.sync="showTagDialog"
-        width="60%"
-        top="5vh"
+        label="rtl"
+        size="30%"
+        custom-class="tag-drawer"
     >
-      <div class="tag-dialog-content">
+      <div class="tag-drawer-content">
         <el-scrollbar>
-          <div v-for="device in selectedDevices" :key="device.id" class="device-tag-section">
-            <h3>{{ device.name }} 标签</h3>
-            <div class="tag-selector">
-              <el-checkbox
-                  v-model="allTagsSelected[device.id]"
-                  :indeterminate="isIndeterminate[device.id]"
-                  @change="handleSelectAll(device.id, $event)"
-              >全选</el-checkbox>
-              <el-checkbox-group v-model="selectedTags[device.id]">
+          <div class="device-tags-container">
+            <div
+                v-for="device in selectedDevices"
+                :key="device.id"
+                class="device-tag-section"
+            >
+              <h3>{{ device.name }} 标签</h3>
+              <div class="tag-selector">
                 <el-checkbox
-                    v-for="tag in sortedDeviceTags[device.id]"
-                    :key="tag"
-                    :label="tag"
-                    class="tag-item"
-                >
-                  {{ formatTagDisplay(tag) }}
-                </el-checkbox>
-              </el-checkbox-group>
+                    v-model="allTagsSelected[device.id]"
+                    :indeterminate="isIndeterminate[device.id]"
+                    @change="handleSelectAll(device.id, $event)"
+                >全选</el-checkbox>
+                <el-scrollbar>
+                  <el-checkbox-group
+                      v-model="selectedTags[device.id]"
+                      class="tag-group"
+                  >
+                    <el-checkbox
+                        v-for="tag in sortedDeviceTags[device.id]"
+                        :key="tag"
+                        :label="tag"
+                        class="tag-item"
+                    >
+                      {{ formatTagDisplay(tag) }}
+                    </el-checkbox>
+                  </el-checkbox-group>
+                </el-scrollbar>
+              </div>
             </div>
           </div>
         </el-scrollbar>
       </div>
-      <div slot="footer">
+
+      <div class="drawer-footer">
         <el-button @click="showTagDialog = false">取消</el-button>
         <el-button type="primary" @click="showTagDialog = false">确定</el-button>
       </div>
-    </el-dialog>
+    </el-drawer>
+
+
   </div>
 </template>
 
@@ -116,6 +135,7 @@ export default {
       filterText: '',
       tempFilterText: '',
       showTagDialog: false,
+      isLoading: false,
     }
   },
   computed: {
@@ -300,7 +320,8 @@ export default {
 
     async fetchDeviceData(deviceId) {
       if (!deviceId) return
-      this.$message.info('请稍候...')
+      // this.$message.info('请稍候...')
+      this.isLoading = true
       try {
         const queryStart = Date.now()
         const res = await this.$request.post('/data/query', {
@@ -318,7 +339,7 @@ export default {
             message: `服务器耗时：${queryEnd - queryStart}ms`,
             type: "success",
             position: "bottom-right",
-            duration: 2000
+            duration: 3000
           })
 
           // 存储预处理数据
@@ -330,12 +351,14 @@ export default {
             message: `处理耗时：${processEnd - queryEnd}ms`,
             type: "success",
             position: "bottom-right",
-            duration: 2000,
+            duration: 3000,
             offset: 80
           })
         }
       } catch (error) {
         this.$message.error('数据加载失败')
+      } finally {
+        this.isLoading = false
       }
     },
 
@@ -531,40 +554,30 @@ export default {
 .device-view {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   padding: 20px;
 }
 
+.el-select, .el-input {
+  width: 100%;
+}
+
 .control-panel {
-  margin-bottom: 20px;
+  /*margin-bottom: 20px;*/
 }
 
 .main-content {
   flex: 1;
   overflow: hidden;
+  width: 100%;
 }
+
 
 .chart-area {
   height: 100%;
-}
-
-.tag-dialog-content {
-  max-height: 60vh;
-}
-
-.device-tag-section {
-  margin-bottom: 24px;
-}
-
-.tag-selector {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 8px;
-  padding: 12px;
-}
-
-.tag-item {
-  margin: 4px 0;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 ::v-deep .el-dialog__body {
@@ -575,5 +588,62 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.tag-drawer-content {
+  height: calc(100% - 55px);
+  padding: 20px;
+}
+
+.device-tags-container {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 20px;
+}
+
+.device-tag-section {
+  /*flex: 0 0 300px;  !* 固定每个设备的宽度 *!*/
+  background: #f8f9fa;
+  border-radius: 4px;
+  padding: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  width: auto;
+  /*min-width: 50px;*/
+}
+
+.tag-selector {
+  height: calc(75vh - 100px);  /* 计算合适的高度 */
+  display: flex;
+  flex-direction: column;
+}
+
+.tag-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.tag-item {
+  margin: 0;
+  white-space: nowrap;  /* 防止标签换行 */
+}
+
+::v-deep .el-scrollbar__wrap {
+  overflow-x: auto;  /* 确保横向滚动生效 */
+}
+
+/* 调整竖向滚动条样式 */
+::v-deep .el-scrollbar__bar.is-vertical {
+  right: 2px;
+}
+
+.drawer-footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  border-top: 1px solid #e8e8e8;
+  padding: 10px 20px;
+  text-align: right;
+  background: #fff;
 }
 </style>
