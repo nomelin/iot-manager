@@ -213,7 +213,7 @@
                 <span v-if="task.speed">速度：{{ task.speed }}/s</span>
               </div>
               <div v-if="task.errorMessage" class="error-message">
-                {{ task.errorMessage }}
+                <pre v-html="extractErrorMessages(task.errorMessage)"></pre>
               </div>
             </div>
           </div>
@@ -287,6 +287,22 @@ export default {
     },
   },
   methods: {
+    extractErrorMessages(errorMessage) {
+      let errorMessages = '';
+      const regex = /msg='(.*?)'.*?extraMessage='(.*?)'/g;
+      let match;
+
+      // 使用正则表达式匹配所有 msg 和 extraMessage
+      while ((match = regex.exec(errorMessage)) !== null) {
+        const msg = match[1]; // msg
+        const extraMessage = match[2]; // extraMessage
+
+        // 格式化输出
+        errorMessages += `错误: ${msg}——细节: ${extraMessage}\n`;
+      }
+
+      return errorMessages
+    },
     formatDateTime(datetime) {
       return datetime ? dayjs(datetime).format('YYYY-MM-DD HH:mm:ss.SSS') : '-'
     },
