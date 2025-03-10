@@ -63,7 +63,9 @@ export default {
       currentChartTitle: '',
       isSolidColor: false, // 纯色模式开关
       showLegend: true, // 控制是否显示图例
-      deviceColors: new Map() // 存储设备颜色映射
+      deviceColors: new Map(), // 存储设备颜色映射
+
+      // isLoading: false,
     }
   },
   watch: {
@@ -72,20 +74,45 @@ export default {
       deep: true
     }
   },
+  computed: {},
   methods: {
-    renderCharts() {
+    async renderCharts() {
+      if (!this.$refs.chart || this.$refs.chart.length === 0) {
+        console.log('渲染图表失败，没有找到图表容器或图表容器为空')
+        return;
+      }
+      const startTime = Date.now()
+      const totalRender = this.$refs.chart.length;  // 初始化总数
+      let currentRender = 0;  // 重置当前进度
+      const loading = this.$loading({
+        text: `正在渲染图表(${currentRender}/${totalRender})`,
+      });
+      console.log('开始渲染图表')
       this.clearCharts()
       this.generateDeviceColors()
 
-      this.$nextTick(() => {
-        if (!this.$refs.chart) return
-        this.$refs.chart.forEach((container, index) => {
-          const chart = echarts.init(container)
-          const option = this.getChartOption(this.chartData[index])
-          chart.setOption(option)
-          this.charts.push(chart)
-        })
-      })
+      // 等待 DOM 更新
+      await this.$nextTick();
+
+      // 分步异步渲染每个图表
+      for (let i = 0; i < this.$refs.chart.length; i++) {
+        const container = this.$refs.chart[i];
+        // 如果已有实例，先销毁
+        if (echarts.getInstanceByDom(container)) {
+          echarts.dispose(container);
+        }
+        const chart = echarts.init(container);
+        const option = this.getChartOption(this.chartData[i]);
+        chart.setOption(option);
+        this.charts.push(chart);
+        currentRender++;
+        loading.text = `正在渲染图表 (${currentRender}/${totalRender})`;
+        // 每渲染一个图表后短暂释放主线程
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+
+      loading.close();
+      console.log('渲染所有图表时间:' + (Date.now() - startTime) + 'ms');
     },
 
     generateDeviceColors() {

@@ -1,9 +1,13 @@
 <template>
-  <div class="device-view" v-loading="isLoading">
+  <div
+      v-loading="isLoading||isLoadingTag"
+      element-loading-text="数据加载中..."
+      class="device-view"
+  >
     <!-- 上侧控制区域 -->
     <el-row :gutter="20" align="middle" class="control-panel">
       <el-col :span="4">
-        <el-form  label-position="left" label-width="auto">
+        <el-form label-position="left" label-width="auto">
           <el-form-item label="组选择">
             <el-select v-model="selectedGroup" placeholder="选择组" @change="fetchDevices">
               <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id"/>
@@ -76,11 +80,11 @@
     <!-- 标签选择对话框 -->
     <!-- 标签选择抽屉 -->
     <el-drawer
-        title="选择标签"
         :visible.sync="showTagDialog"
+        custom-class="tag-drawer"
         label="rtl"
         size="30%"
-        custom-class="tag-drawer"
+        title="选择标签"
     >
       <div class="tag-drawer-content">
         <el-scrollbar>
@@ -96,7 +100,8 @@
                     v-model="allTagsSelected[device.id]"
                     :indeterminate="isIndeterminate[device.id]"
                     @change="handleSelectAll(device.id, $event)"
-                >全选</el-checkbox>
+                >全选
+                </el-checkbox>
                 <el-scrollbar>
                   <el-checkbox-group
                       v-model="selectedTags[device.id]"
@@ -145,6 +150,7 @@ export default {
       tempFilterText: '',
       showTagDialog: false,
       isLoading: false,
+      isLoadingTag: false,
 
       selectedGroup: null, // 当前选择的组ID
       groups: [], // 全部组信息
@@ -184,7 +190,7 @@ export default {
     },
     processedData() {
       const processStart = Date.now()
-
+      this.isLoadingTag = true
       // 处理所有选中的设备数据
       const allData = this.selectedDeviceIds.map(deviceId => {
         const device = this.devices.find(d => d.id === deviceId)
@@ -211,6 +217,7 @@ export default {
       })
 
       const processEnd = Date.now()
+      this.isLoadingTag = false
       console.log('切换tag处理时间:' + (processEnd - processStart) + 'ms')
       // console.log('最终展示图表数量:', filtered.length)
       return filtered
@@ -350,7 +357,7 @@ export default {
       // console.log("进入selectedDeviceIds", JSON.stringify(this.selectedDeviceIds))
       // 移除已取消选择的设备数据
       const removed = this.selectedDeviceIds.filter(id => !deviceIds.includes(id))
-      console.log("device removed",JSON.stringify(removed))
+      console.log("device removed", JSON.stringify(removed))
       removed.forEach(id => {
         delete this.preprocessedData[id]
         delete this.selectedTags[id]
@@ -646,6 +653,7 @@ export default {
   flex-wrap: wrap;
   gap: 8px;
 }
+
 .tag-drawer-content {
   height: calc(100% - 55px);
   padding: 20px;
@@ -662,13 +670,13 @@ export default {
   background: #f8f9fa;
   border-radius: 4px;
   padding: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: auto;
   /*min-width: 50px;*/
 }
 
 .tag-selector {
-  height: calc(75vh - 100px);  /* 计算合适的高度 */
+  height: calc(75vh - 100px); /* 计算合适的高度 */
   display: flex;
   flex-direction: column;
 }
@@ -682,11 +690,11 @@ export default {
 
 .tag-item {
   margin: 0;
-  white-space: nowrap;  /* 防止标签换行 */
+  white-space: nowrap; /* 防止标签换行 */
 }
 
 ::v-deep .el-scrollbar__wrap {
-  overflow-x: auto;  /* 确保横向滚动生效 */
+  overflow-x: auto; /* 确保横向滚动生效 */
 }
 
 /* 调整竖向滚动条样式 */
