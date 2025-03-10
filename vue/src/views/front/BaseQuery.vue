@@ -109,20 +109,21 @@
 
             <!-- 标签筛选 -->
             <el-form-item label="标签筛选">
-              <el-tooltip
-                  content="支持查询语法：NO_TAG||tag2||tag3"
-                  placement="top"
+              <el-select
+                  v-model="form.tagQuery"
+                  clearable
+                  multiple
+                  placeholder="请选择标签"
+                  style="width: 70%"
               >
-                <el-input
-                    v-model="form.tagQuery"
-                    clearable
-                    placeholder="请输入标签查询条件"
-                >
-                  <template #suffix>
-                    <i class="el-icon-info" style="cursor: help"/>
-                  </template>
-                </el-input>
-              </el-tooltip>
+                <el-option
+                    v-for="tag in deviceTags"
+                    :key="tag"
+                    :label="tag === 'NO_TAG' ? '无标签' : tag"
+                    :value="tag"
+                />
+              </el-select>
+              <el-button @click="selectAllTags">全选</el-button>
             </el-form-item>
 
             <!-- 阈值设置区域 -->
@@ -307,7 +308,7 @@ export default {
         selectMeasurements: [],
         aggregationTime: 0,
         queryAggregateFunc: null,
-        tagQuery: '',
+        tagQuery: [],
       },
       thresholdFilterEnabled: false,      // 阈值过滤开关
       thresholdHighlightEnabled: false,     // 阈值高亮开关
@@ -347,7 +348,11 @@ export default {
     },
     selectedDevice() {
       return this.allDevices.find(device => device.id === this.form.deviceId);
-    }
+    },
+    deviceTags() {
+      if (!this.selectedDevice || !this.selectedDevice.allTags) return [];
+      return this.sortTags(this.selectedDevice.allTags)
+    },
   },
   watch: {
     'form.selectMeasurements': {
@@ -366,6 +371,9 @@ export default {
     this.loadAggregateFunctions();
   },
   methods: {
+    selectAllTags() {
+      this.form.tagQuery = this.deviceTags;
+    },
     // 序号从当前页数据基数开始计算
     indexMethod(index) {
       return index + 1 + (this.currentPage - 1) * this.pageSize;
@@ -408,6 +416,7 @@ export default {
         if (res.code === '200') {
           this.deviceMeasurements = res.data;
           this.form.selectMeasurements = [];
+          this.form.tagQuery = [];
         } else {
           this.$message.error(res.msg);
         }
@@ -470,7 +479,7 @@ export default {
         ...this.form,
         startTime: this.form.startTime ? new Date(this.form.startTime).getTime() : null,
         endTime: this.form.endTime ? new Date(this.form.endTime).getTime() : null,
-        tagQuery: this.form.tagQuery,
+        tagQuery: this.form.tagQuery.join('||'), // 拼接数组为字符串
         thresholds: this.thresholdFilterEnabled
             ? this.thresholds.map(t => [
               t[0] !== null ? Number(t[0]) : null,
@@ -535,8 +544,9 @@ export default {
         startTime: null,
         endTime: null,
         selectMeasurements: [],
-        aggregationTime: null,
+        aggregationTime: 0,
         queryAggregateFunc: null,
+        tagQuery: [],
       };
       this.thresholdFilterEnabled = false;
       // this.timeRange = [];
@@ -634,6 +644,31 @@ export default {
         now.getSeconds().toString().padStart(2, '0')
       ].join('-');
       return `${device}_${timeStr}.csv`;
+    },
+
+    sortTags(tags) {
+      //NO_TAG放第一个，其次是整数类字符串从小到大排序，最后是其他字符串，按字母顺序排序
+      return [...tags].sort((a, b) => {
+        // 优先处理NO_TAG
+        if (a === 'NO_TAG') return -1
+        if (b === 'NO_TAG') return 1
+
+        // 判断是否为纯数字字符串
+        const aIsNumeric = /^\d+$/.test(a)
+        const bIsNumeric = /^\d+$/.test(b)
+
+        // 数字类型比较
+        if (aIsNumeric && bIsNumeric) {
+          return parseInt(a, 10) - parseInt(b, 10)
+        }
+
+        // 数字类型优先于非数字类型
+        if (aIsNumeric) return -1
+        if (bIsNumeric) return 1
+
+        // 普通字符串按字母顺序排序
+        return a.localeCompare(b)
+      })
     },
   }
 }
