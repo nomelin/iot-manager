@@ -2,6 +2,15 @@
   <div class="device-view" v-loading="isLoading">
     <!-- 上侧控制区域 -->
     <el-row :gutter="20" align="middle" class="control-panel">
+      <el-col :span="4">
+        <el-form  label-position="left" label-width="auto">
+          <el-form-item label="组选择">
+            <el-select v-model="selectedGroup" placeholder="选择组" @change="fetchDevices">
+              <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id"/>
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </el-col>
       <!-- 多设备选择 -->
       <el-col :span="10">
         <el-form label-position="left" label-width="auto">
@@ -13,7 +22,7 @@
                 @change="handleDeviceChange"
             >
               <el-option
-                  v-for="device in allDevices"
+                  v-for="device in devices"
                   :key="device.id"
                   :label="device.name"
                   :value="device.id"
@@ -23,7 +32,7 @@
         </el-form>
       </el-col>
 
-      <el-col :span="4">
+      <el-col :span="2">
         <el-button type="primary" @click="showTagDialog = true">选择标签</el-button>
       </el-col>
 
@@ -48,7 +57,7 @@
       </el-col>
 
       <!-- 操作按钮组 -->
-      <el-col :span="4">
+      <el-col :span="2">
         <el-button type="primary" @click="exportData">导出CSV</el-button>
       </el-col>
     </el-row>
@@ -127,7 +136,7 @@ export default {
   components: {TagLineChart},
   data() {
     return {
-      allDevices: [],
+      // allDevices: [],
       selectedDeviceIds: [],
       deviceTags: {}, // {deviceId: [...]}
       selectedTags: {}, // {deviceId: [...]}
@@ -136,12 +145,16 @@ export default {
       tempFilterText: '',
       showTagDialog: false,
       isLoading: false,
+
+      selectedGroup: null, // 当前选择的组ID
+      groups: [], // 全部组信息
+      devices: [], // 当前组设备
     }
   },
   computed: {
     selectedDevices() {
       return this.selectedDeviceIds
-          .map(id => this.allDevices.find(d => d.id === id))
+          .map(id => this.devices.find(d => d.id === id))
           .filter(Boolean)
     },
     sortedDeviceTags() {
@@ -174,7 +187,7 @@ export default {
 
       // 处理所有选中的设备数据
       const allData = this.selectedDeviceIds.map(deviceId => {
-        const device = this.allDevices.find(d => d.id === deviceId)
+        const device = this.devices.find(d => d.id === deviceId)
         if (!device || !this.preprocessedData[deviceId]) return []
 
         return this.processDeviceData(
@@ -199,11 +212,54 @@ export default {
 
       const processEnd = Date.now()
       console.log('切换tag处理时间:' + (processEnd - processStart) + 'ms')
-      console.log('最终展示图表数量:', filtered.length)
+      // console.log('最终展示图表数量:', filtered.length)
       return filtered
     }
   },
+
+
   methods: {
+    fetchGroups() {
+      this.$request
+          .get("/group/all")
+          .then((res) => {
+            if (res.code === "200") {
+              console.log("加载组信息成功：" + JSON.stringify(res.data));
+              this.groups = res.data;
+            } else {
+              this.$message.error("加载组信息失败：" + res.msg);
+            }
+          })
+          .catch((error) => {
+            this.$message.error("请求组信息失败：" + error.message);
+          });
+    },
+    fetchDevices() {
+      if (!this.selectedGroup) {
+        this.devices = [];
+        this.selectedDeviceIds = [];
+        // this.selectedTags = {};
+        // this.preprocessedData = {};
+        return;
+      }
+      this.$request
+          .get(`/group/getDevices/${this.selectedGroup}`)
+          .then((res) => {
+            if (res.code === "200") {
+              this.devices = res.data;
+              this.selectedDeviceIds = []; // 重置设备选择
+              // this.selectedTags = {}; // 重置设备标签选择
+              // this.preprocessedData = {}; // 重置设备数据
+            } else {
+              this.$message.error("加载设备信息失败：" + res.msg);
+            }
+          })
+          .catch((error) => {
+            this.$message.error("请求设备信息失败：" + error.message);
+          });
+    },
+
+
     // 处理筛选条件变化
     handleFilterChange(value) {
       this.filterText = value;
@@ -227,16 +283,16 @@ export default {
             }))
       }))
     },
-    async fetchAllDevices() {
-      try {
-        const res = await this.$request.get('/device/all')
-        if (res.code === '200') {
-          this.allDevices = res.data
-        }
-      } catch (error) {
-        this.$message.error('设备加载失败')
-      }
-    },
+    // async fetchAllDevices() {
+    //   try {
+    //     const res = await this.$request.get('/device/all')
+    //     if (res.code === '200') {
+    //       this.allDevices = res.data
+    //     }
+    //   } catch (error) {
+    //     this.$message.error('设备加载失败')
+    //   }
+    // },
     sortTags(tags) {
       //NO_TAG放第一个，其次是整数类字符串从小到大排序，最后是其他字符串，按字母顺序排序
       return [...tags].sort((a, b) => {
@@ -294,7 +350,7 @@ export default {
       // console.log("进入selectedDeviceIds", JSON.stringify(this.selectedDeviceIds))
       // 移除已取消选择的设备数据
       const removed = this.selectedDeviceIds.filter(id => !deviceIds.includes(id))
-      // console.log("removed",JSON.stringify(removed))
+      console.log("device removed",JSON.stringify(removed))
       removed.forEach(id => {
         delete this.preprocessedData[id]
         delete this.selectedTags[id]
@@ -303,10 +359,10 @@ export default {
 
       // 加载新设备的标签和数据
       const added = deviceIds.filter(id => !this.selectedDeviceIds.includes(id))
-      // console.log("added", JSON.stringify(added))
+      console.log("device added", JSON.stringify(added))
       for (const deviceId of added) {
         if (!this.deviceTags[deviceId]) {
-          const device = this.allDevices.find(d => d.id === deviceId)
+          const device = this.devices.find(d => d.id === deviceId)
           // console.log("device", device)
           this.deviceTags[deviceId] = device?.allTags || []
           this.$set(this.selectedTags, deviceId, [])
@@ -417,7 +473,7 @@ export default {
 
     exportData() {
       const devices = this.selectedDeviceIds.map(deviceId => {
-        const device = this.allDevices.find(d => d.id === deviceId)
+        const device = this.devices.find(d => d.id === deviceId)
         const filter = this.parseFilterSyntax(this.filterText)
         return {
           id: deviceId,
@@ -545,7 +601,8 @@ export default {
 
   },
   created() {
-    this.fetchAllDevices()
+    // this.fetchAllDevices()
+    this.fetchGroups(); // 初始化加载组信息
   },
 }
 </script>
