@@ -597,6 +597,7 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden; /* 防止全局滚动条 */
+  font-weight: bold;
 }
 
 .main-content {
@@ -728,4 +729,12 @@ export default {
 /*/deep/ .el-collapse-item__header{*/
 /*  border-radius: 1rem;*/
 /*}*/
+
+::v-deep .el-button {
+  font-weight: bold !important;
+}
+
+::v-deep .el-collapse-item__header {
+  font-weight: bold !important;
+}
 </style>

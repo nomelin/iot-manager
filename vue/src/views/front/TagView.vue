@@ -737,4 +737,10 @@ export default {
   padding: 0;
   height: auto;
 }
+::v-deep .el-button {
+  font-weight: bold !important;
+}
+::v-deep .el-dialog {
+  border-radius: 1.5rem !important;
+}
 </style>

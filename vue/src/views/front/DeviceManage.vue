@@ -436,8 +436,8 @@ export default {
               }
               // this.fetchDevices()
             }).catch(() => {
-              this.$message.error('清空设备数据失败')
-            })
+          this.$message.error('清空设备数据失败')
+        })
       }).catch((e) => {
         console.log(e)
         this.$message.info('取消清空设备数据')
@@ -475,8 +475,9 @@ export default {
   cursor: pointer;
   transition: transform 0.2s;
   background: #f8f9fa;
-  border-radius: 1rem;
-  min-height: 150px;
+  border-radius: 1.5rem;
+  height: 200px;
+  overflow: auto;
 }
 
 .device-card:hover {
@@ -520,7 +521,7 @@ export default {
 }
 
 .clear-btn {
-  color: #f56c6c;
+  color: #f1b70a;
 }
 
 .delete-btn {
@@ -537,5 +538,22 @@ export default {
 
 .data-type-tag {
   margin: 2px 4px;
+}
+
+::v-deep .el-descriptions-item__label {
+  font-weight: bold !important;
+  color: #303133 !important;
+}
+
+::v-deep .el-descriptions-item__content {
+  font-weight: bold !important;
+}
+
+::v-deep .el-dialog {
+  border-radius: 1.5rem !important;
+}
+
+::v-deep .el-button {
+  font-weight: bold !important;
 }
 </style>

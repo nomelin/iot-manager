@@ -152,7 +152,10 @@ export default {
 
     async exportCSV() {
       const devices = this.prepareExportData()
-      if (!devices.length) return
+      if (!devices.length) {
+        this.$message.warning('没有数据可供导出')
+        return
+      }
 
       for (const device of devices) {
         const csvContent = this.generateDeviceCSV(device)
@@ -165,7 +168,10 @@ export default {
 
     async exportZIP() {
       const devices = this.prepareExportData()
-      if (!devices.length) return
+      if (!devices.length){
+        this.$message.warning('没有数据可供导出')
+        return
+      }
 
       const zip = new JSZip()
       const timeFolder = zip.folder(this.generateTimeString())

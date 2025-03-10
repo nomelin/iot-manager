@@ -826,4 +826,7 @@ export default {
 /*  padding: 10px 0;*/
 /*  text-align: center;*/
 /*}*/
+::v-deep .el-button {
+  font-weight: bold !important;
+}
 </style>

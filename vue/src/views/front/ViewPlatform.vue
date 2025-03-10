@@ -160,4 +160,7 @@ export default {
   overflow-y: auto;
   padding: 10px;
 }
+::v-deep .el-button {
+  font-weight: bold !important;
+}
 </style>

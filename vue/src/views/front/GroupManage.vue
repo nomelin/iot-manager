@@ -16,7 +16,7 @@
               <div class="device-count">设备数量: {{ group.deviceIds?.length || 0 }}</div>
             </div>
             <el-button class="delete-btn" icon="el-icon-delete" type="text"
-                       @click.stop="handleDelete(group.id)"></el-button>
+                       @click.stop="handleDelete(group.id)">删除设备组</el-button>
           </div>
         </el-card>
       </el-col>
@@ -369,9 +369,9 @@ export default {
   cursor: pointer;
   transition: transform 0.2s;
   background: #f8f9fa;
-  border-radius: 1rem;
-  min-height: 150px;
-}
+  border-radius: 1.5rem;
+  height: 200px;
+  overflow: auto;}
 
 .group-card:hover {
   transform: translateY(-3px);
@@ -438,5 +438,23 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+
+::v-deep .el-descriptions-item__label {
+  font-weight: bold !important;
+  color: #303133 !important;
+}
+
+::v-deep .el-descriptions-item__content {
+  font-weight: bold !important;
+}
+
+::v-deep .el-dialog {
+  border-radius: 1.5rem !important;
+}
+
+::v-deep .el-button {
+  font-weight: bold !important;
 }
 </style>

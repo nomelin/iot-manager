@@ -24,7 +24,7 @@
               <div class="template-name">{{ template.name }}</div>
             </div>
             <el-button class="delete-btn" icon="el-icon-delete" type="text"
-                       @click.stop="handleDelete(template.id)"></el-button>
+                       @click.stop="handleDelete(template.id)">删除模板</el-button>
           </div>
         </el-card>
       </el-col>
@@ -431,9 +431,9 @@ export default {
   cursor: pointer;
   transition: transform 0.2s;
   background: #f8f9fa;
-  border-radius: 1rem;
-  min-height: 150px;
-}
+  border-radius: 1.5rem;
+  height: 200px;
+  overflow: auto;}
 
 .template-card:hover {
   transform: translateY(-3px);
@@ -481,5 +481,23 @@ export default {
   margin-bottom: 10px;
   display: flex;
   align-items: center;
+}
+
+
+::v-deep .el-descriptions-item__label {
+  font-weight: bold !important;
+  color: #303133 !important;
+}
+
+::v-deep .el-descriptions-item__content {
+  font-weight: bold !important;
+}
+
+::v-deep .el-dialog {
+  border-radius: 1.5rem !important;
+}
+
+::v-deep .el-button {
+  font-weight: bold !important;
 }
 </style>
