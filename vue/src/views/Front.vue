@@ -25,9 +25,9 @@
             <i class="el-icon-monitor"></i>
             <span slot="title" class="words">监测平台</span>
           </el-menu-item>
-          <el-menu-item class="el-menu-item" index="/front/device_view">
+          <el-menu-item class="el-menu-item" index="/front/tag_view">
             <i class="el-icon-data-line"></i>
-            <span slot="title" class="words">设备视图</span>
+            <span slot="title" class="words">标签视图</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/base_query">
             <i class="el-icon-postcard"></i>

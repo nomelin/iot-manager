@@ -24,10 +24,10 @@ const routes = [
                 component: () => import('../views/front/ViewPlatform.vue')
             },
             {
-                path: 'device_view',
-                name: 'deviceView',
-                meta: {name: '设备视图'},
-                component: () => import('../views/front/DeviceView.vue')
+                path: 'tag_view',
+                name: 'tagView',
+                meta: {name: '标签视图'},
+                component: () => import('../views/front/TagView.vue')
             },
             {
                 path: 'upload',
