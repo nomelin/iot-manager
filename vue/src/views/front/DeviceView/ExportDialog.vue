@@ -20,13 +20,22 @@
           </el-checkbox>
         </el-form-item>
       </el-form>
-
+      <h4>预览结构：</h4>
       <div class="structure-preview">
-        <h4>预览结构：</h4>
         <template>
           <pre>{{ structurePreview }}</pre>
         </template>
       </div>
+    </div>
+    <h4>即将导出的内容：</h4>
+    <div class="export-preview">
+      <ul>
+        <li v-for="device in selectedDevices" :key="device.id">
+          <strong>{{ device.name }}</strong>
+          <p v-if="exportFormat === 'csv'">标签: {{ formatTagList(device.id) }}</p>
+          <p>传感器: {{ getFilteredFields(device.id).join(', ') || '无' }}</p>
+        </li>
+      </ul>
     </div>
 
     <div slot="footer">
@@ -118,7 +127,10 @@ export default {
       return this.selectedDeviceIds
           .map(id => this.devices.find(d => d.id === id))
           .filter(Boolean)
-    }
+    },
+    formatTagList() {
+      return (deviceId) => this.sortTags([...this.selectedTags[deviceId] || []]).join('/')|| '无'
+    },
   },
   methods: {
     async handleExport() {
@@ -180,7 +192,7 @@ export default {
       const metaInfo = [
         `# 设备名称: ${name}`,
         `选择标签: ${tags.map(t => this.formatTagDisplay(t)).join('/')}`,
-        `选择属性: ${fields.join('/')}`,
+        `选择传感器: ${fields.join('/')}`,
         `生成时间: ${this.getBeijingTimeString()}`
       ].join('; ')
 
@@ -228,7 +240,7 @@ export default {
       // 元信息（不包含标签信息）
       const metaInfo = [
         `# 设备名称: ${name}`,
-        `选择属性: ${fields.join('/')}`,
+        `选择传感器: ${fields.join('/')}`,
         `生成时间: ${this.getBeijingTimeString()}`
       ].join('; ')
 
@@ -287,6 +299,7 @@ export default {
     },
 
     getFilteredFields(deviceId) {
+      // console.log("deviceId",deviceId)
       // console.log("this.preprocessedData", JSON.stringify(this.preprocessedData))
       const filter = this.parseFilterSyntax(this.filterText)
       return this.naturalSort(
@@ -414,14 +427,15 @@ export default {
 
 <style scoped>
 .export-dialog {
-  max-height: 60vh;
+  max-height: 70vh;
   display: flex;
   flex-direction: column;
 }
 
 .structure-preview {
+  max-height: 30vh;
   flex: 1;
-  margin-top: 20px;
+  margin-top: 10px;
   padding: 10px;
   background: #f8f9fa;
   border-radius: 4px;
@@ -431,5 +445,16 @@ export default {
 .structure-preview pre {
   margin: 0;
   white-space: pre-wrap;
+}
+
+.export-preview{
+  max-height: 20vh;
+  flex: 1;
+  margin-top: 10px;
+  padding: 30px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  overflow: auto;
+  font-weight: normal;
 }
 </style>

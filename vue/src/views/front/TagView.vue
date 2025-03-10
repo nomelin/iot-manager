@@ -40,7 +40,7 @@
         <el-button type="primary" @click="showTagDialog = true">选择标签</el-button>
       </el-col>
 
-      <!-- 属性筛选输入框 -->
+      <!-- 传感器筛选输入框 -->
       <el-col :span="6">
         <el-tooltip
             content="支持查询语法：直接输入关键词模糊匹配, 使用{sensor1|sensor2}精确匹配多个字段"
@@ -49,7 +49,7 @@
           <el-input
               v-model="tempFilterText"
               clearable
-              placeholder="输入属性名称关键字"
+              placeholder="输入传感器名称关键字"
               @change="handleFilterChange"
               @clear="handleClear"
           >
