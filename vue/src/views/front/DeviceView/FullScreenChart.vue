@@ -5,16 +5,26 @@
       <div class="chart-title">
         {{ title }}
       </div>
-      <el-switch
-          v-for="device in deviceNames"
-          :key="device"
-          v-model="deviceVisibility[device]"
-          :active-text="device"
-          class="switch-item"
-          @change="updateChart"
-      />
+      <el-dropdown class="dropdown"
+                   :hide-on-click=false
+      >
+        <span class="el-dropdown-link">
+            设备选择<i class="el-icon-arrow-down el-icon--right"></i>
+          </span>
+        <el-dropdown-menu slot="dropdown">
+          <el-dropdown-item v-for="device in deviceNames" :key="device">
+            <el-switch
+                v-model="deviceVisibility[device]"
+                :active-text="device"
+                @change="updateChart"
+            />
+          </el-dropdown-item>
+        </el-dropdown-menu>
+      </el-dropdown>
+
       <el-switch v-model="isSolidColor" active-text="纯色模式" class="switch-item" @change="updateChart"/>
       <el-switch v-model="showLegend" active-text="显示图例" class="switch-item" @change="updateChart"/>
+      <el-switch v-model="isSmooth" active-text="平滑曲线" class="switch-item" @change="updateChart"/>
     </div>
     <!-- 图表容器 -->
     <div ref="chart" class="chart-class"></div>
@@ -38,6 +48,7 @@ export default {
     return {
       chartInstance: null,
       isSolidColor: false,
+      isSmooth: true,
       deviceVisibility: {},
       showLegend: true,
       deviceNames: []
@@ -91,22 +102,24 @@ export default {
           const device = this.extractDeviceName(series.name)
           return {
             ...series,
-            itemStyle: { color: deviceColors[device] },
+            itemStyle: {color: deviceColors[device]},
             lineStyle: {
               ...series.lineStyle,
               color: deviceColors[device],
               type: 'solid'
-            }
+            },
+            smooth: this.isSmooth,
           }
         })
       } else {
         option.series = option.series.map((series, index) => ({
           ...series,
-          itemStyle: { color: COLOR_SCHEME[index % COLOR_SCHEME.length] },
+          itemStyle: {color: COLOR_SCHEME[index % COLOR_SCHEME.length]},
           lineStyle: {
             ...series.lineStyle,
             color: COLOR_SCHEME[index % COLOR_SCHEME.length]
-          }
+          },
+          smooth: this.isSmooth,
         }))
       }
 
@@ -123,7 +136,7 @@ export default {
         left: 20,
         top: 'middle',
         itemGap: 10,
-        textStyle: { lineHeight: 20 },
+        textStyle: {lineHeight: 20},
         formatter: name => name.length > 20 ? name.slice(0, 20) + '...' : name,
         selected: legendSelected
       }
@@ -196,6 +209,14 @@ export default {
   display: flex;
   flex-wrap: wrap;
 }
+.el-dropdown-link {
+  cursor: pointer;
+  color: #409EFF;
+}
+.dropdown{
+  font-size: 1.1rem;
+  margin-right: 2%;
+}
 
 .chart-title {
   font-weight: bold;
@@ -203,7 +224,7 @@ export default {
 }
 
 .switch-item {
-  margin-right: 5%;
+  margin-right: 2%;
 }
 
 .chart-class {

@@ -4,6 +4,9 @@
     <div class="chart-controls">
       <el-switch v-model="isSolidColor" active-text="纯色模式" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="showLegend" active-text="显示图例" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isSmooth" active-text="平滑曲线" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isSampling" active-text="降采样" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isAnimation" active-text="开启动画" class="switch-item" @change="updateCharts"/>
     </div>
 
     <el-row :gutter="30">
@@ -62,6 +65,9 @@ export default {
       currentChartOption: null,
       currentChartTitle: '',
       isSolidColor: false, // 纯色模式开关
+      isSmooth: true, // 平滑曲线开关
+      isSampling: true, // 是否开启降采样模式
+      isAnimation: false,// 是否开启动画
       showLegend: true, // 控制是否显示图例
       deviceColors: new Map(), // 存储设备颜色映射
 
@@ -86,7 +92,9 @@ export default {
       let currentRender = 0;  // 重置当前进度
       const loading = this.$loading({
         text: `正在渲染图表(${currentRender}/${totalRender})`,
-        lock:false,
+        background: 'rgba(255, 255, 255, 0.3)', // 设置透明背景
+        lock: false, // 不锁定页面滚动，无效。
+        customClass: 'transparent-loading' // 添加自定义类名
       });
       // console.log('开始渲染图表')
       this.clearCharts()
@@ -179,14 +187,15 @@ export default {
         series: data.series.map(series => ({
           name: series.name,
           type: 'line',
-          smooth: true,
+          smooth: this.isSmooth,
           showSymbol: false,//不显示折线上的节点
           data: series.data,
-          animation: false,//关闭动画
-          silent: true,//图形不响应和触发鼠标事件
+          animation: this.isAnimation,//关闭动画
+          silent: !this.isAnimation,//图形不响应和触发鼠标事件
           large: true,//启用大规模路径图的优化
           largeThreshold: 1000,
-          sampling: 'lttb',//降采样，采用 Largest-Triangle-Three-Bucket 算法，可以最大程度保证采样后线条的趋势，形状和极值。
+          //降采样，采用 Largest-Triangle-Three-Bucket 算法，可以最大程度保证采样后线条的趋势，形状和极值。
+          sampling: this.isSampling ? 'lttb' : null,
           itemStyle: this.isSolidColor ?
               {color: this.deviceColors.get(this.extractDeviceName(series.name))} :
               series.itemStyle,
