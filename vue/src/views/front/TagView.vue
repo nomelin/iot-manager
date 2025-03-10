@@ -110,6 +110,11 @@
                     @change="handleSelectAll(device.id, $event)"
                 >全选
                 </el-checkbox>
+                <el-button
+                    type="text"
+                    @click="handleUnselectAll(device.id)"
+                    style="margin-left: 10px;"
+                >全不选</el-button>
                 <el-scrollbar>
                   <el-checkbox-group
                       v-model="selectedTags[device.id]"
@@ -146,6 +151,11 @@
                     @change="handlePendingSelectAll(device.id, $event)"
                 >全选
                 </el-checkbox>
+                <el-button
+                    type="text"
+                    @click="handlePendingUnselectAll(device.id)"
+                    style="margin-left: 10px;"
+                >全不选</el-button>
                 <el-scrollbar>
                   <el-checkbox-group
                       v-model="pendingSelectedTags[device.id]"
@@ -321,6 +331,16 @@ export default {
             selected > 0 && selected < tags.length
         )
       })
+    },
+    // 立即应用模式的全不选
+    handleUnselectAll(deviceId) {
+      this.$set(this.selectedTags, deviceId, []);
+    },
+
+    // 懒应用模式的全不选
+    handlePendingUnselectAll(deviceId) {
+      this.$set(this.pendingSelectedTags, deviceId, []);
+      this.updatePendingSelectionState();
     },
     fetchGroups() {
       this.$request
@@ -812,5 +832,10 @@ export default {
   padding: 10px 20px;
   text-align: left;
   background: #fff;
+}
+
+.el-button--text {
+  padding: 0;
+  height: auto;
 }
 </style>
