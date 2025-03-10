@@ -1,8 +1,8 @@
 <template>
   <div
       v-loading="isLoading||isLoadingTag"
-      element-loading-text="数据加载中..."
       class="device-view"
+      element-loading-text="数据加载中..."
   >
     <!-- 上侧控制区域 -->
     <el-row :gutter="20" align="middle" class="control-panel">
@@ -83,11 +83,19 @@
         :visible.sync="showTagDialog"
         custom-class="tag-drawer"
         label="rtl"
-        size="30%"
+        size="35%"
         title="选择标签"
+        @open="handleDrawerOpen"
     >
       <div class="tag-drawer-content">
-        <el-scrollbar>
+        <div class="mode-switch">
+          <el-switch
+              v-model="immediateApply"
+              active-text="立即应用更改"
+              style="margin-bottom: 20px"
+          />
+        </div>
+        <el-scrollbar v-if="immediateApply">
           <div class="device-tags-container">
             <div
                 v-for="device in selectedDevices"
@@ -121,11 +129,49 @@
             </div>
           </div>
         </el-scrollbar>
+
+        <!-- 懒应用模式 -->
+        <el-scrollbar v-else>
+          <div class="device-tags-container">
+            <div
+                v-for="device in selectedDevices"
+                :key="device.id"
+                class="device-tag-section"
+            >
+              <h3>{{ device.name }} 标签</h3>
+              <div class="tag-selector">
+                <el-checkbox
+                    v-model="pendingAllSelected[device.id]"
+                    :indeterminate="pendingIndeterminate[device.id]"
+                    @change="handlePendingSelectAll(device.id, $event)"
+                >全选
+                </el-checkbox>
+                <el-scrollbar>
+                  <el-checkbox-group
+                      v-model="pendingSelectedTags[device.id]"
+                      class="tag-group"
+                  >
+                    <el-checkbox
+                        v-for="tag in sortedDeviceTags[device.id]"
+                        :key="tag"
+                        :label="tag"
+                        class="tag-item"
+                    >
+                      {{ formatTagDisplay(tag) }}
+                    </el-checkbox>
+                  </el-checkbox-group>
+                </el-scrollbar>
+              </div>
+            </div>
+          </div>
+        </el-scrollbar>
+
+
       </div>
 
       <div class="drawer-footer">
         <el-button @click="showTagDialog = false">取消</el-button>
-        <el-button type="primary" @click="showTagDialog = false">确定</el-button>
+        <el-button type="primary" @click="handleConfirm">应用更改</el-button>
       </div>
     </el-drawer>
 
@@ -155,6 +201,11 @@ export default {
       selectedGroup: null, // 当前选择的组ID
       groups: [], // 全部组信息
       devices: [], // 当前组设备
+
+      immediateApply: true,
+      pendingSelectedTags: {},
+      pendingAllSelected: {},
+      pendingIndeterminate: {},
     }
   },
   computed: {
@@ -224,8 +275,53 @@ export default {
     }
   },
 
+  watch: {
+    immediateApply(val) {
+      console.log('切换模式:', val)
+      if (!val) {
+        this.handleDrawerOpen()//因为在不关闭抽屉时也需要更新状态，所以这里需要调用。
+      }
+    }
+  },
+
 
   methods: {
+    handleDrawerOpen() {
+      // 初始化懒应用模式的临时数据
+      if (!this.immediateApply) {
+        this.pendingSelectedTags = JSON.parse(JSON.stringify(this.selectedTags))
+        this.updatePendingSelectionState()
+      }
+    },
+
+    handleConfirm() {
+      if (!this.immediateApply) {
+        // 应用懒模式的修改
+        this.selectedTags = JSON.parse(JSON.stringify(this.pendingSelectedTags))
+      }
+      this.showTagDialog = false
+    },
+
+    handlePendingSelectAll(deviceId, val) {
+      this.$set(this.pendingSelectedTags, deviceId,
+          val ? [...this.deviceTags[deviceId]] : []
+      )
+      this.updatePendingSelectionState()
+    },
+
+    updatePendingSelectionState() {
+      this.selectedDeviceIds.forEach(deviceId => {
+        const tags = this.deviceTags[deviceId] || []
+        const selected = this.pendingSelectedTags[deviceId]?.length || 0
+
+        this.$set(this.pendingAllSelected, deviceId,
+            tags.length > 0 && selected === tags.length
+        )
+        this.$set(this.pendingIndeterminate, deviceId,
+            selected > 0 && selected < tags.length
+        )
+      })
+    },
     fetchGroups() {
       this.$request
           .get("/group/all")
@@ -630,6 +726,12 @@ export default {
   /*margin-bottom: 20px;*/
 }
 
+.mode-switch {
+  padding: 0 20px 10px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 10px;
+}
+
 .main-content {
   flex: 1;
   overflow: hidden;
@@ -708,7 +810,7 @@ export default {
   width: 100%;
   border-top: 1px solid #e8e8e8;
   padding: 10px 20px;
-  text-align: right;
+  text-align: left;
   background: #fff;
 }
 </style>

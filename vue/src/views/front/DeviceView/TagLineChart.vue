@@ -86,8 +86,9 @@ export default {
       let currentRender = 0;  // 重置当前进度
       const loading = this.$loading({
         text: `正在渲染图表(${currentRender}/${totalRender})`,
+        lock:false,
       });
-      console.log('开始渲染图表')
+      // console.log('开始渲染图表')
       this.clearCharts()
       this.generateDeviceColors()
 
