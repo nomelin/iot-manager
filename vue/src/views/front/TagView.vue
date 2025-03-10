@@ -62,7 +62,23 @@
 
       <!-- 操作按钮组 -->
       <el-col :span="2">
-        <el-button type="primary" @click="exportData">导出CSV</el-button>
+        <el-col :span="2">
+          <el-button
+              type="primary"
+              @click="exportDialogVisible = true"
+          >
+            数据导出
+          </el-button>
+        </el-col>
+
+        <export-dialog
+            v-model="exportDialogVisible"
+            :selected-device-ids="selectedDeviceIds"
+            :devices="devices"
+            :selected-tags="selectedTags"
+            :preprocessed-data="preprocessedData"
+            :filter-text="filterText"
+        />
       </el-col>
     </el-row>
 
@@ -191,10 +207,11 @@
 
 <script>
 import TagLineChart from './DeviceView/TagLineChart.vue'
+import ExportDialog from './DeviceView/ExportDialog.vue'
 
 export default {
   name: 'DeviceView',
-  components: {TagLineChart},
+  components: {TagLineChart,ExportDialog},
   data() {
     return {
       // allDevices: [],
@@ -216,6 +233,8 @@ export default {
       pendingSelectedTags: {},
       pendingAllSelected: {},
       pendingIndeterminate: {},
+
+      exportDialogVisible: false,
     }
   },
   computed: {
@@ -594,127 +613,6 @@ export default {
       )
     },
 
-    exportData() {
-      const devices = this.selectedDeviceIds.map(deviceId => {
-        const device = this.devices.find(d => d.id === deviceId)
-        const filter = this.parseFilterSyntax(this.filterText)
-        return {
-          id: deviceId,
-          name: device.name,
-          tags: this.sortTags([...this.selectedTags[deviceId] || []]),
-          fields: this.naturalSort(
-              Object.keys(this.preprocessedData[deviceId] || {}).filter(f =>
-                  filter.regex ? filter.regex.test(f) : true
-              )
-          ),
-          data: this.preprocessedData[deviceId]
-        }
-      })
-
-      if (devices.length === 0) {
-        this.$message.warning('请先选择至少一个设备')
-        return
-      }
-
-      // 构造确认信息
-      const confirmLines = devices.map((d, index) => [
-        `设备${index + 1}（${d.name}）`,
-        `- 选择标签：${d.tags.map(this.formatTagDisplay).join(', ') || '无'}`,
-        `- 选择属性：${d.fields.join(', ') || '无'}`
-      ]).flat()
-      confirmLines.push(`生成时间：${new Date().toISOString()}`)
-
-      this.$confirm(confirmLines.join('<br>'), '导出确认', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-        customClass: 'export-confirm-dialog',
-        dangerouslyUseHTMLString: true
-      }).then(async () => {
-        for (const device of devices) {
-          const csvContent = this.generateDeviceCSV(device)
-          if (csvContent) {
-            const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'})
-            const link = document.createElement('a')
-            link.href = URL.createObjectURL(blob)
-            link.download = this.generateFileName(device.name)
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-          }
-        }
-      }).catch((e) => {
-        console.log(e)
-        this.$message.info('已取消导出')
-      })
-    },
-
-    generateDeviceCSV(device) {
-      const {data, tags, name, fields} = device
-      if (!data || tags.length === 0 || fields.length === 0) return null
-
-      // 元信息行
-      const metaInfo = [
-        `# 设备名称: ${name}`,
-        `选择标签: ${tags.map(this.formatTagDisplay).join('/')}`,
-        `选择属性: ${fields.join('/')}`,
-        `生成时间: ${new Date().toISOString()}`
-      ].join('; ')
-
-      const rows = []
-      // 表头
-      const headers = ['标签', '序号', ...fields]
-
-      tags.forEach(tag => {
-        const formattedTag = this.formatTagDisplay(tag)
-        const sequenceMap = {}
-
-        // 收集所有字段的数据并记录最大序号
-        let maxSequence = 0
-        fields.forEach(field => {
-          const tagData = data[field]?.[tag]
-          if (tagData) {
-            tagData.data.forEach(([seq, value]) => {
-              if (!sequenceMap[seq]) {
-                sequenceMap[seq] = {[field]: value}
-                if (seq > maxSequence) maxSequence = seq
-              } else {
-                sequenceMap[seq][field] = value
-              }
-            })
-          }
-        })
-
-        // 生成从1到最大序号的行
-        for (let seq = 1; seq <= maxSequence; seq++) {
-          const row = [formattedTag, seq]
-          fields.forEach(field => {
-            row.push(sequenceMap[seq]?.[field] ?? '')// 有值则使用，否则留空。csv中显示是空格
-          })
-          rows.push(row.join(','))
-        }
-      })
-
-      if (rows.length === 0) return null
-
-      // 添加BOM头避免中文乱码
-      const BOM = '\ufeff'
-      return BOM + [metaInfo, headers.join(','), ...rows].join('\n')
-    },
-
-    generateFileName(deviceName) {
-      const now = new Date()
-      const timestamp = [
-        now.getFullYear(),
-        String(now.getMonth() + 1).padStart(2, '0'),
-        String(now.getDate()).padStart(2, '0'),
-        String(now.getHours()).padStart(2, '0'),
-        String(now.getMinutes()).padStart(2, '0'),
-        String(now.getSeconds()).padStart(2, '0')
-      ].join('-')
-      return `${deviceName}_导出_${timestamp}.csv`
-    },
-
     naturalSort(arr) {
       return arr.slice().sort((a, b) =>
           a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'})
@@ -736,6 +634,7 @@ export default {
   flex-direction: column;
   height: 100%;
   padding: 20px;
+  font-weight: bold;
 }
 
 .el-select, .el-input {
