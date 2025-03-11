@@ -1,7 +1,6 @@
 package top.nomelin.iot.dao;
 
 import org.apache.ibatis.annotations.Mapper;
-import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.Template;
 
 import java.util.List;

@@ -40,5 +40,7 @@ public class Constants {
     public static final String TAG = "tag";
     //没有标签的属性值
     public static final String NO_TAG = "NO_TAG";
+    public static final int SYSTEM_SENDER_ID = 0;
+
 
 }
