@@ -60,11 +60,23 @@ const routes = [
                 component: () => import('../views/front/GroupManage.vue')
             },
             {
+                path: 'message_center',
+                name: 'MessageCenter',
+                meta: {name: '消息中心'},
+                component: () => import('../views/front/MessageCenter.vue')
+            },
+            {
                 path: 'third_party',
                 name: 'thirdParty',
                 meta: {name: '第三方接口'},
                 component: () => import('../views/front/ThirdParty.vue')
-            }
+            },
+            {
+                path: 'user_profile',
+                name: 'userProfile',
+                meta: {name: '用户信息'},
+                component: () => import('../views/front/UserProfile.vue'),
+            },
         ]
 
     },

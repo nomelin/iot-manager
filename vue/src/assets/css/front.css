@@ -1,3 +1,4 @@
+/*
 .front-notice {
     padding: 5px 20px;
     color: #666;
@@ -47,13 +48,13 @@
     text-align: center !important;
 }
 
-/*页面具体样式自定义*/
+!*页面具体样式自定义*!
 .main-content {
     width: 100%;
     margin: 5px auto;
 }
-/* ElementUI 样式覆盖 */
+!* ElementUI 样式覆盖 *!
 .el-menu.el-menu--horizontal {
     border: none !important;
     height: 59px;
-}
+}*/

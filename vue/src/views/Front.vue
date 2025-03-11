@@ -6,19 +6,34 @@
 
       </div>
       <div class="front-header-center">
-        <div style="font-size: 2rem">消息</div>
+
       </div>
       <div class="front-header-right">
-        <div style="font-size: 2rem">用户</div>
+        <router-link to="/front/message_center">
+          <img
+              alt="消息"
+              class="icon-svg"
+              src="@/assets/imgs/msg_box.svg"
+              style="width: 3rem; height: 3rem; opacity: 0.8; "
+          >
+        </router-link>
+        <div class="user-info" @click="goToUserProfile">
+          <el-avatar
+              class="avatar"
+              :size="45"
+              :src="defaultAvatar">
+          </el-avatar>
+          <div class="username">{{ user?.name || '用户' }}</div>
+        </div>
       </div>
     </div>
     <!--主体-->
     <div class="main-body">
       <div class="main-left">
-        <div class="main-left-upper">
+        <!--        <div class="main-left-upper">-->
 
 
-        </div>
+        <!--        </div>-->
 
         <el-menu :default-active="$route.path" active-text-color="#0d53ff" class="el-menu" router text-color="#565757">
           <el-menu-item class="el-menu-item" index="/front/view_platform">
@@ -49,9 +64,17 @@
             <i class="el-icon-folder-opened"></i>
             <span slot="title" class="words">组管理</span>
           </el-menu-item>
+          <el-menu-item class="el-menu-item" index="/front/message_center">
+            <i class="el-icon-message-solid"></i>
+            <span slot="title" class="words">消息中心</span>
+          </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/third_party">
             <i class="el-icon-link"></i>
             <span slot="title" class="words">第三方</span>
+          </el-menu-item>
+          <el-menu-item class="el-menu-item" index="/front/user_profile">
+            <i class="el-icon-user"></i>
+            <span slot="title" class="words">我的</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" @click="logout">
             <i class="el-icon-switch-button"></i>
@@ -71,6 +94,7 @@
 
 <script>
 import {getItemWithExpiry} from "@/App"
+import defaultAvatar from "@/assets/imgs/default-avatar.jpg"
 
 export default {
   name: "FrontLayout",
@@ -78,6 +102,7 @@ export default {
   data() {
     return {
       user: getItemWithExpiry("user"),
+      defaultAvatar: defaultAvatar,
     }
   },
 
@@ -99,7 +124,7 @@ export default {
         type: 'success',
         center: true
       }).then(response => {
-        this.$request.delete("/openapi/logout").then(res => {
+        this.$request.delete("/user/logout").then(res => {
           if (res.code === '200') {
             this.$message.success("退出成功")
             localStorage.removeItem("user");
@@ -115,7 +140,7 @@ export default {
       });
     },
     goToUserProfile() {
-      this.$router.push('/person');
+      this.$router.push('/front/user_profile');
     },
   }
 
@@ -159,9 +184,14 @@ export default {
 .user-info {
   display: flex; /* 使用 Flexbox 布局 */
   align-items: center; /* 垂直方向上居中对齐 */
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333333;
+  margin-left: 10%;
+  padding-right: 10%;
   /*position: absolute; !* 设置绝对定位 *!*/
-  padding-left: 10%;
-  padding-top: 10%;
+  /*padding-left: 10%;*/
+  /*padding-top: 10%;*/
 }
 
 .avatar {
@@ -262,13 +292,25 @@ export default {
 }
 
 .front-header-center {
-  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%; /* 确保 div 具有高度 */
+  width: 100%;
 }
 
 .front-header-right {
-  width: 200px;
+  display: flex;
+  width: 300px;
+  justify-content: center;
+  align-items: center;
+  height: 100%; /* 确保 div 具有高度 */
   padding-right: 20px;
-  text-align: right;
+  /*text-align: right;*/
+}
+
+.icon-svg {
+  margin-right: 30px;
 }
 
 .front-header-dropdown {
@@ -315,6 +357,10 @@ export default {
   width: 100%; /* 设置宽度为100% */
   text-align: right; /* 将文本内容右对齐 */
   box-sizing: border-box; /* 使用边框盒模型，确保宽度包含 padding 和 border */
+}
+
+.avatar {
+
 }
 
 
