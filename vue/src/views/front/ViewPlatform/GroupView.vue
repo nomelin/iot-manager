@@ -157,6 +157,7 @@ export default {
           duration: 2500,
           offset: 80
         })
+        await this.updateCharts()
       } catch (error) {
         console.log("数据加载失败：" + error.message);
       }
