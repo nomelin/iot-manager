@@ -224,7 +224,7 @@ export default {
     },
 
     handleOpenFullscreen(chartIndex) {
-      console.log("打开全屏图表, chartIndex: ", chartIndex)
+      console.log(`打开全屏图表，chartIndex:${chartIndex},fieldName:${this.chartData[chartIndex].field}`)
       this.currentChartOption = this.getChartOption(this.chartData[chartIndex])
       this.currentChartTitle = this.chartData[chartIndex].field
       this.fullscreenVisible = true

@@ -2,10 +2,12 @@
   <div class="group-view">
     <!-- 统一控制所有图表的开关 -->
     <div class="chart-controls">
-      <el-switch v-model="showLegend" active-text="显示图例" @change="updateCharts"/>
-      <el-switch v-model="isSmooth" active-text="平滑曲线" @change="updateCharts"/>
-      <el-switch v-model="isSampling" active-text="降采样" @change="updateCharts"/>
-      <el-switch v-model="isAnimation" active-text="开启动画" @change="updateCharts"/>
+      <el-switch v-model="showLegend" active-text="显示图例" @change="updateCharts" class="switch-item" />
+      <el-switch v-model="isSmooth" active-text="平滑曲线" @change="updateCharts" class="switch-item" />
+      <el-switch v-model="isSampling" active-text="降采样" @change="updateCharts" class="switch-item"/>
+      <el-switch v-model="isAnimation" active-text="开启动画" @change="updateCharts" class="switch-item" />
+       <el-switch v-model="isShowSymbol" active-text="显示数据点" @change="updateCharts" class="switch-item" />
+      <el-switch v-model="isLarge" active-text="大数据量" @change="updateCharts" class="switch-item" />
     </div>
 
     <el-row :gutter="30">
@@ -21,12 +23,14 @@
             <i class="el-icon-full-screen"></i> 全屏显示
           </el-button>
         </div>
-        <div :ref="`chart-${fieldName}`" class="chart" :style="{ height: '400px' }"></div>
+        <div :ref="`chart-${fieldName}`" :style="{ height: '400px' }" class="chart"></div>
       </el-col>
     </el-row>
 
     <!-- 全屏图表对话框 -->
     <el-dialog
+        :center="true"
+        :close-on-click-modal="false"
         :visible.sync="fullscreenVisible"
         fullscreen
     >
@@ -45,7 +49,7 @@ import * as echarts from 'echarts'
 import SimpleFullScreenChart from './SimpleFullScreenChart.vue'
 
 export default {
-  components: { SimpleFullScreenChart },
+  components: {SimpleFullScreenChart},
   name: "GroupView",
   props: {
     selectedDeviceIds: {
@@ -74,16 +78,42 @@ export default {
       showLegend: true,
       isSmooth: true,
       isSampling: true,
-      isAnimation: false
+      isAnimation: false,
+      isShowSymbol: false,
+      isLarge: false,
     };
+  },
+  computed: {
+    allDeviceIds() {
+      // console.log("devices: " + JSON.stringify(this.devices))
+      return this.devices.map((device) => device.id);
+    },
+    selectedProcessedData() {
+      const res = Object.keys(this.processedData).reduce((result, fieldName) => {
+        result[fieldName] = this.selectedDeviceIds
+            .map(deviceId => this.processedData[fieldName]?.[deviceId])
+            .filter(Boolean);
+        return result;
+      }, {});
+      // console.log("processedData",JSON.stringify(this.processedData))
+      // console.log("selectedDeviceIds: " + JSON.stringify(this.selectedDeviceIds))
+      // console.log("selectedProcessedData: " + JSON.stringify(res))
+      return res
+    }
   },
   methods: {
     async fetchData() {
-      if (!this.selectedDeviceIds || !this.selectedDeviceIds.length || !this.dateRange) return
+      if (!this.dateRange) return
+      // console.log("allDeviceIds", JSON.stringify(this.allDeviceIds))
+      if (this.allDeviceIds.length === 0) return
       try {
         const queryStartTime = Date.now();
-        const promises = this.selectedDeviceIds.map((deviceId) => {
-          console.log("device: " + JSON.stringify(deviceId));
+        const promises = this.allDeviceIds.map((deviceId) => {
+          if (!deviceId) {
+            console.warn("deviceId is null")
+            return null
+          }
+          // console.log("device: " + JSON.stringify(deviceId));
           const requestBody = {
             deviceId: deviceId,
             startTime: this.dateRange[0],
@@ -112,6 +142,10 @@ export default {
           totalLength += Object.values(records).reduce((sum, arr) => sum + arr.length, 0);
         });
         const rawData = responses.map((res) => res.data);
+        if (totalLength === 0) {
+          this.$message.warning("所选时间范围内无任何数据");
+          return;
+        }
 
         this.processedData = this.organizeData(rawData);
         const processEndTime = Date.now();
@@ -129,10 +163,15 @@ export default {
     },
     organizeData(rawData) {
       const fieldsMap = {};
-      // console.log("rawData: " + JSON.stringify(rawData));
+      // console.log("rawData: " + JSON.stringify(rawData))
+
       rawData.forEach((deviceData) => {
         const {devicePath, records} = deviceData;
-        const deviceName = devicePath.split(".").pop();
+        const deviceId = this.extractDeviceIdFromDevicePath(devicePath);
+        console.log("deviceId" + deviceId);
+        // 查找匹配的设备对象
+        const device = this.devices.find(dev => dev.id === deviceId);
+        const deviceName = device ? device.name : `Unknown(${deviceId})`;
 
         // 处理每个时间戳，只取第一个Record
         Object.entries(records).forEach(([timestamp, recordList]) => {
@@ -141,30 +180,26 @@ export default {
           const formattedTime = this.$options.filters.formatTime(timestamp);
 
           Object.entries(record.fields).forEach(([fieldName, value]) => {
-            if (!fieldsMap[fieldName]) fieldsMap[fieldName] = [];
+            if(fieldName === 'tag'){
+              return;//过滤掉名称为 "tag" 的数据
+            }
+            if (!fieldsMap[fieldName]) fieldsMap[fieldName] = {};
 
-            // 查找或创建当前设备的字段数据
-            let fieldData = fieldsMap[fieldName].find(
-                (item) => item.deviceName === deviceName
-            );
-            if (!fieldData) {
-              fieldData = {deviceName, data: []};
-              fieldsMap[fieldName].push(fieldData);
+            // 设备数据按 deviceId 索引
+            if (!fieldsMap[fieldName][deviceId]) {
+              fieldsMap[fieldName][deviceId] = {deviceName, data: []};
             }
 
-            // 添加时间和值到数据数组
-            fieldData.data.push([formattedTime, value]);
+            // 添加时间和值
+            fieldsMap[fieldName][deviceId].data.push([formattedTime, value]);
           });
         });
       });
 
-      // 对每个字段的每个设备数据进行时间排序
+      // 确保数据按时间排序
       Object.keys(fieldsMap).forEach((fieldName) => {
-        fieldsMap[fieldName].forEach((fieldData) => {
-          // 按时间戳排序
-          fieldData.data.sort((a, b) => {
-            return new Date(a[0]) - new Date(b[0]);
-          });
+        Object.values(fieldsMap[fieldName]).forEach((fieldData) => {
+          fieldData.data.sort((a, b) => new Date(a[0]) - new Date(b[0]));
         });
       });
       // console.log("fieldsMap: " + JSON.stringify(fieldsMap));
@@ -176,8 +211,14 @@ export default {
       this.renderCharts()
     },
 
+    extractDeviceIdFromDevicePath(devicePath) {
+      //耦合性很高
+      return Number(devicePath.split('_').pop())
+    },
+
     renderCharts() {
-      Object.keys(this.processedData).forEach(fieldName => {
+      Object.keys(this.selectedProcessedData).forEach(fieldName => {
+        if (fieldName === 'tag') return; // 过滤掉名称为 "tag" 的图表
         const container = this.$refs[`chart-${fieldName}`][0]
         if (echarts.getInstanceByDom(container)) {
           echarts.dispose(container)
@@ -189,38 +230,60 @@ export default {
     },
 
     getChartOption(fieldName) {
-      const fieldData = this.processedData[fieldName]
+      const fieldData = this.selectedProcessedData[fieldName]
       return {
-        title: { text: fieldName, left: 'center' },
-        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+        title: {show: false},
+        tooltip: {trigger: 'axis', axisPointer: {type: 'cross'}},
         toolbox: {
           show: true,
           feature: {
-            saveAsImage: { title: '保存为PNG' },
-            dataZoom: { show: true },
-            dataView: { show: true, readOnly: false },
-            restore: { show: true }
-          }
+            saveAsImage: {title: '保存为PNG'},
+            dataZoom: {show: true, yAxisIndex: 0, xAxisIndex: 0},
+            dataView: {show: true, readOnly: false},
+            magicType: {
+              show: true,
+              type: ['line', 'bar']
+            },
+            restore: {show: true},
+          },
         },
         legend: this.showLegend ? {
           data: fieldData.map(d => d.deviceName),
-          top: '10%'
+          orient: 'vertical',
+          left: 0,
+          top: 'middle',
         } : undefined,
-        xAxis: { type: 'time' },
-        yAxis: { type: 'value' },
+        xAxis: {type: 'time', name: '时间', position: 'bottom'},
+        yAxis: {type: 'value', name: fieldName, position: 'left'},
+        dataZoom: [
+          {type: 'slider', xAxisIndex: 0, filterMode: 'none'},
+          {type: 'inside', xAxisIndex: 0, filterMode: 'none'},
+          {type: 'slider', yAxisIndex: 0, filterMode: 'none'},
+          {type: 'inside', yAxisIndex: 0, filterMode: 'none'}
+        ],
         series: fieldData.map(deviceData => ({
           name: deviceData.deviceName,
           type: 'line',
           data: deviceData.data,
           smooth: this.isSmooth,
-          showSymbol: false,
+          showSymbol: this.isShowSymbol,
           animation: this.isAnimation,
-          sampling: this.isSampling ? 'lttb' : null
-        }))
+          sampling: this.isSampling ? 'lttb' : null,
+          large: this.isLarge,//启用大规模路径图的优化
+          largeThreshold: 1000,
+        })),
+        grid: {
+          show: true,
+          top: 40,
+          bottom: 60,
+          left: 80,
+          containLabel: true
+        },
       }
     },
 
     handleOpenFullscreen(fieldName) {
+      console.log("打开全屏图表, fieldName: ", fieldName)
       this.currentChartOption = this.getChartOption(fieldName)
       this.currentChartTitle = fieldName
       this.fullscreenVisible = true
@@ -243,7 +306,7 @@ export default {
 
   watch: {
     selectedDeviceIds() {
-      this.fetchData();//TODO 选择设备变化时不需要重新加载数据
+      this.updateCharts();//不重新获取数据，只更新图表
     },
     devices() {
       this.fetchData();
@@ -251,9 +314,6 @@ export default {
     dateRange() {
       this.fetchData();
     },
-    processedData() {
-      this.updateCharts();
-    }
   }
 }
 </script>
@@ -262,8 +322,24 @@ export default {
 .group-view {
   height: 100%; /* 填满父容器 */
   overflow-y: auto; /* 启用垂直滚动条 */
-  padding: 20px; /* 添加内边距避免元素紧贴容器边缘 */
+  overflow-x: hidden; /* 隐藏水平滚动条 */
+  /* 添加内边距避免元素紧贴容器边缘 */
+  padding: 0 10px 10px;
   box-sizing: border-box; /* 包括内边距和边框在内的宽高计算 */
+}
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.switch-item {
+  margin-right: 10px;
 }
 
 .chart-container {
@@ -273,23 +349,16 @@ export default {
 .chart-container:last-child {
   margin-bottom: 0; /* 最后一个图表去掉间距 */
 }
-.chart-controls {
-  padding: 10px;
-  background: #fff;
-  border-bottom: 1px solid #eee;
-  margin-bottom: 20px;
-}
 
 .chart-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding: 0 10px;
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
 }
 
 .chart {
   background: #fff;
+  padding: 15px;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }

@@ -127,10 +127,10 @@ export default {
       }
 
       if (ranges[type]) {
-        this.dateRange = [
-          new Date(Date.now() - ranges[type]),
-          new Date()
-        ]
+        const startTime = new Date(Date.now() - ranges[type]).getTime();
+        const endTime = new Date().getTime();
+
+        this.dateRange = [startTime, endTime];
       }
     },
   },
@@ -147,6 +147,7 @@ export default {
   height: 100%; /* 填满父容器 */
   box-sizing: border-box;
   font-weight: bold;
+  overflow-x: hidden;
 }
 
 .control-panel {
@@ -162,5 +163,8 @@ export default {
 }
 ::v-deep .el-button {
   font-weight: bold !important;
+}
+::v-deep .el-dialog {
+  border-radius: 1.5rem !important;
 }
 </style>
