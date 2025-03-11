@@ -1,13 +1,13 @@
 <template>
-  <div class="group-view">
+  <div v-loading="isLoading" class="group-view">
     <!-- 统一控制所有图表的开关 -->
     <div class="chart-controls">
-      <el-switch v-model="showLegend" active-text="显示图例" @change="updateCharts" class="switch-item" />
-      <el-switch v-model="isSmooth" active-text="平滑曲线" @change="updateCharts" class="switch-item" />
-      <el-switch v-model="isSampling" active-text="降采样" @change="updateCharts" class="switch-item"/>
-      <el-switch v-model="isAnimation" active-text="开启动画" @change="updateCharts" class="switch-item" />
-       <el-switch v-model="isShowSymbol" active-text="显示数据点" @change="updateCharts" class="switch-item" />
-      <el-switch v-model="isLarge" active-text="大数据量" @change="updateCharts" class="switch-item" />
+      <el-switch v-model="showLegend" active-text="显示图例" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isSmooth" active-text="平滑曲线" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isSampling" active-text="降采样" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isAnimation" active-text="开启动画" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isShowSymbol" active-text="显示数据点" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isLarge" active-text="大数据量" class="switch-item" @change="updateCharts"/>
     </div>
 
     <el-row :gutter="30">
@@ -81,6 +81,8 @@ export default {
       isAnimation: false,
       isShowSymbol: false,
       isLarge: false,
+
+      isLoading: false,
     };
   },
   computed: {
@@ -103,11 +105,12 @@ export default {
   },
   methods: {
     async fetchData() {
-      if (!this.dateRange) return
-      // console.log("allDeviceIds", JSON.stringify(this.allDeviceIds))
-      if (this.allDeviceIds.length === 0) return
       try {
+        if (!this.dateRange) return
+        // console.log("allDeviceIds", JSON.stringify(this.allDeviceIds))
+        if (this.allDeviceIds.length === 0) return
         const queryStartTime = Date.now();
+        this.isLoading = true;
         const promises = this.allDeviceIds.map((deviceId) => {
           if (!deviceId) {
             console.warn("deviceId is null")
@@ -157,9 +160,12 @@ export default {
           duration: 2500,
           offset: 80
         })
+        this.isLoading = false;
         await this.updateCharts()
       } catch (error) {
         console.log("数据加载失败：" + error.message);
+      } finally {
+        this.isLoading = false;
       }
     },
     organizeData(rawData) {
@@ -169,7 +175,7 @@ export default {
       rawData.forEach((deviceData) => {
         const {devicePath, records} = deviceData;
         const deviceId = this.extractDeviceIdFromDevicePath(devicePath);
-        console.log("deviceId" + deviceId);
+        // console.log("deviceId" + deviceId);
         // 查找匹配的设备对象
         const device = this.devices.find(dev => dev.id === deviceId);
         const deviceName = device ? device.name : `Unknown(${deviceId})`;
@@ -181,7 +187,7 @@ export default {
           const formattedTime = this.$options.filters.formatTime(timestamp);
 
           Object.entries(record.fields).forEach(([fieldName, value]) => {
-            if(fieldName === 'tag'){
+            if (fieldName === 'tag') {
               return;//过滤掉名称为 "tag" 的数据
             }
             if (!fieldsMap[fieldName]) fieldsMap[fieldName] = {};
@@ -208,8 +214,9 @@ export default {
     },
 
     async updateCharts() {
+      console.log("updateCharts")
       await this.$nextTick()
-      this.renderCharts()
+      await this.renderCharts()
     },
 
     extractDeviceIdFromDevicePath(devicePath) {
@@ -217,17 +224,47 @@ export default {
       return Number(devicePath.split('_').pop())
     },
 
-    renderCharts() {
-      Object.keys(this.selectedProcessedData).forEach(fieldName => {
-        if (fieldName === 'tag') return; // 过滤掉名称为 "tag" 的图表
-        const container = this.$refs[`chart-${fieldName}`][0]
-        if (echarts.getInstanceByDom(container)) {
-          echarts.dispose(container)
+    async renderCharts() {
+      const fieldNames = Object.keys(this.selectedProcessedData).filter(f => f !== 'tag');
+      if (fieldNames.length === 0) return;
+
+      // 初始化 loading
+      const total = fieldNames.length;
+      let current = 0;
+      const loading = this.$loading({
+        lock: true,
+        text: `正在渲染图表 (0/${total})`,
+        background: 'rgba(255, 255, 255, 0.7)'
+      });
+
+      try {
+        // 使用 for 循环进行顺序渲染
+        for (const fieldName of fieldNames) {
+          const container = this.$refs[`chart-${fieldName}`]?.[0];
+          if (!container) continue;
+
+          // 销毁旧实例
+          if (echarts.getInstanceByDom(container)) {
+            echarts.dispose(container);
+          }
+
+          // 创建新实例并渲染
+          const chart = echarts.init(container);
+          this.charts[fieldName] = chart;
+          chart.setOption(this.getChartOption(fieldName));
+
+          // 更新进度
+          current++;
+          loading.setText(`正在渲染图表 (${current}/${total})`);
+
+          // 释放主线程
+          await new Promise(resolve => setTimeout(resolve, 20));
         }
-        const chart = echarts.init(container)
-        this.charts[fieldName] = chart
-        chart.setOption(this.getChartOption(fieldName))
-      })
+      } catch (error) {
+        console.error('图表渲染失败:', error);
+      } finally {
+        loading.close();
+      }
     },
 
     getChartOption(fieldName) {
@@ -295,6 +332,7 @@ export default {
     }
   },
   created() {
+    this.isLoading = true;
     this.fetchData();
   },
   mounted() {
@@ -306,8 +344,22 @@ export default {
   },
 
   watch: {
-    selectedDeviceIds() {
-      this.updateCharts();//不重新获取数据，只更新图表
+    selectedDeviceIds: {
+      handler(newVal, oldVal) {
+        if (this.isLoading) {
+          console.log("selectedDeviceIds 变化时，忽略，因为数据正在加载中");
+          return;
+        }
+
+        if (JSON.stringify(newVal) === JSON.stringify(oldVal)) {
+          console.log("selectedDeviceIds 未发生实际变化，忽略渲染");
+          return;
+        }
+
+        console.log("selectedDeviceIds 变化，重新渲染图表");
+        this.updateCharts();
+      },
+      deep: true, // 监听数组内部变化
     },
     devices() {
       this.fetchData();
@@ -328,6 +380,7 @@ export default {
   padding: 0 10px 10px;
   box-sizing: border-box; /* 包括内边距和边框在内的宽高计算 */
 }
+
 .chart-controls {
   display: flex;
   align-items: center;
@@ -339,6 +392,7 @@ export default {
   top: 0;
   z-index: 100;
 }
+
 .switch-item {
   margin-right: 10px;
 }
