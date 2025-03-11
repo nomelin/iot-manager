@@ -546,6 +546,8 @@ export default {
     },
     clearAllTask() {
       this.taskInfos = {};
+      // 同时清理本地存储中的所有任务
+      localStorage.removeItem('failedTasks');
     },
     // 从存储恢复失败任务
     async restoreFailedTasks() {
@@ -561,6 +563,7 @@ export default {
         // 更新存储（移除过期记录）
         localStorage.setItem('failedTasks', JSON.stringify(failedTasks));
 
+        console.log('恢复失败任务:', JSON.stringify(failedTasks));
         // 获取任务详情
         for (const {taskId} of failedTasks) {
           if (!this.taskInfos[taskId]) { // 避免重复显示
