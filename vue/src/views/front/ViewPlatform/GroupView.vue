@@ -1,5 +1,13 @@
 <template>
   <div class="group-view">
+    <!-- 统一控制所有图表的开关 -->
+    <div class="chart-controls">
+      <el-switch v-model="showLegend" active-text="显示图例" @change="updateCharts"/>
+      <el-switch v-model="isSmooth" active-text="平滑曲线" @change="updateCharts"/>
+      <el-switch v-model="isSampling" active-text="降采样" @change="updateCharts"/>
+      <el-switch v-model="isAnimation" active-text="开启动画" @change="updateCharts"/>
+    </div>
+
     <el-row :gutter="30">
       <el-col
           v-for="(fieldData, fieldName) in processedData"
@@ -7,19 +15,38 @@
           :span="12"
           class="chart-container"
       >
-        <LineChart :data="fieldData" :title="fieldName" height="400px" width="100%"/>
+        <div class="chart-title">
+          {{ fieldName }}
+          <el-button @click="handleOpenFullscreen(fieldName)">
+            <i class="el-icon-full-screen"></i> 全屏显示
+          </el-button>
+        </div>
+        <div :ref="`chart-${fieldName}`" class="chart" :style="{ height: '400px' }"></div>
       </el-col>
     </el-row>
+
+    <!-- 全屏图表对话框 -->
+    <el-dialog
+        :visible.sync="fullscreenVisible"
+        fullscreen
+    >
+      <SimpleFullScreenChart
+          v-if="fullscreenVisible"
+          :chart-option="currentChartOption"
+          :title="currentChartTitle"
+          @close="fullscreenVisible = false"
+      />
+    </el-dialog>
   </div>
 </template>
 
-
 <script>
-import LineChart from "@/views/front/ViewPlatform/charts/LineChart.vue";
+import * as echarts from 'echarts'
+import SimpleFullScreenChart from './SimpleFullScreenChart.vue'
 
 export default {
+  components: { SimpleFullScreenChart },
   name: "GroupView",
-  components: {LineChart},
   props: {
     selectedDeviceIds: {
       type: Array,
@@ -40,6 +67,14 @@ export default {
   data() {
     return {
       processedData: {}, // 存储整理后的字段数据
+      charts: {},
+      fullscreenVisible: false,
+      currentChartOption: null,
+      currentChartTitle: '',
+      showLegend: true,
+      isSmooth: true,
+      isSampling: true,
+      isAnimation: false
     };
   },
   methods: {
@@ -134,11 +169,78 @@ export default {
       });
       // console.log("fieldsMap: " + JSON.stringify(fieldsMap));
       return fieldsMap;
+    },
+
+    async updateCharts() {
+      await this.$nextTick()
+      this.renderCharts()
+    },
+
+    renderCharts() {
+      Object.keys(this.processedData).forEach(fieldName => {
+        const container = this.$refs[`chart-${fieldName}`][0]
+        if (echarts.getInstanceByDom(container)) {
+          echarts.dispose(container)
+        }
+        const chart = echarts.init(container)
+        this.charts[fieldName] = chart
+        chart.setOption(this.getChartOption(fieldName))
+      })
+    },
+
+    getChartOption(fieldName) {
+      const fieldData = this.processedData[fieldName]
+      return {
+        title: { text: fieldName, left: 'center' },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+        toolbox: {
+          show: true,
+          feature: {
+            saveAsImage: { title: '保存为PNG' },
+            dataZoom: { show: true },
+            dataView: { show: true, readOnly: false },
+            restore: { show: true }
+          }
+        },
+        legend: this.showLegend ? {
+          data: fieldData.map(d => d.deviceName),
+          top: '10%'
+        } : undefined,
+        xAxis: { type: 'time' },
+        yAxis: { type: 'value' },
+        series: fieldData.map(deviceData => ({
+          name: deviceData.deviceName,
+          type: 'line',
+          data: deviceData.data,
+          smooth: this.isSmooth,
+          showSymbol: false,
+          animation: this.isAnimation,
+          sampling: this.isSampling ? 'lttb' : null
+        }))
+      }
+    },
+
+    handleOpenFullscreen(fieldName) {
+      this.currentChartOption = this.getChartOption(fieldName)
+      this.currentChartTitle = fieldName
+      this.fullscreenVisible = true
+    },
+
+    handleResize() {
+      Object.values(this.charts).forEach(chart => chart.resize())
     }
   },
   created() {
     this.fetchData();
   },
+  mounted() {
+    window.addEventListener('resize', this.handleResize)
+  },
+  beforeDestroy() {
+    window.removeEventListener('resize', this.handleResize)
+    Object.values(this.charts).forEach(chart => chart.dispose())
+  },
+
   watch: {
     selectedDeviceIds() {
       this.fetchData();//TODO 选择设备变化时不需要重新加载数据
@@ -148,9 +250,12 @@ export default {
     },
     dateRange() {
       this.fetchData();
+    },
+    processedData() {
+      this.updateCharts();
     }
   }
-};
+}
 </script>
 
 <style scoped>
@@ -167,5 +272,25 @@ export default {
 
 .chart-container:last-child {
   margin-bottom: 0; /* 最后一个图表去掉间距 */
+}
+.chart-controls {
+  padding: 10px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 20px;
+}
+
+.chart-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 0 10px;
+}
+
+.chart {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 </style>
