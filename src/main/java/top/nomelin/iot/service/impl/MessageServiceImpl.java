@@ -1,9 +1,9 @@
 package top.nomelin.iot.service.impl;
 
 
+import cn.hutool.core.util.ObjectUtil;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import top.nomelin.iot.cache.CurrentUserCache;
 import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.enums.CodeMessage;
@@ -31,7 +31,6 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    @Transactional
     public void sendSystemMessage(Integer receiveId, String title, String content, MessageType type) {
         Message message = new Message();
         message.setSendId(Constants.SYSTEM_SENDER_ID);
@@ -54,10 +53,10 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    @Transactional
     public void markMessageStatus(Integer messageId, MessageStatus status) {
         Message message = checkMessagePermission(messageId);
-        Long updateTime = Instant.now().getEpochSecond();
+        //获取毫秒级时间戳
+        Long updateTime = System.currentTimeMillis();
         if (message.getStatus() == status) {
             log.warn("消息状态未改变 | messageId:{} | status:{}", messageId, status);
             return;
@@ -66,15 +65,31 @@ public class MessageServiceImpl implements MessageService {
             log.warn("消息状态不能设置为未读 | messageId:{} | status:{}", messageId, status);
             throw new BusinessException(CodeMessage.INVALID_STATUS_ERROR);
         }
-        message.setStatus(status);
+        MessageStatus oldStatus = message.getStatus();
+        if (oldStatus == MessageStatus.UNREAD && status == MessageStatus.MARKED) {
+            log.warn("消息状态不能从未读直接变为标记 | messageId:{} | status:{}", messageId, status);
+            throw new BusinessException(CodeMessage.INVALID_STATUS_ERROR);
+        }
         // 只有未读消息变为已读时才更新已读时间。比如标记状态取消变为已读，则不更新已读时间
-        if (status == MessageStatus.READ && message.getStatus() == MessageStatus.UNREAD) {
+        if (status == MessageStatus.READ && oldStatus == MessageStatus.UNREAD) {
             message.setReadTime(updateTime);
         } else if (status == MessageStatus.DELETED) {
             message.setDeleteTime(updateTime);
         }
-        log.info("更新消息状态 | messageId:{} | status:{}", messageId, status);
+        message.setStatus(status);
+        messageMapper.updateById(message);
+        log.info("更新消息状态 | messageId:{} | status:{}->{}", messageId, oldStatus, status);
     }
+
+    @Override
+    public void deleteMessageBatch(List<Integer> messageIds) {
+        int currentUserId = currentUserCache.getCurrentUser().getId();
+        for (Integer messageId : messageIds) {
+            markMessageStatus(messageId, MessageStatus.DELETED);
+        }
+        log.info("批量删除消息 | messageIds:{}", messageIds);
+    }
+
 
     @Override
     public List<Message> getAllSimpleMessages(MessageType type, MessageStatus status) {
@@ -89,6 +104,9 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     public List<Message> getAllSimpleMessages(MessageType type, MessageStatus status, String keyword) {
+        if (ObjectUtil.isEmpty(keyword)) {
+            return getAllSimpleMessages(type, status);
+        }
         int currentUserId = currentUserCache.getCurrentUser().getId();
         Message message = new Message();
         message.setReceiveId(currentUserId);

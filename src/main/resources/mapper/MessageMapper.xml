@@ -11,10 +11,10 @@
         <result column="title" property="title"/>
         <result column="content" property="content"/>
         <result column="type" property="type"
-                typeHandler="org.apache.ibatis.type.EnumOrdinalTypeHandler"
+                typeHandler="org.apache.ibatis.type.EnumTypeHandler"
                 javaType="top.nomelin.iot.model.enums.MessageType"/>
         <result column="status" property="status"
-                typeHandler="org.apache.ibatis.type.EnumOrdinalTypeHandler"
+                typeHandler="org.apache.ibatis.type.EnumTypeHandler"
                 javaType="top.nomelin.iot.model.enums.MessageStatus"/>
         <result column="create_time" property="createTime"/>
         <result column="read_time" property="readTime"/>
@@ -25,18 +25,18 @@
             useGeneratedKeys="true" keyColumn="id" keyProperty="id">
         INSERT INTO message (send_id, receive_id, title, content, type, status, create_time, read_time, delete_time)
         VALUES (#{sendId}, #{receiveId}, #{title}, #{content},
-                #{type, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler},
-                #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler},
+                #{type, typeHandler=org.apache.ibatis.type.EnumTypeHandler},
+                #{status, typeHandler=org.apache.ibatis.type.EnumTypeHandler},
                 #{createTime}, #{readTime}, #{deleteTime})
     </insert>
 
-    <update id="update" parameterType="top.nomelin.iot.model.Message">
+    <update id="updateById" parameterType="top.nomelin.iot.model.Message">
         UPDATE message
         <set>
             <if test="title != null">title = #{title},</if>
             <if test="content != null">content = #{content},</if>
-            <if test="type != null">type = #{type, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler},</if>
-            <if test="status != null">status = #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler},
+            <if test="type != null">type = #{type, typeHandler=org.apache.ibatis.type.EnumTypeHandler},</if>
+            <if test="status != null">status = #{status, typeHandler=org.apache.ibatis.type.EnumTypeHandler},
             </if>
             <if test="readTime != null">read_time = #{readTime},</if>
             <if test="deleteTime != null">delete_time = #{deleteTime}</if>
@@ -75,10 +75,10 @@
                 AND content LIKE CONCAT('%', #{content}, '%')
             </if>
             <if test="type != null">
-                AND type = #{type, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
+                AND type = #{type, typeHandler=org.apache.ibatis.type.EnumTypeHandler}
             </if>
             <if test="status != null">
-                AND status = #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
+                AND status = #{status, typeHandler=org.apache.ibatis.type.EnumTypeHandler}
             </if>
             <if test="createTime != null">
                 AND create_time = #{createTime}
@@ -122,10 +122,10 @@
                 AND content LIKE CONCAT('%', #{content}, '%')
             </if>
             <if test="type != null">
-                AND type = #{type, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
+                AND type = #{type, typeHandler=org.apache.ibatis.type.EnumTypeHandler}
             </if>
             <if test="status != null">
-                AND status = #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
+                AND status = #{status, typeHandler=org.apache.ibatis.type.EnumTypeHandler}
             </if>
             <if test="createTime != null">
                 AND create_time = #{createTime}
@@ -136,7 +136,7 @@
             <if test="deleteTime != null">
                 AND delete_time = #{deleteTime}
             </if>
-            AND status != 2#不查询已删除的消息
+            AND status != 'DELETED' #不查询已删除的消息
         </where>
     </select>
 
@@ -144,10 +144,10 @@
         SELECT COUNT(*) FROM message
         WHERE receive_id = #{receiveId}
         <if test="type != null">
-            AND type = #{type, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
+            AND type = #{type, typeHandler=org.apache.ibatis.type.EnumTypeHandler}
         </if>
         <if test="status != null">
-            AND status = #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
+            AND status = #{status, typeHandler=org.apache.ibatis.type.EnumTypeHandler}
         </if>
     </select>
 

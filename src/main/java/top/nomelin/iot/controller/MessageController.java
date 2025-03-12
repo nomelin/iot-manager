@@ -12,6 +12,8 @@ import top.nomelin.iot.model.enums.MessageStatus;
 import top.nomelin.iot.model.enums.MessageType;
 import top.nomelin.iot.service.MessageService;
 
+import java.util.List;
+
 /**
  * MessageController
  * 消息管理控制器
@@ -48,6 +50,18 @@ public class MessageController {
             throw new BusinessException(CodeMessage.PARAM_LOST_ERROR, "标记消息状态失败，参数为空");
         }
         messageService.markMessageStatus(id, status);
+        return Result.success();
+    }
+
+    /**
+     * 删除消息,软删除
+     */
+    @RequestMapping("/delete")
+    public Result deleteMessageBatch(@RequestParam List<Integer> ids) {
+        if (ObjectUtil.isEmpty(ids)) {
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR, "删除消息失败，id列表为空");
+        }
+        messageService.deleteMessageBatch(ids);
         return Result.success();
     }
 

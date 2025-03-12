@@ -60,6 +60,12 @@ const routes = [
                 component: () => import('../views/front/GroupManage.vue')
             },
             {
+                path: 'alarm_manage',
+                name: 'alarmManage',
+                meta: {name: '告警配置'},
+                component: () => import('../views/front/AlarmManage.vue')
+            },
+            {
                 path: 'message_center',
                 name: 'MessageCenter',
                 meta: {name: '消息中心'},

@@ -17,8 +17,11 @@ import java.util.List;
 public interface MessageMapper {
     int insert(Message message);
 
-    int update(Message message);
+    int updateById(Message message);
 
+    /**
+     * 硬删除消息，最好不要使用。软删除可以用updateById方法，将status字段设置为[删除]
+     */
     int delete(Integer id);
 
     Message selectById(Integer id);

@@ -19,9 +19,9 @@
         </router-link>
         <div class="user-info" @click="goToUserProfile">
           <el-avatar
-              class="avatar"
               :size="45"
-              :src="defaultAvatar">
+              :src="defaultAvatar"
+              class="avatar">
           </el-avatar>
           <div class="username">{{ user?.name || '用户' }}</div>
         </div>
@@ -63,6 +63,10 @@
           <el-menu-item class="el-menu-item" index="/front/group_manage">
             <i class="el-icon-folder-opened"></i>
             <span slot="title" class="words">组管理</span>
+          </el-menu-item>
+          <el-menu-item class="el-menu-item" index="/front/alarm_manage">
+            <i class="el-icon-warning"></i>
+            <span slot="title" class="words">告警管理</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/message_center">
             <i class="el-icon-message-solid"></i>

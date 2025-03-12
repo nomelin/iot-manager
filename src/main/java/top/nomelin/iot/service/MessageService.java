@@ -29,6 +29,11 @@ public interface MessageService {
     void markMessageStatus(Integer messageId, MessageStatus status);
 
     /**
+     * 删除消息
+     */
+    void deleteMessageBatch(List<Integer> messageIds);
+
+    /**
      * 获取简略消息列表，不包含消息content，不包含删除的消息
      */
     List<Message> getAllSimpleMessages(MessageType type, MessageStatus status);

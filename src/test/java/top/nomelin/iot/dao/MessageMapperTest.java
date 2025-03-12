@@ -62,7 +62,7 @@ class MessageMapperTest {
         testMessage.setReadTime(currentTime + 1000);
 
         // 执行更新
-        int result = messageMapper.update(testMessage);
+        int result = messageMapper.updateById(testMessage);
         assertEquals(1, result);
 
         // 验证更新
@@ -81,7 +81,7 @@ class MessageMapperTest {
         message.setId(testMessage.getId());
         message.setStatus(MessageStatus.READ);
         message.setReadTime(updateTime);
-        int result = messageMapper.update(message);
+        int result = messageMapper.updateById(message);
         assertEquals(1, result);
         Message readMsg = messageMapper.selectById(testMessage.getId());
         assertEquals(MessageStatus.READ, readMsg.getStatus());
@@ -90,7 +90,7 @@ class MessageMapperTest {
         // 测试标记为删除
         message.setStatus(MessageStatus.DELETED);
         message.setDeleteTime(updateTime + 1000);
-        result = messageMapper.update(message);
+        result = messageMapper.updateById(message);
         assertEquals(1, result);
         Message deletedMsg = messageMapper.selectById(testMessage.getId());
         assertEquals(MessageStatus.DELETED, deletedMsg.getStatus());
