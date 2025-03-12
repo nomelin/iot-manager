@@ -42,6 +42,8 @@ public enum CodeMessage {
     INVALID_TAG_ERROR("612", "非法标签"),
     TAG_MEASUREMENT_CONFLICT("613", "标签属性冲突"),
 
+    INVALID_STATUS_ERROR("701", "消息不能更新到该状态"),
+
 
     SYSTEM_ERROR("800", "系统异常"),
     DB_ERROR("801", "数据库异常"),

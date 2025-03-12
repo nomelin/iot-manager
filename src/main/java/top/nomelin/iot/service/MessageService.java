@@ -1,9 +1,10 @@
 package top.nomelin.iot.service;
 
-import cn.hutool.db.PageResult;
 import top.nomelin.iot.model.Message;
 import top.nomelin.iot.model.enums.MessageStatus;
 import top.nomelin.iot.model.enums.MessageType;
+
+import java.util.List;
 
 /**
  * MessageService
@@ -28,10 +29,14 @@ public interface MessageService {
     void markMessageStatus(Integer messageId, MessageStatus status);
 
     /**
-     * 分页获取消息列表
+     * 获取简略消息列表，不包含消息content，不包含删除的消息
      */
-    PageResult<Message> listMessages(MessageType type, MessageStatus status,
-                                     Integer pageNum, Integer pageSize);
+    List<Message> getAllSimpleMessages(MessageType type, MessageStatus status);
+
+    /**
+     * 获取简略消息列表，不包含消息content，不包含删除的消息，根据关键字搜索
+     */
+    List<Message> getAllSimpleMessages(MessageType type, MessageStatus status, String keyword);
 
     /**
      * 获取未读消息数量

@@ -93,6 +93,53 @@
 
     </select>
 
+    <select id="selectSimpleAll" resultType="top.nomelin.iot.model.Message">
+        SELECT id,
+        send_id,
+        receive_id,
+        title,
+        type,
+        status,
+        create_time,
+        read_time,
+        delete_time
+        FROM message
+        <where>
+            <if test="id != null">
+                WHERE id = #{id}
+            </if>
+            <if test="sendId != null">
+                AND send_id = #{sendId}
+            </if>
+            <if test="receiveId != null">
+                AND receive_id = #{receiveId}
+            </if>
+            <if test="title != null">
+                AND title LIKE CONCAT('%', #{title}, '%')
+            </if>
+            #虽然是查询缩略信息，但也可以用内容模糊查询
+            <if test="content != null">
+                AND content LIKE CONCAT('%', #{content}, '%')
+            </if>
+            <if test="type != null">
+                AND type = #{type, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
+            </if>
+            <if test="status != null">
+                AND status = #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
+            </if>
+            <if test="createTime != null">
+                AND create_time = #{createTime}
+            </if>
+            <if test="readTime != null">
+                AND read_time = #{readTime}
+            </if>
+            <if test="deleteTime != null">
+                AND delete_time = #{deleteTime}
+            </if>
+            AND status != 2#不查询已删除的消息
+        </where>
+    </select>
+
     <select id="countByReceiveId" resultType="int">
         SELECT COUNT(*) FROM message
         WHERE receive_id = #{receiveId}
@@ -103,5 +150,6 @@
             AND status = #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
         </if>
     </select>
+
 
 </mapper>

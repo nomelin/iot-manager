@@ -23,7 +23,15 @@ public interface MessageMapper {
 
     Message selectById(Integer id);
 
+    /**
+     * 查询消息列表,返回的是完整的消息对象，包含[删除]的消息
+     */
     List<Message> selectAll(Message message);
+
+    /**
+     * 查询消息列表，不包含消息内容字段，不包含[删除]的消息
+     */
+    List<Message> selectSimpleAll(Message message);
 
     int countByReceiveId(Integer receiveId, MessageType type, MessageStatus status);
 }

@@ -1,7 +1,6 @@
 package top.nomelin.iot.service.impl;
 
 
-import cn.hutool.db.PageResult;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,16 +16,17 @@ import top.nomelin.iot.service.MessageService;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class MessageServiceImpl implements MessageService {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(MessageServiceImpl.class);
 
-    private final MessageMapper messageDao;
+    private final MessageMapper messageMapper;
     private final CurrentUserCache currentUserCache;
 
-    public MessageServiceImpl(MessageMapper messageDao, CurrentUserCache currentUserCache) {
-        this.messageDao = messageDao;
+    public MessageServiceImpl(MessageMapper messageMapper, CurrentUserCache currentUserCache) {
+        this.messageMapper = messageMapper;
         this.currentUserCache = currentUserCache;
     }
 
@@ -42,52 +42,85 @@ public class MessageServiceImpl implements MessageService {
         message.setStatus(MessageStatus.UNREAD);
         message.setCreateTime(Instant.now().getEpochSecond());
 
-        messageDao.insert(message);
+        messageMapper.insert(message);
         log.info("系统消息发送成功 | receiveId:{} | title:{} | type:{}", receiveId, title, type);
     }
 
     @Override
     public Message getMessage(Integer messageId) {
         Message message = checkMessagePermission(messageId);
-        log.debug("获取消息详情 | messageId:{}", messageId);
+        log.info("获取消息详情 | messageId:{}", messageId);
         return message;
     }
 
     @Override
     @Transactional
     public void markMessageStatus(Integer messageId, MessageStatus status) {
-        checkMessagePermission(messageId);
+        Message message = checkMessagePermission(messageId);
         Long updateTime = Instant.now().getEpochSecond();
-//        messageDao.updateStatus(messageId, status, updateTime);
+        if (message.getStatus() == status) {
+            log.warn("消息状态未改变 | messageId:{} | status:{}", messageId, status);
+            return;
+        }
+        if (status == MessageStatus.UNREAD) {
+            log.warn("消息状态不能设置为未读 | messageId:{} | status:{}", messageId, status);
+            throw new BusinessException(CodeMessage.INVALID_STATUS_ERROR);
+        }
+        message.setStatus(status);
+        // 只有未读消息变为已读时才更新已读时间。比如标记状态取消变为已读，则不更新已读时间
+        if (status == MessageStatus.READ && message.getStatus() == MessageStatus.UNREAD) {
+            message.setReadTime(updateTime);
+        } else if (status == MessageStatus.DELETED) {
+            message.setDeleteTime(updateTime);
+        }
         log.info("更新消息状态 | messageId:{} | status:{}", messageId, status);
     }
 
     @Override
-    public PageResult<Message> listMessages(MessageType type, MessageStatus status,
-                                            Integer pageNum, Integer pageSize) {
+    public List<Message> getAllSimpleMessages(MessageType type, MessageStatus status) {
         int currentUserId = currentUserCache.getCurrentUser().getId();
-        int offset = (pageNum - 1) * pageSize;
+        Message message = new Message();
+        message.setReceiveId(currentUserId);
+        message.setType(type);
+        message.setStatus(status);
+        log.info("获取用户消息列表 | type:{} | status:{}", type, status);
+        return messageMapper.selectSimpleAll(message);
+    }
 
-//        List<Message> messages = messageDao.selectByReceiveId(
-//                currentUserId, type, status, offset, pageSize
-//        );
-        int total = messageDao.countByReceiveId(currentUserId, type, status);
-
-        //TODO 分页查询未完成
-        return new PageResult<Message>(pageNum, pageSize, total);
+    @Override
+    public List<Message> getAllSimpleMessages(MessageType type, MessageStatus status, String keyword) {
+        int currentUserId = currentUserCache.getCurrentUser().getId();
+        Message message = new Message();
+        message.setReceiveId(currentUserId);
+        message.setType(type);
+        message.setStatus(status);
+        //搜索标题
+        message.setTitle(keyword);
+        List<Message> messages = messageMapper.selectSimpleAll(message);
+        //搜索内容
+        message.setContent(keyword);
+        message.setTitle(null);
+        List<Message> messages2 = messageMapper.selectSimpleAll(message);
+        //去重
+        Set<Message> set = new java.util.HashSet<>();
+        set.addAll(messages);
+        set.addAll(messages2);
+        messages = new java.util.ArrayList<>(set);
+        log.info("获取用户消息列表 | type:{} | status:{} | keyword:{}", type, status, keyword);
+        return messages;
     }
 
     @Override
     public int getUnreadCount() {
         int currentUserId = currentUserCache.getCurrentUser().getId();
-        return messageDao.countByReceiveId(
+        return messageMapper.countByReceiveId(
                 currentUserId, null, MessageStatus.UNREAD
         );
     }
 
     // 权限校验统一方法
     private Message checkMessagePermission(Integer messageId) {
-        Message message = messageDao.selectById(messageId);
+        Message message = messageMapper.selectById(messageId);
         if (message == null) {
             log.warn("消息不存在 | messageId:{}", messageId);
             throw new BusinessException(CodeMessage.NOT_FOUND_ERROR);
