@@ -682,6 +682,7 @@ export default {
   margin-bottom: 8px;
   background: #f8f9fa;
   border-radius: 1rem;
+  transition: transform 0.1s ease, box-shadow 0.1s ease; /* 添加平滑过渡效果 */
 }
 
 /*鼠标指针选中时偏移卡片*/

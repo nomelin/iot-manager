@@ -114,7 +114,7 @@ public class Message {
             return false;
         }
         Message message = (Message) o;
-        return id.equals(message.id) && sendId.equals(message.sendId) && receiveId.equals(message.receiveId) && Objects.equals(title, message.title) && content.equals(message.content) && type == message.type && status == message.status && createTime.equals(message.createTime) && Objects.equals(readTime, message.readTime) && Objects.equals(deleteTime, message.deleteTime);
+        return id.equals(message.id) && sendId.equals(message.sendId) && receiveId.equals(message.receiveId) && Objects.equals(title, message.title) && Objects.equals(content, message.content) && type == message.type && status == message.status && createTime.equals(message.createTime) && Objects.equals(readTime, message.readTime) && Objects.equals(deleteTime, message.deleteTime);
     }
 
     @Override

@@ -118,6 +118,10 @@ public class TemplateServiceImpl implements TemplateService {
     @Override
     public void deleteTemplate(int templateId) {
         checkPermission(templateId);
+        // 删除mysql的模板行
+        templateMapper.delete(templateId);//级联删除mysql的设备
+        log.info("删除mysql模板成功,同时级联删除了mysql设备行，templateId: {}", templateId);
+
         // 删除iotdb的模板, 所有策略
         List<StorageStrategy> strategies = strategyManager.getAllStrategies();
         for (StorageStrategy strategy : strategies) {
@@ -126,9 +130,6 @@ public class TemplateServiceImpl implements TemplateService {
             log.info("删除iotdb模板成功，templateName: {}",
                     Constants.TEMPLATE_PREFIX + templateId + strategy.getTemplateSuffix());
         }
-        // 删除mysql的模板行
-        templateMapper.delete(templateId);//级联删除mysql的设备
-        log.info("删除mysql模板成功,同时级联删除了mysql设备行，templateId: {}", templateId);
         log.info("删除模板成功，templateId: {}", templateId);
     }
 

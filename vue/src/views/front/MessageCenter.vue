@@ -1,110 +1,121 @@
 <template>
-  <div class="message-center">
-    <!-- 筛选区域 -->
-    <div class="filter-area">
-      <el-select v-model="filterStatus" clearable placeholder="消息状态">
-        <el-option
-            v-for="item in statusOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
+  <div class="container">
+    <div class="main-content">
+      <!-- 筛选区域 -->
+      <div class="filter-area">
+        <el-select v-model="filterStatus" clearable placeholder="消息状态筛选">
+          <el-option
+              v-for="item in statusOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+          />
+        </el-select>
+
+        <el-select v-model="filterType" clearable placeholder="消息类型筛选">
+          <el-option
+              v-for="item in typeOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+          />
+        </el-select>
+
+        <el-input
+            v-model="searchKeyword"
+            clearable
+            placeholder="搜索标题&内容"
+            style="width: 300px"
         />
-      </el-select>
 
-      <el-select v-model="filterType" clearable placeholder="消息类型">
-        <el-option
-            v-for="item in typeOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-        />
-      </el-select>
-
-      <el-input
-          v-model="searchKeyword"
-          clearable
-          placeholder="搜索标题/内容"
-          style="width: 200px"
-      />
-
-      <el-button type="danger" @click="handleBatchDelete">批量删除 ({{ selectedMessages.length }})</el-button>
-      <el-checkbox
-          v-model="selectAll"
-          :indeterminate="isIndeterminate"
-          style="margin-left: 15px"
-          @change="handleSelectAll"
-      >全选本页
-      </el-checkbox>
-    </div>
-
-    <!-- 消息列表 -->
-    <div class="message-list">
-      <el-card
-          v-for="msg in paginatedMessages"
-          :key="msg.id"
-          :class="{ 'read-card': msg.status === 'READ' }"
-          class="message-card"
-          @click.native="showDetail(msg)"
-      >
-        <div class="card-header">
-          <el-checkbox
-              v-model="selectedMessages"
-              :label="msg.id"
-              style="margin-right: 10px"
-              @click.native.stop
-          ><br></el-checkbox>
-          <div class="left-tags">
-            <el-tag :type="getTagType(msg.type)">{{ msg.type }}</el-tag>
-            <span v-if="msg.status === 'UNREAD'" class="unread-tag">未读</span>
-            <span v-if="msg.status === 'READ'||msg.status === 'MARKED'" class="read-tag">已读</span>
-          </div>
-          <i class="el-icon-delete delete-icon" @click.stop="deleteMessage(msg.id)"></i>
-        </div>
-
-        <h3 class="message-title">{{ msg.title }}</h3>
-
-        <div class="card-footer">
-          <div class="sender">来自：{{ msg.sendId === 0 ? '系统' : msg.sendId }}</div>
-          <div class="time">{{ formatTime(msg.createTime) }}</div>
-        </div>
-
-        <div class="mark-icon" @click.stop="toggleMark(msg)">
-          <i :class="msg.status === 'MARKED' ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
-        </div>
-      </el-card>
-    </div>
-
-    <!-- 分页 -->
-    <el-pagination
-        :current-page="currentPage"
-        :page-size="pageSize"
-        :page-sizes="[10, 20, 50]"
-        :total="total"
-        layout="total, sizes, prev, pager, next"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-    />
-
-    <!-- 详情对话框 -->
-    <el-dialog :title="currentMessage.title" :visible.sync="detailVisible">
-      <div class="detail-content">
-        <p><strong>来自：</strong>{{ currentMessage.sendId === 0 ? '系统' : currentMessage.sendId }}</p>
-        <p><strong>时间：</strong>{{ formatTime(currentMessage.createTime) }}</p>
-        <div class="message-content">{{ currentMessage.content }}</div>
+        <el-button type="danger" @click="handleBatchDelete">批量删除 ({{ selectedMessages.length }})</el-button>
+        <el-checkbox
+            v-model="selectAll"
+            :indeterminate="isIndeterminate"
+            style="margin-left: 15px"
+            @change="handleSelectAll"
+        >全选本页
+        </el-checkbox>
       </div>
 
-      <div slot="footer">
-        <el-button @click="detailVisible = false">关闭</el-button>
-        <el-button
-            :icon="currentMessage.status === 'MARKED' ? 'el-icon-star-on' : 'el-icon-star-off'"
-            type="warning"
-            @click="toggleMark(currentMessage)"
+      <!-- 消息列表 -->
+      <div class="message-list">
+        <el-card
+            v-for="msg in paginatedMessages"
+            :key="msg.id"
+            :class="{ 'read-card': msg.status === 'READ' }"
+            class="message-card"
+            @click.native="showDetail(msg)"
         >
-          {{ currentMessage.status === 'MARKED' ? '取消标记' : '标记' }}
-        </el-button>
-        <el-button type="danger" @click="deleteMessage(currentMessage.id)">删除</el-button>
+          <div class="card-header">
+            <el-checkbox
+                v-model="selectedMessages"
+                :label="msg.id"
+                style="margin-right: 10px"
+                @click.native.stop
+            ><br></el-checkbox>
+            <div class="left-tags">
+              <el-tag :type="getTagType(msg.type)">{{ getTagText(msg.type) }}</el-tag>
+              <span v-if="msg.status === 'UNREAD'" class="unread-tag">未读</span>
+              <span v-if="msg.status === 'READ'||msg.status === 'MARKED'" class="read-tag">已读</span>
+            </div>
+            <i class="el-icon-delete delete-icon" @click.stop="deleteMessage(msg.id)"></i>
+          </div>
+
+          <h3 class="message-title">{{ msg.title }}</h3>
+
+          <div class="card-footer">
+            <div class="sender">来自：
+              <span v-if="msg.sendId === 0"><i class="el-icon-warning"></i> 系统</span>
+              <span v-else>{{ msg.sendId }}</span>
+            </div>
+            <div class="time">{{ formatTime(msg.createTime) }}</div>
+          </div>
+
+          <div class="mark-icon" @click.stop="toggleMark(msg)">
+            <i :class="msg.status === 'MARKED' ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
+          </div>
+        </el-card>
       </div>
-    </el-dialog>
+
+      <!-- 分页 -->
+      <div class="pagination-container">
+        <!-- 分页 -->
+        <el-pagination
+            :current-page="currentPage"
+            :page-size="pageSize"
+            :page-sizes="[10, 50, 100]"
+            :total="total"
+            layout="total, sizes, prev, pager, next"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+        />
+      </div>
+
+      <!-- 详情对话框 -->
+      <el-dialog :title="currentMessage.title" :visible.sync="detailVisible">
+        <div class="detail-content">
+          <p><strong>发信人：</strong>
+            <span v-if="currentMessage.sendId === 0"><i class="el-icon-warning"></i> 系统</span>
+            <span v-else>{{ currentMessage.sendId }}</span>
+          </p>
+          <p><strong>发送时间：</strong>{{ formatTime(currentMessage.createTime) }}</p>
+          <div class="message-content">{{ currentMessage.content }}</div>
+        </div>
+
+        <div slot="footer">
+          <el-button @click="detailVisible = false">关闭</el-button>
+          <el-button
+              :icon="currentMessage.status === 'MARKED' ? 'el-icon-star-on' : 'el-icon-star-off'"
+              type="warning"
+              @click="toggleMark(currentMessage)"
+          >
+            {{ currentMessage.status === 'MARKED' ? '取消标记' : '标记' }}
+          </el-button>
+          <el-button type="danger" @click="deleteMessage(currentMessage.id)">删除</el-button>
+        </div>
+      </el-dialog>
+    </div>
   </div>
 </template>
 
@@ -208,7 +219,7 @@ export default {
       const newStatus = msg.status === 'MARKED' ? 'READ' : 'MARKED'
       await this.$request.post(`/message/mark/${msg.id}?status=${newStatus}`)
 
-      msg.status = newStatus
+      this.$set(msg, 'status', newStatus) // 更新列表数据
       // 刷新消息列表
       await this.fetchMessages()
     },
@@ -268,6 +279,9 @@ export default {
       }
       return map[type] || 'info'
     },
+    getTagText(type) {
+      return this.typeOptions.find(item => item.value === type).label
+    },
 
     formatTime(timestamp) {
       return dayjs(timestamp).format('YYYY-MM-DD HH:mm:ss')
@@ -297,10 +311,51 @@ export default {
 </script>
 
 <style scoped>
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 防止全局滚动条 */
+  font-weight: bold;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow: hidden; /* 关键样式 */
+  /*justify-content: center;*/
+}
+
+.filter-area {
+  display: flex;
+  gap: 15px; /* 设置子元素之间的间隔 */
+  align-items: center; /* 可选，确保子元素垂直居中对齐 */
+  margin-bottom: 10px;
+}
+.message-list {
+  overflow: auto;
+  padding-bottom: 20px;
+  background-color: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  justify-items: center;
+}
+
 .message-card {
+  margin-top: 10px;
   margin-bottom: 20px;
   position: relative;
   cursor: pointer;
+  border-radius: 1rem;
+  width: 80%;
+  transition: transform 0.1s ease, box-shadow 0.1s ease; /* 添加平滑过渡效果 */
+}
+
+.message-card:hover {
+  transform: translateX(4px);
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1); /* 只在悬停时显示阴影 */
 }
 
 .read-card {
@@ -364,8 +419,37 @@ export default {
   border-radius: 4px;
 }
 
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px; /* 可根据需要调整分页按钮与内容的间距 */
+}
 
 /*.message-card ::v-deep .el-checkbox__label {*/
 /*  display: none !important;*/
+/*}*/
+
+::v-deep .el-button {
+  font-weight: bold !important;
+}
+
+::v-deep .el-collapse-item__header {
+  font-weight: bold !important;
+}
+
+::v-deep .el-dialog {
+  border-radius: 1.5rem !important;
+}
+
+::v-deep .el-select .el-input__inner::placeholder {
+  font-weight: bold !important; /* 设置 placeholder 为粗体 */
+}
+
+::v-deep .el-input__inner {
+  font-weight: bold !important; /* 设置输入框字体为粗体 */
+}
+
+/*::v-deep .el-select .el-option {*/
+/*  font-weight: bold !important; !* 设置下拉选项字体为粗体 *!*/
 /*}*/
 </style>
