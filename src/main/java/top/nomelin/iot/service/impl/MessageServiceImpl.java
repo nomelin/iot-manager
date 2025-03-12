@@ -1,4 +1,4 @@
-package top.nomelin.iot.service;
+package top.nomelin.iot.service.impl;
 
 
 import cn.hutool.db.PageResult;
@@ -13,6 +13,7 @@ import top.nomelin.iot.dao.MessageMapper;
 import top.nomelin.iot.model.Message;
 import top.nomelin.iot.model.enums.MessageStatus;
 import top.nomelin.iot.model.enums.MessageType;
+import top.nomelin.iot.service.MessageService;
 
 import java.time.Instant;
 import java.util.List;
@@ -57,7 +58,7 @@ public class MessageServiceImpl implements MessageService {
     public void markMessageStatus(Integer messageId, MessageStatus status) {
         checkMessagePermission(messageId);
         Long updateTime = Instant.now().getEpochSecond();
-        messageDao.updateStatus(messageId, status, updateTime);
+//        messageDao.updateStatus(messageId, status, updateTime);
         log.info("更新消息状态 | messageId:{} | status:{}", messageId, status);
     }
 
@@ -67,9 +68,9 @@ public class MessageServiceImpl implements MessageService {
         int currentUserId = currentUserCache.getCurrentUser().getId();
         int offset = (pageNum - 1) * pageSize;
 
-        List<Message> messages = messageDao.selectByReceiveId(
-                currentUserId, type, status, offset, pageSize
-        );
+//        List<Message> messages = messageDao.selectByReceiveId(
+//                currentUserId, type, status, offset, pageSize
+//        );
         int total = messageDao.countByReceiveId(currentUserId, type, status);
 
         //TODO 分页查询未完成

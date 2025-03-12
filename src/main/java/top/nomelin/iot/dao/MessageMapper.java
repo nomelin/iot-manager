@@ -23,10 +23,7 @@ public interface MessageMapper {
 
     Message selectById(Integer id);
 
-    List<Message> selectByReceiveId(Integer receiveId, MessageType type, MessageStatus status,
-                                    Integer offset, Integer limit);
-
-    int updateStatus(Integer id, MessageStatus status, Long updateTime);
+    List<Message> selectAll(Message message);
 
     int countByReceiveId(Integer receiveId, MessageType type, MessageStatus status);
 }

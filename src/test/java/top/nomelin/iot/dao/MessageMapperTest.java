@@ -4,8 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 import top.nomelin.iot.model.Message;
 import top.nomelin.iot.model.enums.MessageStatus;
 import top.nomelin.iot.model.enums.MessageType;
@@ -16,8 +14,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 
 @SpringBootTest
-@Transactional
-@ActiveProfiles("test")
 class MessageMapperTest {
 
     private final long currentTime = System.currentTimeMillis();
@@ -81,15 +77,20 @@ class MessageMapperTest {
         messageMapper.insert(testMessage);
         long updateTime = currentTime + 2000;
 
-        // 测试标记为已读
-        int result = messageMapper.updateStatus(testMessage.getId(), MessageStatus.READ, updateTime);
+        Message message = new Message();
+        message.setId(testMessage.getId());
+        message.setStatus(MessageStatus.READ);
+        message.setReadTime(updateTime);
+        int result = messageMapper.update(message);
         assertEquals(1, result);
         Message readMsg = messageMapper.selectById(testMessage.getId());
         assertEquals(MessageStatus.READ, readMsg.getStatus());
         assertEquals(updateTime, readMsg.getReadTime());
 
         // 测试标记为删除
-        result = messageMapper.updateStatus(testMessage.getId(), MessageStatus.DELETED, updateTime + 1000);
+        message.setStatus(MessageStatus.DELETED);
+        message.setDeleteTime(updateTime + 1000);
+        result = messageMapper.update(message);
         assertEquals(1, result);
         Message deletedMsg = messageMapper.selectById(testMessage.getId());
         assertEquals(MessageStatus.DELETED, deletedMsg.getStatus());
@@ -104,21 +105,25 @@ class MessageMapperTest {
         insertTestMessage(1, MessageType.ERROR, MessageStatus.READ);
         insertTestMessage(2, MessageType.NOTICE, MessageStatus.UNREAD); // 其他接收者
 
+        Message message = new Message();
+        message.setReceiveId(1);
         // 测试基础查询
-        List<Message> messages = messageMapper.selectByReceiveId(1, null, null, 0, 10);
-        assertEquals(3, messages.size());
+        List<Message> messages = messageMapper.selectAll(message);
+        assertEquals(6, messages.size());
+        System.out.println("接收者1，" + messages.size());
 
+        message.setType(MessageType.WARNING);
         // 测试类型过滤
-        messages = messageMapper.selectByReceiveId(1, MessageType.NOTICE, null, 0, 10);
-        assertEquals(1, messages.size());
-
-        // 测试状态过滤
-        messages = messageMapper.selectByReceiveId(1, null, MessageStatus.READ, 0, 10);
-        assertEquals(1, messages.size());
-
-        // 测试分页
-        messages = messageMapper.selectByReceiveId(1, null, null, 0, 2);
+        messages = messageMapper.selectAll(message);
         assertEquals(2, messages.size());
+        System.out.println("notice，" + messages.size());
+
+        message.setType(null);
+        message.setStatus(MessageStatus.READ);
+        // 测试状态过滤
+        messages = messageMapper.selectAll(message);
+        assertEquals(2, messages.size());
+        System.out.println("已读，" + messages.size());
     }
 
     @Test

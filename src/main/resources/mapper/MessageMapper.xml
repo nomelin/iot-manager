@@ -1,4 +1,3 @@
-<!-- MessageMapper.xml -->
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
@@ -13,10 +12,10 @@
         <result column="content" property="content"/>
         <result column="type" property="type"
                 typeHandler="org.apache.ibatis.type.EnumOrdinalTypeHandler"
-                javaType="top.nomelin.iot.enums.MessageType"/>
+                javaType="top.nomelin.iot.model.enums.MessageType"/>
         <result column="status" property="status"
                 typeHandler="org.apache.ibatis.type.EnumOrdinalTypeHandler"
-                javaType="top.nomelin.iot.enums.MessageStatus"/>
+                javaType="top.nomelin.iot.model.enums.MessageStatus"/>
         <result column="create_time" property="createTime"/>
         <result column="read_time" property="readTime"/>
         <result column="delete_time" property="deleteTime"/>
@@ -37,42 +36,61 @@
             <if test="title != null">title = #{title},</if>
             <if test="content != null">content = #{content},</if>
             <if test="type != null">type = #{type, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler},</if>
-            <if test="status != null">status = #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler},</if>
+            <if test="status != null">status = #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler},
+            </if>
             <if test="readTime != null">read_time = #{readTime},</if>
             <if test="deleteTime != null">delete_time = #{deleteTime}</if>
         </set>
         WHERE id = #{id}
     </update>
 
-    <update id="updateStatus">
-        UPDATE message
-        SET status = #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler},
-        <choose>
-            <when test="status.name() == 'READ'">read_time = #{updateTime}</when>
-            <when test="status.name() == 'DELETED'">delete_time = #{updateTime}</when>
-        </choose>
-        WHERE id = #{id}
-    </update>
-
     <delete id="delete">
-        DELETE FROM message WHERE id = #{id}
+        DELETE
+        FROM message
+        WHERE id = #{id}
     </delete>
 
     <select id="selectById" resultMap="messageResultMap">
-        SELECT * FROM message WHERE id = #{id}
+        SELECT *
+        FROM message
+        WHERE id = #{id}
     </select>
 
-    <select id="selectByReceiveId" resultMap="messageResultMap">
+    <select id="selectAll" resultMap="messageResultMap">
         SELECT * FROM message
-        WHERE receive_id = #{receiveId}
-        <if test="type != null">
-            AND type = #{type, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
-        </if>
-        <if test="status != null">
-            AND status = #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
-        </if>
-        ORDER BY create_time DESC
-        LIMIT #{offset}, #{limit}
+        <where>
+            <if test="id != null">
+                WHERE id = #{id}
+            </if>
+            <if test="sendId != null">
+                AND send_id = #{sendId}
+            </if>
+            <if test="receiveId != null">
+                AND receive_id = #{receiveId}
+            </if>
+            <if test="title != null">
+                AND title LIKE CONCAT('%', #{title}, '%')
+            </if>
+            <if test="content != null">
+                AND content LIKE CONCAT('%', #{content}, '%')
+            </if>
+            <if test="type != null">
+                AND type = #{type, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
+            </if>
+            <if test="status != null">
+                AND status = #{status, typeHandler=org.apache.ibatis.type.EnumOrdinalTypeHandler}
+            </if>
+            <if test="createTime != null">
+                AND create_time = #{createTime}
+            </if>
+            <if test="readTime != null">
+                AND read_time = #{readTime}
+            </if>
+            <if test="deleteTime != null">
+                AND delete_time = #{deleteTime}
+            </if>
+        </where>
+
     </select>
 
     <select id="countByReceiveId" resultType="int">
