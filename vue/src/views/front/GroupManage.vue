@@ -370,7 +370,7 @@ export default {
   transition: transform 0.2s;
   background: #f8f9fa;
   border-radius: 1.5rem;
-  height: 200px;
+  height: 20vh;
   overflow: auto;}
 
 .group-card:hover {
@@ -440,6 +440,12 @@ export default {
   gap: 8px;
 }
 
+.card-header {
+  display: flex;
+  justify-content: left;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
 
 ::v-deep .el-descriptions-item__label {
   font-weight: bold !important;

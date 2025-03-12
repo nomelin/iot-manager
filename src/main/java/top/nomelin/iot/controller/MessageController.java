@@ -1,10 +1,7 @@
 package top.nomelin.iot.controller;
 
 import cn.hutool.core.util.ObjectUtil;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import top.nomelin.iot.common.Result;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
@@ -57,7 +54,7 @@ public class MessageController {
      * 删除消息,软删除
      */
     @RequestMapping("/delete")
-    public Result deleteMessageBatch(@RequestParam List<Integer> ids) {
+    public Result deleteMessageBatch(@RequestBody List<Integer> ids) {
         if (ObjectUtil.isEmpty(ids)) {
             throw new BusinessException(CodeMessage.PARAM_LOST_ERROR, "删除消息失败，id列表为空");
         }

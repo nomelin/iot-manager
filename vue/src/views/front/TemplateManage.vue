@@ -12,19 +12,23 @@
     <el-row :gutter="20" class="card-row">
       <el-col v-for="template in templates" :key="template.id" :lg="6" :md="8" :sm="12" :xs="24">
         <el-card class="template-card" shadow="hover" @click.native="showDetail(template)">
-          <!-- 多选复选框 -->
-          <div class="card-checkbox">
-            <el-checkbox v-model="selectedTemplates" :label="template.id" @click.native.stop></el-checkbox>
-          </div>
-
           <!-- 模板基本信息 -->
           <div class="card-content">
             <div class="meta-info">
-              <div class="template-id">ID: {{ template.id }}</div>
+              <div class="card-header">
+                <!-- 多选复选框 -->
+                <div class="card-checkbox">
+                  <el-checkbox v-model="selectedTemplates" :label="template.id" @click.native.stop>
+                    <br>
+                  </el-checkbox>
+                </div>
+                <div class="template-id">ID: {{ template.id }}</div>
+              </div>
               <div class="template-name">{{ template.name }}</div>
             </div>
             <el-button class="delete-btn" icon="el-icon-delete" type="text"
-                       @click.stop="handleDelete(template.id)">删除模板</el-button>
+                       @click.stop="handleDelete(template.id)">删除模板
+            </el-button>
           </div>
         </el-card>
       </el-col>
@@ -85,14 +89,14 @@
         <!-- 文件上传，自动识别部分 -->
         <el-form-item label="自动识别类型">
           <el-upload
-              action=""
               :auto-upload="false"
               :on-change="handleCsvUpload"
               :show-file-list="false"
               accept=".csv"
+              action=""
           >
-            <el-button plain type="primary" icon="el-icon-upload">上传CSV文件</el-button>
-<!--            <span slot="tip" class="upload-tip">（自动识别数据类型）</span>-->
+            <el-button icon="el-icon-upload" plain type="primary">上传CSV文件</el-button>
+            <!--            <span slot="tip" class="upload-tip">（自动识别数据类型）</span>-->
           </el-upload>
         </el-form-item>
 
@@ -342,7 +346,7 @@ export default {
     async handleCsvUpload(file) {
       try {
         const content = await this.readFile(file.raw);
-        const { headers, dataRow } = this.parseCsv(content);
+        const {headers, dataRow} = this.parseCsv(content);
         console.log("headers", JSON.stringify(headers));
         console.log("dataRow", JSON.stringify(dataRow));
 
@@ -398,8 +402,6 @@ export default {
   },
 
 
-
-
 }
 </script>
 
@@ -432,11 +434,19 @@ export default {
   transition: transform 0.2s;
   background: #f8f9fa;
   border-radius: 1.5rem;
-  height: 200px;
-  overflow: auto;}
+  height: 20vh;
+  overflow: auto;
+}
 
 .template-card:hover {
   transform: translateY(-3px);
+}
+
+.card-header {
+  display: flex;
+  justify-content: left;
+  align-items: center;
+  border-bottom: 1px solid #eee;
 }
 
 .card-checkbox {

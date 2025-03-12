@@ -12,15 +12,16 @@
     <el-row :gutter="20" class="card-row">
       <el-col v-for="device in devices" :key="device.id" :lg="6" :md="8" :sm="12" :xs="24">
         <el-card class="device-card" shadow="hover" @click.native="showDetail(device)">
-          <!-- 多选复选框 -->
-          <div class="card-checkbox">
-            <el-checkbox v-model="selectedDevices" :label="device.id" @click.native.stop></el-checkbox>
-          </div>
-
           <!-- 设备基本信息 -->
           <div class="card-content">
             <div class="meta-info">
-              <div class="device-id">ID: {{ device.id }}</div>
+              <div class="card-header">
+                <!-- 多选复选框 -->
+                <div class="card-checkbox">
+                  <el-checkbox v-model="selectedDevices" :label="device.id" @click.native.stop><br></el-checkbox>
+                </div>
+                <div class="device-id">ID: {{ device.id }}</div>
+              </div>
               <div class="device-name">{{ device.name }}</div>
               <div class="device-tags">
                 <el-tag v-for="(tag, index) in device.tags" :key="index" class="tag-item" size="mini">
@@ -476,10 +477,16 @@ export default {
   transition: transform 0.2s;
   background: #f8f9fa;
   border-radius: 1.5rem;
-  height: 200px;
+  height: 20vh;
   overflow: auto;
 }
 
+.card-header {
+  display: flex;
+  justify-content: left;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
 .device-card:hover {
   transform: translateY(-3px);
 }

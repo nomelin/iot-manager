@@ -27,7 +27,14 @@
           style="width: 200px"
       />
 
-      <el-button type="danger" @click="handleBatchDelete">批量删除</el-button>
+      <el-button type="danger" @click="handleBatchDelete">批量删除 ({{ selectedMessages.length }})</el-button>
+      <el-checkbox
+          v-model="selectAll"
+          :indeterminate="isIndeterminate"
+          style="margin-left: 15px"
+          @change="handleSelectAll"
+      >全选本页
+      </el-checkbox>
     </div>
 
     <!-- 消息列表 -->
@@ -40,6 +47,12 @@
           @click.native="showDetail(msg)"
       >
         <div class="card-header">
+          <el-checkbox
+              v-model="selectedMessages"
+              :label="msg.id"
+              style="margin-right: 10px"
+              @click.native.stop
+          ><br></el-checkbox>
           <div class="left-tags">
             <el-tag :type="getTagType(msg.type)">{{ msg.type }}</el-tag>
             <span v-if="msg.status === 'UNREAD'" class="unread-tag">未读</span>
@@ -121,6 +134,8 @@ export default {
         {value: 'ERROR', label: '错误'}
       ],
       selectedMessages: [], // 存储选中的消息 ID
+      selectAll: false,
+      isIndeterminate: false,
     }
   },
 
@@ -134,7 +149,12 @@ export default {
   watch: {
     filterStatus: 'fetchMessages',
     filterType: 'fetchMessages',
-    searchKeyword: 'fetchMessages'
+    searchKeyword: 'fetchMessages',
+    selectedMessages(newVal) {
+      const currentPageIds = this.paginatedMessages.map(m => m.id)
+      this.selectAll = newVal.length > 0 && currentPageIds.every(id => newVal.includes(id))
+      this.isIndeterminate = !this.selectAll && newVal.length > 0
+    }
   },
 
   mounted() {
@@ -194,13 +214,50 @@ export default {
     },
 
     async deleteMessage(id) {
-      await this.$request.post(`/message/mark/${id}?status=DELETED`)
-      await this.fetchMessages()
+      try {
+        await this.$confirm('确定要删除这条消息吗？', '提示', {
+          type: 'warning'
+        })
+        await this.$request.post('/message/delete', [id])
+
+        await this.fetchMessages()
+        // 从已选列表中移除
+        this.selectedMessages = this.selectedMessages.filter(mId => mId !== id)
+        this.currentMessage = {}
+        this.detailVisible = false
+      } catch (error) {
+        if (error !== 'cancel') {
+          this.$message.error('删除失败')
+        }
+      }
     },
 
-    handleBatchDelete() {
-      // 需要实现多选功能，此处省略选择逻辑
-      this.$message.warning('请先实现消息选择功能')
+    async handleBatchDelete() {
+      if (this.selectedMessages.length === 0) {
+        this.$message.warning('请选择要删除的消息')
+        return
+      }
+
+      try {
+        await this.$confirm(`确定要删除选中的 ${this.selectedMessages.length} 条消息吗？`, '提示', {
+          type: 'warning'
+        })
+
+        const res = await this.$request.post('/message/delete', this.selectedMessages)
+
+        if (res.code === '200') {
+          this.$message.success('删除成功')
+          await this.fetchMessages()
+          this.selectedMessages = []
+          this.currentPage = 1
+        } else {
+          this.$message.error(res.msg)
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          this.$message.error('删除失败')
+        }
+      }
     },
 
     getTagType(type) {
@@ -222,7 +279,19 @@ export default {
 
     handleCurrentChange(val) {
       this.currentPage = val
-    }
+    },
+
+    handleSelectAll(val) {
+      const currentPageIds = this.paginatedMessages.map(m => m.id)
+      if (val) {
+        // 去重添加
+        const newSelection = [...new Set([...this.selectedMessages, ...currentPageIds])]
+        this.selectedMessages = newSelection
+      } else {
+        // 过滤保留不在当前页的选项
+        this.selectedMessages = this.selectedMessages.filter(id => !currentPageIds.includes(id))
+      }
+    },
   }
 }
 </script>
@@ -270,6 +339,13 @@ export default {
   margin: 10px 0;
 }
 
+.card-header {
+  display: flex;
+  justify-content: left;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
+
 .card-footer {
   display: flex;
   justify-content: space-between;
@@ -287,4 +363,9 @@ export default {
   background-color: #f9f9f9;
   border-radius: 4px;
 }
+
+
+/*.message-card ::v-deep .el-checkbox__label {*/
+/*  display: none !important;*/
+/*}*/
 </style>
