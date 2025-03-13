@@ -134,6 +134,7 @@ export default {
           position: "bottom-right",
           duration: 2000
         })
+        console.log(`devices: ${JSON.stringify(this.allDeviceIds)},数据获取成功，服务器耗时 ${queryEndTime - queryStartTime}ms`)
         // console.log("resp", JSON.stringify(responses));
         let totalLength = 0;
         responses.forEach((res) => {
@@ -146,7 +147,14 @@ export default {
         });
         const rawData = responses.map((res) => res.data);
         if (totalLength === 0) {
-          this.$message.warning("所选时间范围内无任何数据");
+          this.$notify({
+            title: `所选时间范围内无任何数据`,
+            message: "请选择其他时间范围",
+            type: "warning",
+            position: "bottom-left",
+            duration: 1000
+          })
+          // this.$message.warning("所选时间范围内无任何数据");
           return;
         }
 
@@ -160,6 +168,7 @@ export default {
           duration: 2500,
           offset: 80
         })
+        console.log(`devices: ${JSON.stringify(this.allDeviceIds)},数据转换成功，共 ${totalLength} 条数据, 前端处理耗时 ${processEndTime - queryEndTime}ms`)
         this.isLoading = false;
         await this.updateCharts()
       } catch (error) {

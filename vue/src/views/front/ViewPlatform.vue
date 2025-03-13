@@ -111,7 +111,7 @@ export default {
         {type: '1d', label: '近1天'},
         {type: '1w', label: '近1周'},
         {type: '1M', label: '近1月'},
-        {type: '1y', label: '近1年'}
+        // {type: '1y', label: '近1年'}
       ],
       ranges: {
         '1m': 60 * 1000,

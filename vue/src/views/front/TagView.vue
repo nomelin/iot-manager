@@ -539,6 +539,7 @@ export default {
             position: "bottom-right",
             duration: 3000
           })
+          console.log(`device ${deviceId} ,数据获取成功，共 ${totalRecords} 条数据, 服务器耗时：${queryEnd - queryStart}ms`)
 
           // 存储预处理数据
           this.$set(this.preprocessedData, deviceId, this.preprocessData(res.data))
@@ -552,6 +553,7 @@ export default {
             duration: 3000,
             offset: 80
           })
+          console.log(`device ${deviceId} ,数据处理完成，共 ${totalRecords} 条数据, 前端处理耗时：${processEnd - queryEnd}ms`)
         }
       } catch (error) {
         this.$message.error('数据加载失败')
