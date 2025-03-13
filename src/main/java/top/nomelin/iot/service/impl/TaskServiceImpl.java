@@ -12,6 +12,7 @@ import top.nomelin.iot.service.TaskService;
 
 import java.time.LocalDateTime;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,10 +87,15 @@ public class TaskServiceImpl implements TaskService {
         return metadata.task;
     }
 
+    @Override
+    public List<String> getAllTaskIds() {
+        return tasks.keySet().stream().toList();
+    }
+
     /**
-     * 定时清理过期任务（每1h执行一次）
+     * 定时清理过期任务（每1min执行一次）
      */
-    @Scheduled(fixedRate = 1000 * 60 * 60)
+    @Scheduled(fixedRate = 1000 * 60)
     public void cleanupExpiredTasks() {
         log.info("开始清理过期任务...");
         LocalDateTime now = LocalDateTime.now();

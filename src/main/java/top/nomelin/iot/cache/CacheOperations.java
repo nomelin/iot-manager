@@ -4,6 +4,7 @@ package top.nomelin.iot.cache;
 import org.springframework.lang.NonNull;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -84,6 +85,13 @@ public interface CacheOperations<K, V> {
      * @return 统计信息Map
      */
     Map<String, Object> getStats();
+
+    /**
+     * 获取所有缓存键
+     *
+     * @return 缓存键集合
+     */
+    List<K> getAllKeys();
 
     /**
      * 清空所有缓存

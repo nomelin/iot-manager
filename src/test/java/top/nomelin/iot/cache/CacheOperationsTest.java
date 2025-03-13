@@ -48,6 +48,8 @@ class CacheOperationsTest {
         // 测试 getStats
         System.out.println("Cache stats: " + cacheOperations.getStats());
 
+        System.out.println("All cache keys: " + cacheOperations.getAllKeys());
+
         // 最后清空缓存
         cacheOperations.clear();
         System.out.println("Cache cleared.");

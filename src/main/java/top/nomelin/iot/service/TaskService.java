@@ -3,6 +3,8 @@ package top.nomelin.iot.service;
 import org.springframework.web.multipart.MultipartFile;
 import top.nomelin.iot.model.dto.FileTask;
 
+import java.util.List;
+
 /**
  * TaskManager
  *
@@ -21,4 +23,6 @@ public interface TaskService {
     void cancelTask(String taskId);
 
     FileTask getTask(String taskId);
+
+    List<String> getAllTaskIds();
 }

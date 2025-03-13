@@ -10,6 +10,7 @@ import top.nomelin.iot.cache.CacheResult;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -129,10 +130,22 @@ class CaffeineCacheOperations<K, V> implements CacheOperations<K, V> {
             stats.put("loadFailureCount", caffeineStats.loadFailureCount());
             stats.put("totalLoadTime", caffeineStats.totalLoadTime());
             stats.put("evictionCount", caffeineStats.evictionCount());
+            stats.put("evictionWeight", caffeineStats.evictionWeight());
+            stats.put("requestCount", caffeineStats.requestCount());
         } catch (Exception e) {
             log.error("Get stats error", e);
         }
         return stats;
+    }
+
+    @Override
+    public List<K> getAllKeys() {
+        try {
+            return cache.asMap().keySet().stream().toList();
+        } catch (Exception e) {
+            log.error("Get all keys error", e);
+            return Collections.emptyList();
+        }
     }
 
     @Override

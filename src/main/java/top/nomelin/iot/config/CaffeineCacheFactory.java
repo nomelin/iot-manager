@@ -16,7 +16,7 @@ public class CaffeineCacheFactory<K, V> implements FactoryBean<Cache<K, V>> {
         return Caffeine.newBuilder()
                 .initialCapacity(100)
                 .maximumSize(1000)
-                .expireAfterWrite(10, TimeUnit.MINUTES)
+                .expireAfterWrite(60, TimeUnit.SECONDS)
                 .recordStats()
                 .build();
     }
