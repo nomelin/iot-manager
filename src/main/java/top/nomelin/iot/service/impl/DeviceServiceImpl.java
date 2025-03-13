@@ -276,9 +276,7 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     public List<Device> getAllDevice() {
-        Device device = new Device();
-        device.setUserId(currentUserCache.getCurrentUser().getId());
-        return deviceMapper.selectAll(device);
+        return deviceMapper.selectByUserId(currentUserCache.getCurrentUser().getId());
     }
 
     @Override

@@ -20,6 +20,11 @@ import top.nomelin.iot.cache.CacheResult;
 import top.nomelin.iot.common.annotation.CacheOp;
 import top.nomelin.iot.common.enums.CacheOpType;
 
+import static top.nomelin.iot.common.Constants.ALL_ARGS_KEY;
+
+/**
+ * 适用于简单的缓存场景。如果需要更复杂的缓存逻辑，此aop无法满足。
+ */
 @Aspect
 @Component
 public class CacheAspect {
@@ -74,6 +79,16 @@ public class CacheAspect {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String[] parameterNames = parameterNameDiscoverer.getParameterNames(signature.getMethod());
         Object[] args = joinPoint.getArgs();
+
+
+        // 如果 key 是特殊值，则使用所有参数构造 JSON 作为缓存键
+        if (ALL_ARGS_KEY.equals(expressionStr)) {
+            try {
+                return objectMapper.writeValueAsString(args);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("Failed to serialize key to JSON", e);
+            }
+        }
 
         EvaluationContext context = new StandardEvaluationContext();
         // 绑定参数名和参数值

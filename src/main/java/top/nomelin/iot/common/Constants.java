@@ -45,4 +45,7 @@ public class Constants {
     public static final String TEMPLATE_CACHE_PREFIX = "template";
     public static final String DEVICE_CACHE_PREFIX = "device";
 
+    public static final String ALL_ARGS_KEY = "#ALL_ARGS#";
+
+
 }

@@ -6,7 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import top.nomelin.iot.common.Constants;
+import top.nomelin.iot.common.annotation.CacheOp;
 import top.nomelin.iot.common.annotation.LogExecutionTime;
+import top.nomelin.iot.common.enums.CacheOpType;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.common.exception.SystemException;
@@ -108,6 +110,7 @@ public class DataServiceImpl implements DataService {
                 devicePath, timestamps, measurements, types, values);
     }
 
+    @CacheOp(type = CacheOpType.GET, key = Constants.ALL_ARGS_KEY, prefix = "iot.data")
     @LogExecutionTime(logArgs = true)
     @Override
     public DeviceTable queryRecord(int deviceId, Long startTime, Long endTime,
@@ -121,6 +124,7 @@ public class DataServiceImpl implements DataService {
                 queryAggregateFunc, thresholds, strategy, devicePath, tagQuery);
     }
 
+    @CacheOp(type = CacheOpType.GET, key = Constants.ALL_ARGS_KEY, prefix = "iot.data")
     @LogExecutionTime(logArgs = true)
     @Override
     public DeviceTable queryRecord(Device device, Long startTime, Long endTime,
