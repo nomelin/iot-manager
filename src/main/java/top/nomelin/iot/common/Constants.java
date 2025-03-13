@@ -42,5 +42,7 @@ public class Constants {
     public static final String NO_TAG = "NO_TAG";
     public static final int SYSTEM_SENDER_ID = 0;
 
+    public static final String TEMPLATE_CACHE_PREFIX = "template";
+    public static final String DEVICE_CACHE_PREFIX = "device";
 
 }

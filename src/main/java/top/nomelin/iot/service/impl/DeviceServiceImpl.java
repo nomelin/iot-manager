@@ -210,7 +210,7 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Transactional(timeout = 5)
     @Override
-    public Device addDataTagsWithOutCheck(int deviceId, Set<String> tags) {
+    public Device addDataTagsWithoutCheck(int deviceId, Set<String> tags) {
         Device device = getDeviceByIdWithoutCheck(deviceId);
         Set<String> oldTags = device.getAllTags();
         if (ObjectUtil.isNull(oldTags)) {
@@ -257,6 +257,7 @@ public class DeviceServiceImpl implements DeviceService {
         return deviceMapper.selectByIdForUpdate(deviceId);
     }
 
+
     @Override
     public List<Device> getDevicesByIds(List<Integer> deviceIds) {
         List<Device> devices = new ArrayList<>();
@@ -265,6 +266,7 @@ public class DeviceServiceImpl implements DeviceService {
         }
         return devices;
     }
+
 
     @Override
     public List<Group> getGroupsByDeviceId(int deviceId) {

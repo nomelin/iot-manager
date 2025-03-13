@@ -1,10 +1,7 @@
 package top.nomelin.iot.controller;
 
 import cn.hutool.core.util.ObjectUtil;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import top.nomelin.iot.common.Result;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
@@ -42,6 +39,15 @@ public class TemplateController {
             throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
         }
         templateService.deleteTemplate(templateId);
+        return Result.success();
+    }
+
+    @RequestMapping("/updateName/{templateId}")
+    public Result updateTemplateName(@PathVariable Integer templateId, @RequestParam String name) {
+        if (ObjectUtil.isNull(templateId) || ObjectUtil.isEmpty(name)) {
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);
+        }
+        templateService.updateTemplateName(templateId, name);
         return Result.success();
     }
 

@@ -38,7 +38,7 @@ public interface DeviceService {
      */
     Device addDataTags(int deviceId, Set<String> tags);
 
-    Device addDataTagsWithOutCheck(int deviceId, Set<String> tags);
+    Device addDataTagsWithoutCheck(int deviceId, Set<String> tags);
 
     /**
      * 删除数据行标签记录
