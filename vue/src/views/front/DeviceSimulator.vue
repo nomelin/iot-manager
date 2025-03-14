@@ -17,20 +17,20 @@
         <h3>设备列表</h3>
         <div class="stats-text">共 {{ devices.length }} 台设备</div>
       </div>
-      <el-table :data="devices" border style="width: 100%">
+      <el-table :data="devices" border style="width: 100%"  @row-click="selectDevice">
         <el-table-column label="设备ID" prop="deviceId" width="200"/>
         <el-table-column label="用户ID" prop="userId" width="150"/>
         <el-table-column label="状态" width="100">
-          <template #default="{ row }">
+          <template slot-scope="{ row }">
             <el-tag :type="row.isRunning ? 'success' : 'danger'">
               {{ row.isRunning ? '运行中' : '已停止' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="缓冲区" prop="bufferSize" width="100"/>
-        <el-table-column label="间隔(ms)" prop="interval" width="120"/>
+        <el-table-column label="缓冲区大小" prop="bufferSize" width="100"/>
+        <el-table-column label="产生间隔(ms)" prop="interval" width="120"/>
         <el-table-column label="操作" width="280">
-          <template #default="{ row }">
+          <template slot-scope="{ row }">
             <el-button-group>
               <el-button size="small" @click="toggleDeviceStatus(row)">
                 {{ row.isRunning ? '停止' : '启动' }}
@@ -64,7 +64,7 @@
           </template>
         </el-table-column>
         <el-table-column label="参数" min-width="300">
-          <template #default="{ row }">
+          <template slot-scope="{ row }">
             <pre class="sensor-params">{{ formatGeneratorParams(row.dataGenerator) }}</pre>
           </template>
         </el-table-column>
@@ -164,19 +164,25 @@ deviceApi.interceptors.request.use(config => {
 // 响应拦截器（可选）
 deviceApi.interceptors.response.use(
     response => {
-      console.log("response", JSON.stringify(response.data))
       if (response.data.code !== '200') {
-        console.error(response.data.msg || '请求错误')
-        return Promise.reject(response.data)
+        this.$message({
+          message: response.data.msg || '请求错误',
+          type: 'error',
+          duration: 3000
+        });
+        return Promise.reject(response.data);
       }
-      console.log("请求成功")
-      return response.data
+      return response.data;
     },
     error => {
-      console.error(error.message || '网络错误')
-      return Promise.reject(error)
+      this.$message({
+        message: error.message || '网络错误',
+        type: 'error',
+        duration: 3000
+      });
+      return Promise.reject(error);
     }
-)
+);
 
 export default {
   data() {
@@ -221,20 +227,28 @@ export default {
   },
 
   methods: {
+
+    // 修正后的设备刷新方法
     async refreshDevices() {
-      this.loading = true
+      this.loading = true;
       try {
-        const res = await deviceApi.get('/api/devices')
-        if (res.code === '200') {
-          this.devices = res.data || []
-        }
+        const {data} = await deviceApi.get('/api/devices');
+        console.log("设备列表加载成功:", JSON.stringify(data));
+        this.devices = data || [];
+        this.currentDevice = null
+      } catch (error) {
+        console.error('设备列表加载失败:', error);
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
+    selectDevice(device) {
+      this.currentDevice = device;
+    },
+
     showCreateDialog() {
-      console.log('show create dialog')
+      // console.log('show create dialog')
       this.deviceForm = {
         deviceId: '',
         userId: '',
@@ -243,7 +257,7 @@ export default {
       }
       this.isEditMode = false
       this.deviceDialogVisible = true
-      console.log("当前弹窗状态:", this.deviceDialogVisible);
+      // console.log("当前弹窗状态:", this.deviceDialogVisible);
     },
 
     async submitDevice() {
@@ -267,6 +281,7 @@ export default {
       this.deviceForm = {...device}
       this.isEditMode = true
       this.deviceDialogVisible = true
+      this.currentDevice = device
     },
 
     async deleteDevice(deviceId) {
@@ -279,14 +294,25 @@ export default {
       }
     },
 
+    editSensor(row) {
+      console.log("未实现")
+    },
+
+// 修正后的设备状态切换方法
     async toggleDeviceStatus(device) {
-      const action = device.isRunning ? 'stop' : 'start'
+      const action = device.isRunning ? 'stop' : 'start';
       try {
-        await deviceApi.post(`/api/devices/${device.deviceId}/${action}`)
-        this.$message.success(`${action === 'start' ? '启动' : '停止'}成功`)
-        await this.refreshDevices()
+        await deviceApi.post(`/api/devices/${device.deviceId}/${action}`);
+        this.$message({
+          message: `${action === 'start' ? '启动' : '停止'}成功`,
+          type: 'success',
+          duration: 1500
+        });
+        // 局部更新设备状态
+        device.isRunning = !device.isRunning;
+        console.log("设备状态切换成功:", device.isRunning);
       } catch (error) {
-        this.$message.error(error.message)
+        console.error('设备状态切换失败:', error);
       }
     },
 
