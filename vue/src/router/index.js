@@ -89,6 +89,8 @@ const routes = [
     {path: '/login', name: 'Login', meta: {name: '登录'}, component: () => import('../views/Login.vue')},
     {path: '/register', name: 'Register', meta: {name: '注册'}, component: () => import('../views/Register.vue')},
     {path: '/debug', name: 'debug', meta: {name: '调试'}, component: () => import('../views/front/Debug.vue')},
+    {path: '/deviceSimulator', name: 'deviceSimulator', meta: {name: '设备模拟器'},
+        component: () => import('../views/front/DeviceSimulator.vue')},
     {path: '*', name: 'NotFound', meta: {name: '无法访问'}, component: () => import('../views/404.vue')},
 ]
 
