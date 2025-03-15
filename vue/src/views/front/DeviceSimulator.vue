@@ -17,7 +17,7 @@
         <h3>设备列表</h3>
         <div class="stats-text">共 {{ devices.length }} 台设备</div>
       </div>
-      <el-table :data="devices" border style="width: 100%"  @row-click="selectDevice">
+      <el-table :data="devices" border style="width: 100%" @row-click="selectDevice">
         <el-table-column label="设备ID" prop="deviceId" width="200"/>
         <el-table-column label="用户ID" prop="userId" width="150"/>
         <el-table-column label="状态" width="100">
@@ -50,7 +50,7 @@
     <!-- 传感器管理 -->
     <el-card v-if="currentDevice" class="device-section">
       <div class="section-header">
-        <h3>传感器管理 - {{ currentDevice.deviceId }}</h3>
+        <h3>传感器管理 - 设备ID：{{ currentDevice.deviceId }}</h3>
         <div>
           <el-button type="primary" @click="showSensorDialog">添加传感器</el-button>
         </div>
@@ -71,6 +71,12 @@
         <el-table-column label="操作" width="120">
           <template #default="{ row }">
             <el-button size="small" @click="editSensor(row)">编辑</el-button>
+            <el-button
+                size="small"
+                type="danger"
+                @click="deleteSensor(row.sensorId)"
+            >删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -102,7 +108,10 @@
     <el-dialog :visible.sync="sensorDialogVisible" title="传感器配置" width="600px">
       <el-form :model="sensorForm" label-width="120px">
         <el-form-item label="传感器ID" required>
-          <el-input v-model="sensorForm.sensorId"/>
+          <el-input
+              v-model="sensorForm.sensorId"
+              :disabled="isSensorEditMode"
+          />
         </el-form-item>
         <el-form-item label="生成类型" required>
           <el-select v-model="sensorForm.generationType" @change="handleTypeChange">
@@ -148,6 +157,7 @@
 
 <script>
 import axios from 'axios'
+import { Message } from 'element-ui';
 
 // 创建专用的axios实例
 const deviceApi = axios.create({
@@ -165,21 +175,13 @@ deviceApi.interceptors.request.use(config => {
 deviceApi.interceptors.response.use(
     response => {
       if (response.data.code !== '200') {
-        this.$message({
-          message: response.data.msg || '请求错误',
-          type: 'error',
-          duration: 3000
-        });
+        Message.error(response.data.msg);
         return Promise.reject(response.data);
       }
       return response.data;
     },
     error => {
-      this.$message({
-        message: error.message || '网络错误',
-        type: 'error',
-        duration: 3000
-      });
+      Message.error('请求失败: ' + error.message);
       return Promise.reject(error);
     }
 );
@@ -194,6 +196,7 @@ export default {
       // 设备对话框相关
       deviceDialogVisible: false,
       isEditMode: false,
+      isSensorEditMode: false,
       deviceForm: {
         deviceId: '',
         userId: '',
@@ -228,14 +231,19 @@ export default {
 
   methods: {
 
-    // 修正后的设备刷新方法
     async refreshDevices() {
       this.loading = true;
       try {
-        const {data} = await deviceApi.get('/api/devices');
-        console.log("设备列表加载成功:", JSON.stringify(data));
+        const { data } = await deviceApi.get('/api/devices');
         this.devices = data || [];
-        this.currentDevice = null
+
+        // 保持当前设备选中状态
+        if (this.currentDevice) {
+          const current = this.devices.find(
+              d => d.deviceId === this.currentDevice.deviceId
+          );
+          this.currentDevice = current ? { ...current } : null;
+        }
       } catch (error) {
         console.error('设备列表加载失败:', error);
       } finally {
@@ -295,7 +303,40 @@ export default {
     },
 
     editSensor(row) {
-      console.log("未实现")
+      console.log("编辑传感器:", JSON.stringify(row));
+      const dataGen = row.dataGenerator;
+      console.log("数据生成器:", JSON.stringify(dataGen));
+      this.isSensorEditMode = true;
+      this.sensorForm = {
+        sensorId: row.sensorId,
+        generationType: this.getGeneratorType(dataGen),
+        isInteger: dataGen.integer,
+        minValue: dataGen.min,
+        maxValue: dataGen.max,
+        frequency: dataGen.frequency || 1,
+        phase: dataGen.phase || 0,
+        smallRandomDisturbance: dataGen.smallRandomDisturbance || 0.1
+      };
+      this.sensorDialogVisible = true;
+    },
+
+    async deleteSensor(sensorId) {
+      try {
+        await this.$confirm('确认删除该传感器？', '警告', {type: 'warning'});
+        await deviceApi.delete(
+            `/api/devices/${this.currentDevice.deviceId}/sensors/${sensorId}`
+        );
+        this.$message.success('删除成功');
+        // 刷新当前设备的传感器列表
+        const {data} = await deviceApi.get(
+            `/api/devices/${this.currentDevice.deviceId}/sensors`
+        );
+        this.currentDevice.sensors = data;
+      } catch (error) {
+        if (error !== 'cancel') {
+          this.$message.error('删除失败: ' + error.message);
+        }
+      }
     },
 
 // 修正后的设备状态切换方法
@@ -332,13 +373,25 @@ export default {
 
     async submitSensor() {
       try {
-        const url = `/api/devices/${this.currentDevice.deviceId}/sensors`
-        await deviceApi.post(url, this.sensorForm)
-        this.$message.success('添加成功')
-        this.sensorDialogVisible = false
-        await this.refreshDevices()
+        const deviceId = this.currentDevice.deviceId;
+
+        const url = this.isSensorEditMode
+            ? `/api/devices/${deviceId}/sensors/${this.sensorForm.sensorId}`
+            : `/api/devices/${deviceId}/sensors`;
+
+        await deviceApi[this.isSensorEditMode ? 'put' : 'post'](url, this.sensorForm);
+
+        this.$message.success('操作成功');
+        this.sensorDialogVisible = false;
+
+        // 刷新当前设备数据
+        const { data } = await deviceApi.get(`/api/devices/${deviceId}/sensors`);
+        this.currentDevice.sensors = data;
+
       } catch (error) {
-        this.$message.error(error.message)
+        this.$message.error(error.message);
+      } finally {
+        this.isSensorEditMode = false;
       }
     },
 
