@@ -21,7 +21,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(tokenInterceptor).addPathPatterns("/**")
 //                .excludePathPatterns("/")
                 .excludePathPatterns("/openapi/**")
-                .excludePathPatterns("/data/test/**");
+                .excludePathPatterns("/connect/**");
 
     }
 }

@@ -22,7 +22,7 @@ public interface DataService {
      *
      * @param deviceId          设备ID
      * @param timestamps        时间戳列表
-     * @param measurements      字段名列表。每个时间戳的字段都相同。
+     * @param measurements      字段名列表。每个时间戳的字段都相同。可以为null，表示没有标签。
      * @param tag               标签，每批次写入的数据都是相同的标签。如果为null，代表没有标签。
      *                          限制：不能为"NO_TAG"，不能包含"||"
      * @param values            数据值列表，每行代表一个时间戳的记录。

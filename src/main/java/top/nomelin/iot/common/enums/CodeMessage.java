@@ -60,6 +60,8 @@ public enum CodeMessage {
     TIME_FORMAT_ERROR("813", "时间格式处理异常, 或者不支持的时间格式"),
     TASK_CANCELLED("815", "任务已取消"),
 
+    UPLOAD_DATA_FAILED("850", "上传数据失败"),
+
 
     UNKNOWN_ERROR("900", "未知异常");
 

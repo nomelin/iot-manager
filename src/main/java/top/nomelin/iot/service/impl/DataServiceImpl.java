@@ -47,7 +47,7 @@ public class DataServiceImpl implements DataService {
                                   List<String> measurements, List<List<Object>> values, int mergeTimestampNum) {
         tag = validateTagForInsert(tag);
         List<String> measurementsCopy = addTagInMeasurementsAndValues(tag, measurements, values);
-        Device device = deviceService.addDataTags(deviceId, Collections.singleton(tag));
+        Device device = deviceService.addDataTagsWithoutCheck(deviceId, Collections.singleton(tag));
         Config config = device.getConfig();
         StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
         String devicePath = util.getDevicePath(device.getUserId(), deviceId);
