@@ -1,81 +1,126 @@
 <template>
   <div class="view-platform">
     <!-- 上侧控制区域 -->
-    <el-row :gutter="20" class="control-panel">
-      <!-- 左上：组选择 -->
-      <el-col :span="3">
-        <el-form label-position="left" label-width="auto">
-          <el-form-item label="组选择">
-            <el-select v-model="selectedGroup" placeholder="选择组" @change="fetchDevices">
-              <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id"/>
-            </el-select>
-          </el-form-item>
-        </el-form>
-      </el-col>
+    <div class="control-panel">
+      <el-row :gutter="20">
+        <!-- 左上：组选择 -->
+        <el-col :span="4">
+          <el-form label-position="left" label-width="auto">
+            <el-form-item label="组选择">
+              <el-select v-model="selectedGroup" placeholder="选择组" @change="fetchDevices">
+                <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id"/>
+              </el-select>
+            </el-form-item>
+          </el-form>
+        </el-col>
 
-      <!-- 左下：设备选择 -->
-      <el-col :span="6">
-        <el-form label-position="left" label-width="auto">
-          <el-form-item label="设备选择">
-            <el-select
-                v-model="selectedDeviceIds"
-                :clearable="true"
-                multiple
-                placeholder="选择设备"
-            >
-              <el-option
-                  v-for="device in devices"
-                  :key="device.id"
-                  :label="device.name"
-                  :value="device.id"
-              />
-            </el-select>
-          </el-form-item>
-        </el-form>
-      </el-col>
-
-      <!-- 右上：筛选条件 -->
-      <el-col :span="15" class="filter-col" label-position="left" label-width="auto">
-        <el-form class="filter-form" label-position="left" label-width="auto">
-          <!-- 时间选择行 -->
-          <el-form-item class="compact-item" label="时间段选择">
-            <el-row align="middle" justify="center" type="flex">
-              <el-col :span="2">
-                <el-button icon="el-icon-arrow-left" @click="shiftTimeRange(-1)"/>
-              </el-col>
-              <el-col :span="20">
-                <el-date-picker
-                    v-model="dateRange"
-                    :default-time="['00:00:00', '23:59:59']"
-                    end-placeholder="结束时间"
-                    range-separator="至"
-                    start-placeholder="开始时间"
-                    type="datetimerange"
-                    value-format="timestamp"
-                />
-              </el-col>
-              <el-col :span="2">
-                <el-button icon="el-icon-arrow-right" @click="shiftTimeRange(1)"/>
-              </el-col>
-            </el-row>
-          </el-form-item>
-
-          <!-- 快捷按钮行 -->
-          <el-form-item class="compact-item">
-            <div class="quick-buttons">
-              <el-button
-                  v-for="(btn, index) in quickButtons"
-                  :key="index"
-                  @click="selectQuickRange(btn.type)"
-                  class="quick-button"
+        <!-- 左下：设备选择 -->
+        <el-col :span="8">
+          <el-form label-position="left" label-width="auto">
+            <el-form-item label="设备选择">
+              <el-select
+                  v-model="selectedDeviceIds"
+                  :clearable="true"
+                  multiple
+                  placeholder="选择设备"
               >
-                {{ btn.label }}
-              </el-button>
-            </div>
-          </el-form-item>
-        </el-form>
-      </el-col>
-    </el-row>
+                <el-option
+                    v-for="device in devices"
+                    :key="device.id"
+                    :label="device.name"
+                    :value="device.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-form>
+        </el-col>
+        <!-- 聚合时间 -->
+        <el-col :span="4">
+          <el-form label-position="left" label-width="auto">
+            <el-form-item label="聚合时间">
+              <el-select
+                  v-model="aggregationTime"
+                  placeholder="选择聚合时间"
+                  @change="handleAggregationTimeChange"
+              >
+                <el-option
+                    v-for="item in aggregationTimeOptions"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-form>
+        </el-col>
+
+        <!-- 聚合函数 -->
+        <el-col :span="4">
+          <el-form label-position="left" label-width="auto">
+            <el-form-item label="聚合函数">
+              <el-select
+                  v-model="queryAggregateFunc"
+                  placeholder="选择聚合函数"
+                  :disabled="aggregationTime === 0"
+              >
+                <el-option
+                    v-for="func in aggregateFuncOptions"
+                    :key="func.code"
+                    :value="func.code"
+                >
+                  <el-tooltip :content="func.desc" effect="dark" placement="top">
+                    <span>{{ func.code }} ({{ func.name }})</span>
+                  </el-tooltip>
+                </el-option>
+              </el-select>
+            </el-form-item>
+          </el-form>
+        </el-col>
+      </el-row>
+
+      <el-row :gutter="20" class="filter-row">
+        <el-col :span="24" class="filter-col" label-position="left" label-width="auto">
+          <el-form class="filter-form" inline label-position="left" label-width="auto">
+            <!-- 时间选择行 -->
+            <el-form-item class="compact-item" label="时间段选择">
+              <el-row align="middle" justify="center" type="flex">
+                <el-col :span="2">
+                  <el-button icon="el-icon-arrow-left" @click="shiftTimeRange(-1)"/>
+                </el-col>
+                <el-col :span="20">
+                  <el-date-picker
+                      v-model="dateRange"
+                      :default-time="['00:00:00', '23:59:59']"
+                      end-placeholder="结束时间"
+                      range-separator="至"
+                      start-placeholder="开始时间"
+                      type="datetimerange"
+                      value-format="timestamp"
+                  />
+                </el-col>
+                <el-col :span="2">
+                  <el-button icon="el-icon-arrow-right" @click="shiftTimeRange(1)"/>
+                </el-col>
+              </el-row>
+            </el-form-item>
+
+            <!-- 快捷按钮行 -->
+            <el-form-item class="compact-item">
+              <div class="quick-buttons">
+                <el-button
+                    v-for="(btn, index) in quickButtons"
+                    :key="index"
+                    class="quick-button"
+                    @click="selectQuickRange(btn.type)"
+                >
+                  {{ btn.label }}
+                </el-button>
+              </div>
+            </el-form-item>
+          </el-form>
+        </el-col>
+      </el-row>
+    </div>
 
     <!-- 下侧数据展示 -->
     <div class="data-view">
@@ -83,6 +128,8 @@
           :date-range="dateRange"
           :devices="devices"
           :selected-device-ids="selectedDeviceIds "
+          :aggregation-time="aggregationTime"
+          :query-aggregate-func="queryAggregateFunc"
       />
     </div>
   </div>
@@ -111,7 +158,7 @@ export default {
         {type: '1d', label: '近1天'},
         {type: '1w', label: '近1周'},
         {type: '1M', label: '近1月'},
-        // {type: '1y', label: '近1年'}
+        {type: '1y', label: '近1年'}
       ],
       ranges: {
         '1m': 60 * 1000,
@@ -122,10 +169,45 @@ export default {
         '1w': 7 * 24 * 60 * 60 * 1000,
         '1M': 30 * 24 * 60 * 60 * 1000,
         '1y': 365 * 24 * 60 * 60 * 1000,
-      }
+      },
+
+      // 新增聚合相关数据
+      aggregationTime: 0,
+      queryAggregateFunc: null,
+      aggregationTimeOptions: [
+        {label: '不聚合', value: 0},
+        {label: '1ms', value: 1},
+        {label: '1s', value: 1000},
+        {label: '1m', value: 60000},
+        {label: '1h', value: 3600000},
+        {label: '1d', value: 86400000}
+      ],
+      aggregateFuncOptions: [],
+
     };
   },
   methods: {
+    async loadAggregateFunctions() {
+      try {
+        const res = await this.$request.get('/data/aggregateFuncs');
+        if (res.code === '200') {
+          this.aggregateFuncOptions = res.data.map(item => ({
+            code: item.code,
+            name: item.name,
+            desc: item.desc,
+          }));
+        } else {
+          this.$message.error(res.msg);
+        }
+      } catch (error) {
+        this.$message.error('获取聚合函数失败');
+      }
+    },
+    handleAggregationTimeChange(value) {
+      if (value === 0) {
+        this.queryAggregateFunc = null;
+      }
+    },
     fetchGroups() {
       this.$request
           .get("/group/all")
@@ -189,6 +271,7 @@ export default {
   },
   created() {
     this.fetchGroups(); // 初始化加载组信息
+    this.loadAggregateFunctions(); // 初始化加载聚合函数
   },
 };
 </script>
@@ -238,7 +321,8 @@ export default {
   gap: 0;
   flex-wrap: wrap;
 }
-.quick-button{
+
+.quick-button {
 
 }
 

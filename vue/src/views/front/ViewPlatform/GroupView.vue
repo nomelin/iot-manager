@@ -22,6 +22,9 @@
           <el-button @click="handleOpenFullscreen(fieldName)">
             <i class="el-icon-full-screen"></i> 全屏显示
           </el-button>
+          <el-button @click="handleOpenConfig(fieldName)">
+            <i class="el-icon-setting"></i> 配置
+          </el-button>
         </div>
         <div :ref="`chart-${fieldName}`" :style="{ height: '400px' }" class="chart"></div>
       </el-col>
@@ -66,7 +69,15 @@ export default {
       type: Array,
       required: true,
       description: "时间范围选择",//时间范围变化时重新加载数据
-    }
+    },
+    aggregationTime: {
+      type: Number,
+      default: 0,
+    },
+    queryAggregateFunc: {
+      type: String,
+      default: null,
+    },
   },
   data() {
     return {
@@ -109,6 +120,10 @@ export default {
         if (!this.dateRange) return
         // console.log("allDeviceIds", JSON.stringify(this.allDeviceIds))
         if (this.allDeviceIds.length === 0) return
+        if (this.aggregationTime !== 0 && !this.queryAggregateFunc) {
+          this.$message.warning('请选择聚合函数');
+          return;
+        }
         const queryStartTime = Date.now();
         this.isLoading = true;
         const promises = this.allDeviceIds.map((deviceId) => {
@@ -121,6 +136,10 @@ export default {
             deviceId: deviceId,
             startTime: this.dateRange[0],
             endTime: this.dateRange[1],
+            ...(this.aggregationTime !== 0 && {
+              aggregationTime: this.aggregationTime,
+              queryAggregateFunc: this.queryAggregateFunc
+            })
           }
           console.log("requestBody: ", JSON.stringify(requestBody));
           return this.$request.post(`/data/query`, requestBody);
@@ -193,7 +212,7 @@ export default {
         Object.entries(records).forEach(([timestamp, recordList]) => {
           if (!recordList.length) return;
           const record = recordList[0]; // 只取第一个Record
-          const formattedTime = this.$options.filters.formatTime(timestamp);
+          const formattedTime = this.$options.filters.formatTimeMs(timestamp);
 
           Object.entries(record.fields).forEach(([fieldName, value]) => {
             if (fieldName === 'tag') {
@@ -336,6 +355,11 @@ export default {
       this.fullscreenVisible = true
     },
 
+    handleOpenConfig(fieldName) {
+      console.log("打开图表配置, fieldName: ", fieldName)
+      this.$message.info("暂未开放图表配置功能")
+    },
+
     handleResize() {
       Object.values(this.charts).forEach(chart => chart.resize())
     }
@@ -376,6 +400,16 @@ export default {
     dateRange() {
       this.fetchData();
     },
+    aggregationTime() {
+      if (this.aggregationTime !== 0 && this.queryAggregateFunc) {
+        this.fetchData();
+      }
+    },
+    queryAggregateFunc() {
+      if (this.aggregationTime !== 0 && this.queryAggregateFunc) {
+        this.fetchData();
+      }
+    }
   }
 }
 </script>

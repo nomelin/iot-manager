@@ -146,7 +146,7 @@
         <!-- 正弦波专用参数 -->
         <template v-if="sensorForm.generationType === '正弦波(带噪声)'">
           <el-form-item label="频率" required>
-            <el-input-number v-model="sensorForm.frequency" :min="0.1" :step="0.1"/>
+            <el-input-number v-model="sensorForm.frequency" :min="0.00001" :step="0.1"/>
           </el-form-item>
           <el-form-item label="相位" required>
             <el-input-number v-model="sensorForm.phase"/>
