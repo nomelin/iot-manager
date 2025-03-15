@@ -49,6 +49,8 @@ public interface DeviceService {
 
     Device getDeviceById(int deviceId);
 
+    Device getDeviceByIdWithoutCheck(int deviceId);
+
     List<Device> getDevicesByIds(List<Integer> deviceIds);
 
     List<Group> getGroupsByDeviceId(int deviceId);

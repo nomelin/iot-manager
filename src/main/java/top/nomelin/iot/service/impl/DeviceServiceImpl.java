@@ -253,7 +253,8 @@ public class DeviceServiceImpl implements DeviceService {
         return checkPermission(deviceId);
     }
 
-    private Device getDeviceByIdWithoutCheck(int deviceId) {
+    @Override
+    public Device getDeviceByIdWithoutCheck(int deviceId) {
         return deviceMapper.selectByIdForUpdate(deviceId);
     }
 

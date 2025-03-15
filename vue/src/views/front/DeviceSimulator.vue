@@ -4,9 +4,18 @@
     <el-card class="device-section">
       <div class="section-header">
         <h3>设备管理</h3>
-        <div>
+        <div class="btn-group">
           <el-button type="primary" @click="showCreateDialog">新建设备</el-button>
           <el-button :loading="loading" type="info" @click="refreshDevices">刷新列表</el-button>
+          <el-button type="success" @click="exportConfig">导出配置</el-button>
+          <el-upload
+              :auto-upload="false"
+              :on-change="handleFileUpload"
+              :show-file-list="false"
+              action=""
+          >
+            <el-button type="warning">导入配置</el-button>
+          </el-upload>
         </div>
       </div>
     </el-card>
@@ -86,7 +95,7 @@
     <el-dialog :title="dialogTitle" :visible.sync="deviceDialogVisible" width="500px">
       <el-form :model="deviceForm" label-width="100px">
         <el-form-item label="设备ID" required>
-          <el-input v-model="deviceForm.deviceId" :disabled="isEditMode"/>
+          <el-input v-model="deviceForm.deviceId"/>
         </el-form-item>
         <el-form-item label="用户ID" required>
           <el-input v-model="deviceForm.userId"/>
@@ -157,7 +166,7 @@
 
 <script>
 import axios from 'axios'
-import { Message } from 'element-ui';
+import {Message} from 'element-ui';
 
 // 创建专用的axios实例
 const deviceApi = axios.create({
@@ -234,7 +243,7 @@ export default {
     async refreshDevices() {
       this.loading = true;
       try {
-        const { data } = await deviceApi.get('/api/devices');
+        const {data} = await deviceApi.get('/api/devices');
         this.devices = data || [];
 
         // 保持当前设备选中状态
@@ -242,7 +251,7 @@ export default {
           const current = this.devices.find(
               d => d.deviceId === this.currentDevice.deviceId
           );
-          this.currentDevice = current ? { ...current } : null;
+          this.currentDevice = current ? {...current} : null;
         }
       } catch (error) {
         console.error('设备列表加载失败:', error);
@@ -269,8 +278,9 @@ export default {
     },
 
     async submitDevice() {
+      console.log(`修改前的id: ${this.currentDevice ? this.currentDevice.deviceId : ''}, 修改后的id: ${this.deviceForm.deviceId}`)
       const url = this.isEditMode
-          ? `/api/devices/${this.deviceForm.deviceId}`
+          ? `/api/devices/${this.currentDevice.deviceId}`//需要使用修改前的ID
           : '/api/devices'
 
       const method = this.isEditMode ? 'put' : 'post'
@@ -385,7 +395,7 @@ export default {
         this.sensorDialogVisible = false;
 
         // 刷新当前设备数据
-        const { data } = await deviceApi.get(`/api/devices/${deviceId}/sensors`);
+        const {data} = await deviceApi.get(`/api/devices/${deviceId}/sensors`);
         this.currentDevice.sensors = data;
 
       } catch (error) {
@@ -412,7 +422,109 @@ export default {
         this.sensorForm.phase = 0
         this.sensorForm.smallRandomDisturbance = 0.1
       }
-    }
+    },
+    // 导出配置
+    async exportConfig() {
+      try {
+        // 获取完整的设备数据（包含传感器）
+        const fullDevices = await Promise.all(this.devices.map(async device => {
+          const {data: sensors} = await deviceApi.get(`/api/devices/${device.deviceId}/sensors`);
+          return {
+            ...device,
+            sensors: sensors.map(s => ({
+              sensorId: s.sensorId,
+              dataGenerator: s.dataGenerator
+            }))
+          };
+        }));
+
+        // 创建下载
+        const jsonStr = JSON.stringify(fullDevices, null, 2);
+        const blob = new Blob([jsonStr], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `设备配置_${new Date().toLocaleDateString()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        this.$message.success('导出成功');
+      } catch (error) {
+        this.$message.error('导出失败: ' + error.message);
+      }
+    },
+
+    // 处理文件上传
+    handleFileUpload(file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        this.loading = true;
+        try {
+          const devicesToImport = JSON.parse(e.target.result);
+
+          for (const device of devicesToImport) {
+            // 创建设备
+            const {deviceId, userId, bufferSize, interval, sensors} = device;
+
+            try {
+              await deviceApi.post('/api/devices', {
+                deviceId,
+                userId,
+                bufferSize,
+                interval
+              });
+            } catch (error) {
+              if (error.response?.data?.code === 'DEVICE_EXISTS') {
+                this.$message.warning(`设备 ${deviceId} 已存在，跳过创建`);
+                continue;
+              }
+              throw error;
+            }
+
+            // 创建传感器
+            // 修改后的handleFileUpload方法中的传感器创建部分
+            for (const sensor of sensors) {
+              const generator = sensor.dataGenerator;
+              const isSine = generator.name.includes('Sine');
+
+              // 构建基础参数
+              const params = {
+                sensorId: sensor.sensorId,
+                generationType: isSine ? '正弦波(带噪声)' : '随机数',
+                isInteger: generator.integer || false
+              };
+
+              // 处理不同生成器类型的参数
+              if (isSine) {
+                // 计算minValue和maxValue
+                params.minValue = generator.offset - generator.amplitude;
+                params.maxValue = generator.offset + generator.amplitude;
+                // 正弦波专用参数
+                params.frequency = generator.frequency;
+                params.phase = generator.phase;
+                params.smallRandomDisturbance = generator.smallRandomDisturbance;
+              } else {
+                // 随机数参数
+                params.minValue = generator.min;
+                params.maxValue = generator.max;
+              }
+
+              await deviceApi.post(`/api/devices/${deviceId}/sensors`, params);
+            }
+          }
+
+          this.$message.success('导入成功');
+          await this.refreshDevices();
+        } catch (error) {
+          this.$message.error('导入失败: ' + (error.response?.data?.msg || error.message));
+        } finally {
+          this.loading = false;
+        }
+      };
+      reader.readAsText(file.raw);
+    },
   }
 }
 </script>
@@ -433,6 +545,12 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
+}
+
+.btn-group {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .stats-text {

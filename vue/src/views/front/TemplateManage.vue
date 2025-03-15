@@ -260,6 +260,24 @@ export default {
             return
           }
 
+          // 校验传感器名称
+          const sensorNamePattern = /^[\u2E80-\u9FFF_A-Za-z@:#{\}$][\u2E80-\u9FFF_A-Za-z0-9@:#{\}$]*$/;
+
+          for (const item of this.newTemplate.config.dataTypes) {
+            if (!item.key) {
+              this.$message.warning('传感器名称不能为空');
+              return;
+            }
+            if (!sensorNamePattern.test(item.key)) {
+              this.$message.warning(`传感器名称 "${item.key}" 不符合命名规则`);
+              return;
+            }
+            if (/^\d/.test(item.key)) {
+              this.$message.warning('传感器名称不能以数字开头');
+              return;
+            }
+          }
+
           this.createTemplate()
         }
       })

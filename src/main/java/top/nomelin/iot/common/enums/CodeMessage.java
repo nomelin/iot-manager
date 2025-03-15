@@ -61,6 +61,7 @@ public enum CodeMessage {
     TASK_CANCELLED("815", "任务已取消"),
 
     UPLOAD_DATA_FAILED("850", "上传数据失败"),
+    DATA_CONVERSION_ERROR("851", "数据转换异常"),
 
 
     UNKNOWN_ERROR("900", "未知异常");
