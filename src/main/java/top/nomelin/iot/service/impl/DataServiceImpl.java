@@ -177,7 +177,12 @@ public class DataServiceImpl implements DataService {
         } else {
             log.info("queryRecord 应用聚合, selectMeasurements={}, aggregationTime={}, QueryAggregateFunc={}",
                     selectMeasurements, aggregationTime, queryAggregateFunc);
-            aggregatedTable = aggregateRawData(rawTable, aggregationTime, queryAggregateFunc);
+            try {
+                aggregatedTable = aggregateRawData(rawTable, aggregationTime, queryAggregateFunc);
+            } catch (Exception e) {
+                log.error("queryRecord 聚合数据失败", e);
+                throw new SystemException(CodeMessage.DATA_AGGREGATION_ERROR, "聚合数据失败", e);
+            }
         }
 
         aggregatedTable.setDevicePath(devicePath);
@@ -279,8 +284,13 @@ public class DataServiceImpl implements DataService {
         );
 
         // 执行聚合操作
-        measurementValues.forEach((measurement, values) ->
-                aggregated.addField(measurement, performAggregation(values, mode))
+        //TAG属性直接取第一个值，相当于FIRST模式。
+        measurementValues.forEach((measurement, values) -> {
+                    if (Constants.TAG.equals(measurement)) {
+                        aggregated.addField(measurement, values.get(0));
+                    }
+                    aggregated.addField(measurement, performAggregation(values, mode));
+                }
         );
 
         return aggregated;
@@ -290,6 +300,10 @@ public class DataServiceImpl implements DataService {
     private Object performAggregation(List<Object> values, QueryAggregateFunc mode) {
         if (values == null || values.isEmpty()) {
             return null;
+        }
+        //处理字符串类型，例如TAG属性
+        if (values.get(0) instanceof String) {
+            return performAggregationString(values, mode);
         }
         // 过滤掉null值, 并转换为double值
         List<Double> numericValues = values.stream()
@@ -313,6 +327,50 @@ public class DataServiceImpl implements DataService {
                 throw new SystemException(CodeMessage.ILLEGAL_AGGREGATION_ERROR, "不合法的聚合模式: " + mode);
             }
         };
+    }
+
+    private Object performAggregationString(List<Object> values, QueryAggregateFunc mode) {
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+
+        switch (mode) {
+            case AVG:
+            case FIRST:
+                return values.get(0);
+            case MIN: {
+                List<String> nonNullStrings = values.stream()
+                        .filter(Objects::nonNull)
+                        .map(v -> (String) v)
+                        .toList();
+                if (nonNullStrings.isEmpty()) {
+                    return null;
+                }
+                return nonNullStrings.stream()
+                        .min(Comparator.comparingInt(String::length))
+                        .orElse(null);
+            }
+            case MAX: {
+                List<String> nonNullStrings = values.stream()
+                        .filter(Objects::nonNull)
+                        .map(v -> (String) v)
+                        .toList();
+                if (nonNullStrings.isEmpty()) {
+                    return null;
+                }
+                return nonNullStrings.stream()
+                        .max(Comparator.comparingInt(String::length))
+                        .orElse(null);
+            }
+            case SUM:
+            case COUNT:
+                return values.size();
+            case LAST:
+                return values.get(values.size() - 1);
+            default:
+                log.error("Illegal aggregation mode for string: {}", mode);
+                throw new SystemException(CodeMessage.ILLEGAL_AGGREGATION_ERROR, "不合法的聚合模式: " + mode);
+        }
     }
 
     private boolean shouldApplyThreshold(QueryAggregateFunc mode, List<List<Double>> thresholds) {

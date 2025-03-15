@@ -62,6 +62,7 @@ public enum CodeMessage {
 
     UPLOAD_DATA_FAILED("850", "上传数据失败"),
     DATA_CONVERSION_ERROR("851", "数据转换异常"),
+    DATA_AGGREGATION_ERROR("852", "数据聚合异常"),
 
 
     UNKNOWN_ERROR("900", "未知异常");
