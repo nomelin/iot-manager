@@ -29,7 +29,11 @@ public class Constants {
     public static final List<Integer> VALID_STORAGE_AGGREGATION_TIME = List.of(1, 10, 100, 1_000, 10_000, 100_000);
 
     //查询聚合时间粒度。0表示不聚合
-    public static final List<Integer> VALID_QUERY_AGGREGATION_TIME = List.of(0, 1, 1000, 60_000, 3600_000, 86400000);
+    public static final List<Integer> VALID_QUERY_AGGREGATION_TIME = List.of(
+            0,
+            1, 1000, 5000, 15000, 30000,//1ms,1s,5s,15s,30s
+            60_000, 300_000, 900_000, 1_800_000,//1min,5min,15min,30min
+            3600_000, 86400000);//1h,1d
 
     public static final int DEFAULT_FILE_BATCH_SIZE = 500;
     public static final String DEFAULT_FILE_BATCH_SIZE_STR = "500";

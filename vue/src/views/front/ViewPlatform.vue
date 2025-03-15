@@ -60,8 +60,8 @@
             <el-form-item label="聚合函数">
               <el-select
                   v-model="queryAggregateFunc"
-                  placeholder="选择聚合函数"
                   :disabled="aggregationTime === 0"
+                  placeholder="选择聚合函数"
               >
                 <el-option
                     v-for="func in aggregateFuncOptions"
@@ -125,11 +125,11 @@
     <!-- 下侧数据展示 -->
     <div class="data-view">
       <GroupView
+          :aggregation-time="aggregationTime"
           :date-range="dateRange"
           :devices="devices"
-          :selected-device-ids="selectedDeviceIds "
-          :aggregation-time="aggregationTime"
           :query-aggregate-func="queryAggregateFunc"
+          :selected-device-ids="selectedDeviceIds "
       />
     </div>
   </div>
@@ -178,7 +178,13 @@ export default {
         {label: '不聚合', value: 0},
         {label: '1ms', value: 1},
         {label: '1s', value: 1000},
+        {label: '5s', value: 5000},
+        {label: '15s', value: 15000},
+        {label: '30s', value: 30000},
         {label: '1m', value: 60000},
+        {label: '5m', value: 300000},
+        {label: '15m', value: 900000},
+        {label: '30m', value: 1800000},
         {label: '1h', value: 3600000},
         {label: '1d', value: 86400000}
       ],

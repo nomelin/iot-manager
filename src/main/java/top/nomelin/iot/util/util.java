@@ -47,8 +47,20 @@ public class util {
         switch (granularity) {
             case 1000 -> // 1s
                     zdt = zdt.withNano(0);//毫秒是纳秒（0-999,999,999）的前三位
+            case 5_000 -> // 5s
+                    zdt = zdt.withNano(0).withSecond(zdt.getSecond() / 5 * 5);
+            case 15_000 -> // 15s
+                    zdt = zdt.withNano(0).withSecond(zdt.getSecond() / 15 * 15);
+            case 30_000 -> // 30s
+                    zdt = zdt.withNano(0).withSecond(zdt.getSecond() / 30 * 30);
             case 60_000 -> // 1min
                     zdt = zdt.withSecond(0).withNano(0);
+            case 300_000 -> // 5min
+                    zdt = zdt.withSecond(0).withNano(0).withMinute(zdt.getMinute() / 5 * 5);
+            case 900_000 -> // 15min
+                    zdt = zdt.withSecond(0).withNano(0).withMinute(zdt.getMinute() / 15 * 15);
+            case 1_800_000 -> // 30min
+                    zdt = zdt.withSecond(0).withNano(0).withMinute(zdt.getMinute() / 30 * 30);
             case 3_600_000 -> // 1h
                     zdt = zdt.withMinute(0).withSecond(0).withNano(0);
             case 86_400_000 -> // 1day
