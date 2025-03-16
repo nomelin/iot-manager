@@ -104,7 +104,7 @@
           <el-input-number v-model="deviceForm.bufferSize" :min="1"/>
         </el-form-item>
         <el-form-item label="间隔时间(ms)" required>
-          <el-input-number v-model="deviceForm.interval" :min="100" :step="100"/>
+          <el-input-number v-model="deviceForm.interval" :min="10" :step="100"/>
         </el-form-item>
       </el-form>
       <template #footer>

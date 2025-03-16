@@ -21,22 +21,25 @@ public class DeviceBuffer {
     private final int deviceId;
     private final Device device;
     private final DataService dataService;
-    private final DeviceService deviceService;
     private final int bufferSize;
     private final long flushInterval;//刷新间隔，单位ms
     private final ReentrantLock lock = new ReentrantLock();//控制写入和刷新操作的锁
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
-    private final List<DataPoint> buffer = new ArrayList<>();
-    private final Set<String> measurements = new LinkedHashSet<>();
+    // 双缓冲区结构
+    private List<DataPoint> currentBuffer;
+    private List<DataPoint> backBuffer;
+    private final List<String> measurementList; // 来自设备配置的固定测量项
 
     public DeviceBuffer(int deviceId, DataService dataService, DeviceService deviceService, int bufferSize, long flushInterval) {
         this.deviceId = deviceId;
         this.dataService = dataService;
-        this.deviceService = deviceService;
         this.bufferSize = bufferSize;
         this.flushInterval = flushInterval;
         this.device = deviceService.getDeviceByIdWithoutCheck(deviceId);
+        this.measurementList = new ArrayList<>(device.getConfig().getDataTypes().keySet());
+        currentBuffer = new ArrayList<>(bufferSize);
+        backBuffer = new ArrayList<>(bufferSize);
         scheduleFlush();
         log.info("创建设备缓冲区，设备ID: {}，数据缓冲区大小: {}，刷新间隔: {}ms", deviceId, bufferSize, flushInterval);
     }
@@ -49,60 +52,82 @@ public class DeviceBuffer {
         lock.lock();
         try {
             log.info("接收到设备ID: {}的数据，数据内容: {}", deviceId, rawData);
-            parseData(rawData);
-            if (buffer.size() >= bufferSize) {
-                log.info("设备ID: {}，数据达到缓冲区大小{}，开始刷新数据", deviceId, bufferSize);
-                flush();
+            parseData(rawData, currentBuffer);
+            if (currentBuffer.size() >= bufferSize) {
+                log.info("设备ID: {}，数据达到缓冲区大小{}，触发刷盘", deviceId, bufferSize);
+                swapAndFlush();
             }
         } finally {
             lock.unlock();
         }
     }
 
-
     //解析数据，将原始数据转换为DataPoint对象，并放入buffer中
-    private void parseData(Map<String, Object> rawData) {
+    private void parseData(Map<String, Object> rawData, List<DataPoint> targetBuffer) {
         for (Map.Entry<String, Object> entry : rawData.entrySet()) {
-            long timestamp = Long.parseLong(entry.getKey());
+            long timestamp;
+            try {
+                timestamp = Long.parseLong(entry.getKey());
+            } catch (NumberFormatException e) {
+                log.error("设备ID: {}，解析时间戳失败: {}", deviceId, entry.getKey(), e);
+                continue; // 跳过错误数据
+            }
+
             List<Map<String, Object>> dataPoints = (List<Map<String, Object>>) entry.getValue();
 
             for (Map<String, Object> point : dataPoints) {
                 Map<String, Object> convertedPoint = new HashMap<>();
-                for (Map.Entry<String, Object> dataEntry : point.entrySet()) {
-                    String measurement = dataEntry.getKey();
-                    Object value = dataEntry.getValue();
-
-                    // 获取对应的数据类型
+                for (String measurement : measurementList) {
+                    Object value = point.get(measurement);
+                    if (value == null) {
+                        log.error("设备ID: {}，数据缺少测量项: {}", deviceId, measurement);
+                        continue; // 跳过错误数据
+                    }
                     IotDataType dataType = device.getConfig().getDataTypes().get(measurement);
                     if (dataType == null) {
-                        throw new SystemException(CodeMessage.UPLOAD_DATA_FAILED,
-                                "设备配置错误，未找到测量项 '" + measurement + "' 的数据类型");
+                        log.error("设备ID: {}，找不到测量项 '{}' 对应的数据类型", deviceId, measurement);
+                        continue;
                     }
-
-                    // 转换值
                     Object convertedValue = convertValue(value, dataType);
                     convertedPoint.put(measurement, convertedValue);
                 }
-
-                if (measurements.isEmpty()) {
-                    measurements.addAll(convertedPoint.keySet());
-                }
-                buffer.add(new DataPoint(timestamp, convertedPoint));
+                targetBuffer.add(new DataPoint(timestamp, convertedPoint));
             }
         }
     }
 
-    @LogExecutionTime
     private void flush() {
+        swapAndFlush();
+    }
+
+    private void swapAndFlush() {
+        List<DataPoint> toFlush;
         lock.lock();
         try {
-            if (buffer.isEmpty()) {
-                return;
-            }
+            // 1. 交换缓冲区引用（耗时纳秒级）
+            List<DataPoint> temp = currentBuffer;
+            currentBuffer = backBuffer;
+            backBuffer = temp;
 
+            // 2. 获取待刷盘数据的引用（不复制数据）
+            toFlush = backBuffer;
+
+            // 3. 立即重置后台缓冲区（不影响已获取的toFlush引用）
+            backBuffer = new ArrayList<>(bufferSize);
+        } finally {
+            lock.unlock();
+        }
+
+        if (!toFlush.isEmpty()) {
+            scheduler.execute(() -> flushBuffer(toFlush));
+        }
+    }
+
+    @LogExecutionTime
+    private void flushBuffer(List<DataPoint> buffer) {
+        try {
             List<Long> timestamps = new ArrayList<>();
             List<List<Object>> values = new ArrayList<>();
-            List<String> measurementList = new ArrayList<>(measurements);
 
             for (DataPoint dp : buffer) {
                 timestamps.add(dp.timestamp);
@@ -122,19 +147,26 @@ public class DeviceBuffer {
                     -1    // mergeTimestampNum
             );
             log.info("刷新数据到设备ID: {}，共{}条数据", deviceId, buffer.size());
-            buffer.clear();
         } catch (Exception e) {
             log.error("刷新数据到设备ID: {}失败，原因: {}", deviceId, e.getMessage());
             throw new SystemException(CodeMessage.UPLOAD_DATA_FAILED,
                     "刷新数据到设备ID: " + deviceId + "失败，原因: " + e.getMessage(),
                     e);
-        } finally {
-            lock.unlock();
         }
     }
 
     public void shutdown() {
         scheduler.shutdown();
+        try {
+            if (!scheduler.awaitTermination(30, TimeUnit.SECONDS)) {
+                log.warn("设备ID: {}，调度器未能在30秒内终止，强制关闭", deviceId);
+                scheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            log.error("设备ID: {}，关闭调度器时被中断", deviceId, e);
+            scheduler.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     private record DataPoint(long timestamp, Map<String, Object> data) {

@@ -8,6 +8,7 @@
       <el-switch v-model="isAnimation" active-text="开启动画" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="isShowSymbol" active-text="显示数据点" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="isLarge" active-text="大数据量" class="switch-item" @change="updateCharts"/>
+      <el-button type="primary" @click="fetchData">刷新</el-button>
     </div>
 
     <el-row :gutter="30">
