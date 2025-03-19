@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="top.nomelin.iot.dao.AlertMapper">
+
+    <resultMap id="alertResultMap" type="top.nomelin.iot.model.alert.Alert">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="condition_config" property="conditionConfig"
+                typeHandler="top.nomelin.iot.common.handler.ConditionConfigTypeHandler"/>
+        <result column="action_config" property="actionConfig"
+                typeHandler="top.nomelin.iot.common.handler.ActionConfigTypeHandler"/>
+        <result column="enable" property="enable"/>
+        <result column="device_id" property="deviceId"/>
+        <result column="group_id" property="groupId"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="updated_time" property="updatedTime"/>
+    </resultMap>
+
+    <!-- 插入告警 -->
+    <insert id="insert" parameterType="top.nomelin.iot.model.alert.Alert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO alert (user_id, name, description, condition_config, action_config, enable, device_id, group_id,
+                           created_time, updated_time)
+        VALUES (#{userId}, #{name}, #{description},
+                #{conditionConfig, typeHandler=top.nomelin.iot.common.handler.JsonTypeHandler},
+                #{actionConfig, typeHandler=top.nomelin.iot.common.handler.JsonTypeHandler},
+                #{enable}, #{deviceId}, #{groupId}, #{createdTime}, #{updatedTime})
+    </insert>
+
+    <!-- 更新告警 -->
+    <update id="update" parameterType="top.nomelin.iot.model.alert.Alert">
+        UPDATE alert
+        <set>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="conditionConfig != null">condition_config =
+                #{conditionConfig, typeHandler=top.nomelin.iot.common.handler.JsonTypeHandler},
+            </if>
+            <if test="actionConfig != null">action_config =
+                #{actionConfig, typeHandler=top.nomelin.iot.common.handler.JsonTypeHandler},
+            </if>
+            <if test="enable != null">enable = #{enable},</if>
+            <if test="deviceId != null">device_id = #{deviceId},</if>
+            <if test="groupId != null">group_id = #{groupId},</if>
+            updated_time = #{updatedTime}
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除告警 -->
+    <delete id="delete" parameterType="int">
+        DELETE
+        FROM alert
+        WHERE id = #{id}
+    </delete>
+
+    <!-- 根据 ID 查询告警 -->
+    <select id="selectById" parameterType="int" resultMap="alertResultMap">
+        SELECT *
+        FROM alert
+        WHERE id = #{id}
+    </select>
+
+    <!-- 条件查询告警 -->
+    <select id="selectAll" parameterType="top.nomelin.iot.model.alert.Alert" resultMap="alertResultMap">
+        SELECT * FROM alert
+        <where>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="name != null">AND name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="description != null">AND description LIKE CONCAT('%', #{description}, '%')</if>
+            <if test="enable != null">AND enable = #{enable}</if>
+            <if test="deviceId != null">AND device_id = #{deviceId}</if>
+            <if test="groupId != null">AND group_id = #{groupId}</if>
+        </where>
+    </select>
+
+</mapper>

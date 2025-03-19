@@ -24,7 +24,7 @@ public class ViewConfigTypeHandler extends BaseTypeHandler<ViewConfig> {
         try {
             ps.setString(i, objectMapper.writeValueAsString(parameter));
         } catch (Exception e) {
-            throw new SQLException("Error converting Config to JSON string: " + parameter, e);
+            throw new SQLException("Error converting ViewConfig to JSON string: " + parameter, e);
         }
     }
 

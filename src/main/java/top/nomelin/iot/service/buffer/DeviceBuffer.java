@@ -8,7 +8,10 @@ import top.nomelin.iot.model.enums.IotDataType;
 import top.nomelin.iot.service.DataService;
 import top.nomelin.iot.service.DeviceService;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -25,11 +28,10 @@ public class DeviceBuffer {
     private final long flushInterval;//刷新间隔，单位ms
     private final ReentrantLock lock = new ReentrantLock();//控制写入和刷新操作的锁
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-
+    private final List<String> measurementList; // 来自设备配置的固定测量项
     // 双缓冲区结构
     private List<DataPoint> currentBuffer;
     private List<DataPoint> backBuffer;
-    private final List<String> measurementList; // 来自设备配置的固定测量项
 
     public DeviceBuffer(int deviceId, DataService dataService, DeviceService deviceService, int bufferSize, long flushInterval) {
         this.deviceId = deviceId;
@@ -130,10 +132,10 @@ public class DeviceBuffer {
             List<List<Object>> values = new ArrayList<>();
 
             for (DataPoint dp : buffer) {
-                timestamps.add(dp.timestamp);
+                timestamps.add(dp.timestamp());
                 List<Object> row = new ArrayList<>();
                 for (String measurement : measurementList) {
-                    row.add(dp.data.get(measurement));
+                    row.add(dp.data().get(measurement));
                 }
                 values.add(row);
             }
@@ -169,6 +171,4 @@ public class DeviceBuffer {
         }
     }
 
-    private record DataPoint(long timestamp, Map<String, Object> data) {
-    }
 }
