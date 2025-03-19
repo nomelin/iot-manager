@@ -11,9 +11,9 @@
         <result column="name" property="name"/>
         <result column="description" property="description"/>
         <result column="condition_config" property="conditionConfig"
-                typeHandler="top.nomelin.iot.common.handler.ConditionConfigTypeHandler"/>
+                typeHandler="top.nomelin.iot.common.handler.JsonTypeHandler"/>
         <result column="action_config" property="actionConfig"
-                typeHandler="top.nomelin.iot.common.handler.ActionConfigTypeHandler"/>
+                typeHandler="top.nomelin.iot.common.handler.JsonTypeHandler"/>
         <result column="enable" property="enable"/>
         <result column="device_id" property="deviceId"/>
         <result column="group_id" property="groupId"/>

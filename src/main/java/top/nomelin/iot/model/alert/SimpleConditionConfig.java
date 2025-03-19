@@ -1,5 +1,6 @@
 package top.nomelin.iot.model.alert;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
@@ -19,6 +20,7 @@ public class SimpleConditionConfig {
     /**
      * @return 此触发条件是否合法。
      */
+    @JsonIgnore
     public boolean isValid() {
         return duration != null && duration >= 0
                 && StringUtils.isNotEmpty(metric)

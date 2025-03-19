@@ -19,6 +19,25 @@ public class Alert {
     private Long createdTime;
     private Long updatedTime;
 
+    public Alert(Integer id, Integer userId, String name, String description, SimpleConditionConfig conditionConfig,
+                 ActionConfig actionConfig, Boolean enable, Integer deviceId,
+                 Integer groupId, Long createdTime, Long updatedTime) {
+        this.id = id;
+        this.userId = userId;
+        this.name = name;
+        this.description = description;
+        this.conditionConfig = conditionConfig;
+        this.actionConfig = actionConfig;
+        this.enable = enable;
+        this.deviceId = deviceId;
+        this.groupId = groupId;
+        this.createdTime = createdTime;
+        this.updatedTime = updatedTime;
+    }
+
+    public Alert() {
+    }
+
     public Integer getId() {
         return id;
     }
