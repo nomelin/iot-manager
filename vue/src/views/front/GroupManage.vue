@@ -6,11 +6,14 @@
       <el-button :disabled="selectedGroups.length === 0" icon="el-icon-delete" type="danger"
                  @click="handleBatchDelete">批量删除
       </el-button>
+      <el-input v-model="nameSearch" clearable placeholder="搜索名称(空格分割多关键字)"
+                style="width: 300px; margin-left: 10px;"
+      ></el-input>
     </div>
 
     <!-- 分组卡片展示 -->
     <el-row :gutter="20" class="card-row">
-      <el-col v-for="group in groups" :key="group.id" :lg="6" :md="8" :sm="12" :xs="24">
+      <el-col v-for="group in filteredGroups" :key="group.id" :lg="6" :md="8" :sm="12" :xs="24">
         <el-card class="group-card" shadow="hover" @click.native="showDetail(group)">
           <div class="card-content">
             <div class="meta-info">
@@ -26,7 +29,8 @@
               <div class="device-count">设备数量: {{ group.deviceIds?.length || 0 }}</div>
             </div>
             <el-button class="delete-btn" icon="el-icon-delete" type="text"
-                       @click.stop="handleDelete(group.id)">删除设备组</el-button>
+                       @click.stop="handleDelete(group.id)">删除设备组
+            </el-button>
           </div>
         </el-card>
       </el-col>
@@ -61,6 +65,7 @@
                   v-for="deviceId in selectedDevices"
                   :key="deviceId"
                   :device="getDeviceById(deviceId)"
+                  :all-groups="groups"
                   :show-data-types="true"
                   class="preview-item"/>
             </div>
@@ -106,6 +111,7 @@
                   v-for="deviceId in currentGroup.deviceIds"
                   :key="deviceId"
                   :device="getDeviceById(deviceId)"
+                  :all-groups="groups"
                   :show-data-types="true"
                   class="preview-item"/>
             </div>
@@ -149,6 +155,7 @@
               v-for="deviceId in newDevices"
               :key="deviceId"
               :device="getDeviceById(deviceId)"
+              :all-groups="groups"
               :show-data-types="true"
               class="preview-item"/>
         </div>
@@ -188,10 +195,26 @@ export default {
       editType: 'name',
       editContent: '',
 
-      selectedGroups: []
+      selectedGroups: [],
+      nameSearch: '',
     }
   },
-  computed: {},
+  computed: {
+    filteredGroups() {
+      let filtered = this.groups
+      if (this.nameSearch.trim()) {
+        const keywords = this.nameSearch.toLowerCase().split(' ').filter(k => k)
+        console.log("[组搜索]名称搜索keywords:", keywords)
+        if (keywords.length) {
+          filtered = filtered.filter(g => {
+            const name = g.name.toLowerCase()
+            return keywords.every(k => name.includes(k))
+          })
+        }
+      }
+      return filtered
+    }
+  },
   created() {
     this.fetchGroups()
     this.fetchAllDevices()
@@ -371,7 +394,8 @@ export default {
         } catch (error) {
           this.$message.error('部分删除失败')
         }
-      }).catch(() => {})
+      }).catch(() => {
+      })
     },
   }
 }
@@ -404,7 +428,8 @@ export default {
   background: #f8f9fa;
   border-radius: 1.5rem;
   height: 20vh;
-  overflow: auto;}
+  overflow: auto;
+}
 
 .group-card:hover {
   transform: translateY(-3px);
@@ -450,7 +475,10 @@ export default {
 .selected-devices {
   margin-top: 10px;
 }
-
+.group-id {
+  font-size: 12px;
+  color: #909399;
+}
 .selected-title {
   font-size: 14px;
   color: #666;

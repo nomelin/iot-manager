@@ -6,11 +6,14 @@
       <el-button :disabled="selectedTemplates.length === 0" icon="el-icon-delete" type="danger"
                  @click="handleBatchDelete">批量删除
       </el-button>
+      <el-input v-model="nameSearch" clearable placeholder="搜索名称(空格分割多关键字)"
+                style="width: 300px; margin-left: 10px;"
+      ></el-input>
     </div>
 
     <!-- 模板卡片展示 -->
     <el-row :gutter="20" class="card-row">
-      <el-col v-for="template in templates" :key="template.id" :lg="6" :md="8" :sm="12" :xs="24">
+      <el-col v-for="template in filteredTemplates" :key="template.id" :lg="6" :md="8" :sm="12" :xs="24">
         <el-card class="template-card" shadow="hover" @click.native="showDetail(template)">
           <!-- 模板基本信息 -->
           <div class="card-content">
@@ -155,11 +158,26 @@ export default {
       storageModes: [],
       dataTypeOptions: [],
       storageAggregationTimes: [],
+      nameSearch: '',
     }
   },
   computed: {
     currentStorageMode() {
       return this.storageModes.find(m => m.code === this.currentTemplate?.config?.storageMode) || {}
+    },
+    filteredTemplates() {
+      let filtered = this.templates
+      if (this.nameSearch.trim()) {
+        const keywords = this.nameSearch.toLowerCase().split(' ').filter(k => k)
+        console.log("[模板搜索]名称搜索keywords:", keywords)
+        if (keywords.length) {
+          filtered = filtered.filter(t => {
+            const name = t.name.toLowerCase()
+            return keywords.every(k => name.includes(k))
+          })
+        }
+      }
+      return filtered
     }
   },
   created() {
