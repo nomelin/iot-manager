@@ -357,6 +357,17 @@ public class IoTDBDaoImpl implements IoTDBDao {
 
     }
 
+    @Override
+    public boolean checkConnection() {
+        try (SessionDataSet sessionDataSet = executeQueryStatement("show databases")) {
+            log.info("IoTDB 连接成功");
+            return true;
+        } catch (IoTDBConnectionException | StatementExecutionException e) {
+            log.error("IoTDB 连接失败", e);
+            return false;
+        }
+    }
+
 
     private DeviceTable queryRecordsByPaths(String devicePath, Long startTime, Long endTime,
                                             List<String> paths, List<String> selectedMeasurements) {

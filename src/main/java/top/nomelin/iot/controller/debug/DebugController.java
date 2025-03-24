@@ -1,12 +1,14 @@
-package top.nomelin.iot.debug;
+package top.nomelin.iot.controller.debug;
 
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import top.nomelin.iot.cache.CacheOperations;
 import top.nomelin.iot.common.Result;
+import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.service.TaskService;
 
 import java.io.File;
@@ -30,12 +32,17 @@ public class DebugController {
 
     private final TaskService taskService;
 
+    private final IoTDBDao iotDBDao;
+    private final JdbcTemplate jdbcTemplate;
+
     @Value("${file.tempDir}")
     private String tempDir;
 
-    public DebugController(CacheOperations cacheOperations, TaskService taskService) {
+    public DebugController(CacheOperations cacheOperations, TaskService taskService, IoTDBDao iotDBDao, JdbcTemplate jdbcTemplate) {
         this.cacheOperations = cacheOperations;
         this.taskService = taskService;
+        this.iotDBDao = iotDBDao;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @RequestMapping("/hello")
@@ -97,6 +104,21 @@ public class DebugController {
             }
         }
         return Result.success("成功删除所有临时文件.");
+    }
+
+    @RequestMapping("/iotdb/checkConnection")
+    public Result checkIoTDBConnection() {
+        return Result.success(iotDBDao.checkConnection());
+    }
+
+    @RequestMapping("/mysql/checkConnection")
+    public Result checkMySQLConnection() {
+        try {
+            jdbcTemplate.execute("SELECT 1");
+            return Result.success(true);
+        } catch (Exception e) {
+            return Result.success(false);
+        }
     }
 
 }

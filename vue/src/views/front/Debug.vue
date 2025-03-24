@@ -109,6 +109,24 @@
       </div>
     </el-card>
 
+    <!-- 数据库状态 -->
+    <el-card class="debug-section">
+      <div class="section-header">
+        <h3>数据库状态</h3>
+        <el-button :loading="dbStatusLoading" type="primary" @click="checkDbStatus">检查状态</el-button>
+      </div>
+      <div class="db-status-container">
+        <div class="db-status-item">
+          <span :class="iotdbStatusClass" class="status-dot"></span>
+          IoTDB 状态：{{ getDbStatusText(iotdbStatus) }}
+        </div>
+        <div class="db-status-item">
+          <span :class="mysqlStatusClass" class="status-dot"></span>
+          MySQL 状态：{{ getDbStatusText(mysqlStatus) }}
+        </div>
+      </div>
+    </el-card>
+
 
   </div>
 </template>
@@ -135,6 +153,19 @@ export default {
       // 临时文件相关
       tempFiles: [],
       tempFilesLoading: false,
+
+      // 数据库状态相关
+      dbStatusLoading: false,
+      iotdbStatus: 'unknown', // 'ok', 'error', 'unknown'
+      mysqlStatus: 'unknown'
+    }
+  },
+  computed: {
+    iotdbStatusClass() {
+      return this.getStatusClass(this.iotdbStatus);
+    },
+    mysqlStatusClass() {
+      return this.getStatusClass(this.mysqlStatus);
     }
   },
 
@@ -143,6 +174,7 @@ export default {
     this.getCacheStats()
     this.getTaskIds()
     this.getTempFiles()
+    this.checkDbStatus();
   },
 
   methods: {
@@ -288,6 +320,47 @@ export default {
       }
     },
 
+    async checkDbStatus() {
+      this.dbStatusLoading = true;
+      try {
+        // 检查 IoTDB 状态
+        const iotdbRes = await this.$request.get('/debug/iotdb/checkConnection');
+        if (iotdbRes.code === '200') {
+          this.iotdbStatus = iotdbRes.data ? 'ok' : 'error';
+        }
+
+        // 检查 MySQL 状态
+        const mysqlRes = await this.$request.get('/debug/mysql/checkConnection');
+        if (mysqlRes.code === '200') {
+          this.mysqlStatus = mysqlRes.data ? 'ok' : 'error';
+        }
+      } catch (error) {
+        this.iotdbStatus = 'error';
+        this.mysqlStatus = 'error';
+      } finally {
+        this.dbStatusLoading = false;
+      }
+    },
+
+    getDbStatusText(status) {
+      switch (status) {
+        case 'ok':
+          return '正常';
+        case 'error':
+          return '异常';
+        default:
+          return '未知';
+      }
+    },
+
+    getStatusClass(status) {
+      return {
+        ok: 'status-dot-green',
+        error: 'status-dot-red',
+        unknown: 'status-dot-gray'
+      }[status];
+    },
+
   }
 }
 </script>
@@ -347,5 +420,36 @@ export default {
 
 .task-detail {
   margin-top: 15px;
+}
+
+/*数据库状态*/
+.db-status-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.db-status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.status-dot-green {
+  background-color: #67c23a;
+}
+
+.status-dot-red {
+  background-color: #f56c6c;
+}
+
+.status-dot-gray {
+  background-color: #909399;
 }
 </style>

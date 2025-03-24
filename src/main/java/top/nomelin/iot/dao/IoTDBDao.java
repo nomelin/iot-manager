@@ -157,4 +157,6 @@ public interface IoTDBDao {
      * 批量查询时间戳下的属性及其json value值
      */
     Map<Long, Map<String, String>> getExistingMeasurementsBatch(String devicePath, List<Long> windowTimestamps);
+
+    boolean checkConnection();
 }
