@@ -11,8 +11,16 @@
           </template>
           <div class="collapse-content">
             <el-form ref="formRef" :model="form" :rules="rules" label-position="left" label-width="200px">
+              <el-form-item label="启用文件夹上传">
+                <el-switch
+                    v-model="enableFolderUpload"
+                    active-text="是"
+                    inactive-text="否"
+                    @change="handleUploadModeChange"
+                />
+              </el-form-item>
               <!-- 多文件上传 -->
-              <el-form-item label="数据文件" prop="files">
+              <el-form-item v-if="!enableFolderUpload" label="数据文件" prop="files">
                 <el-upload
                     :auto-upload="false"
                     :file-list="fileList"
@@ -48,12 +56,42 @@
                 </el-button>
               </el-form-item>
 
+              <!-- 文件夹上传 -->
+              <el-form-item v-else label="数据文件夹" prop="folderFiles">
+                <!--                <el-upload-->
+                <!--                    ref="folderUpload"-->
+                <!--                    :auto-upload="false"-->
+                <!--                    :file-list="folderFileList"-->
+                <!--                    :limit="1"-->
+                <!--                    :multiple="false"-->
+                <!--                    :on-change="handleFolderChange"-->
+                <!--                    :on-remove="handleFolderRemove"-->
+                <!--                    action=null-->
+                <!--                    class="upload-demo"-->
+                <!--                    drag-->
+                <!--                    webkitdirectory-->
+                <!--                >-->
+                <!--                  <i class="el-icon-upload"></i>-->
+                <!--                  <div class="el-upload__text">将文件夹拖到此处，或<em>点击上传</em></div>-->
+                <!--                  <div slot="tip" class="el-upload__tip">支持上传单个文件夹（包含子文件夹）</div>-->
+                <!--                </el-upload>-->
+                <input type="file" webkitdirectory @change="handleFolderSelect"/>
+                <el-button
+                    :disabled="folderFileList.length === 0"
+                    type="warning"
+                    @click="clearAllFiles"
+                >
+                  清空文件夹
+                </el-button>
+              </el-form-item>
+
+
               <!-- 组选择 -->
               <el-form-item label="选择组">
                 <el-select
                     v-model="selectedGroup"
-                    placeholder="选择组(不选则为全部设备)"
                     clearable
+                    placeholder="选择组(不选则为全部设备)"
                     @change="handleGroupChange"
                 >
                   <el-option
@@ -80,8 +118,8 @@
                 </el-select>
                 <!-- 显示设备缩略卡片 -->
                 <div v-if="form.deviceId" class="device_preview">
-                  <device-card-mini :device="selectedDevice"
-                                    :all-groups="groups"
+                  <device-card-mini :all-groups="groups"
+                                    :device="selectedDevice"
                                     :show-data-types="true"/>
                 </div>
               </el-form-item>
@@ -137,7 +175,7 @@
               <!-- 提交按钮 -->
               <el-form-item>
                 <el-button
-                    :disabled="fileList.length === 0"
+                    :disabled="fileList.length === 0 && folderFileList.length === 0"
                     :loading="isUploading"
                     type="primary"
                     @click="submitUpload"
@@ -285,6 +323,10 @@ export default {
       groups: [],
       selectedGroup: null,
       groupDevices: [],
+
+      enableFolderUpload: false,
+      folderFileList: [],      // 文件夹模式文件列表
+      // folderStructure: new Map(), // 用于存储文件夹结构
     }
   },
   created() {
@@ -297,6 +339,7 @@ export default {
   },
   computed: {
     selectedDevice() {
+      // console.log("检查",this.form.deviceId,JSON.stringify(this.allDevices))
       return this.allDevices.find(device => device.id === this.form.deviceId);
     },
     sortedTasks() {
@@ -317,6 +360,64 @@ export default {
     },
   },
   methods: {
+    handleFolderSelect(event) {
+      const files = Array.from(event.target.files);
+      files.forEach(file => {
+        console.log('文件路径:', file.webkitRelativePath, "\n文件名:", file.name, "\n文件大小:", file.size, "\n文件类型:", file.type);
+      });
+      this.folderFileList = files.map(file => ({
+        //将文件夹路径的/替换为-，作为新的文件名
+        name: file.webkitRelativePath.replace(/\//g, '-'),
+        size: file.size,
+        type: file.type,
+        raw: file,
+        tag: file.webkitRelativePath.split('.')[0]
+      }))
+    },
+    // 处理上传模式切换
+    handleUploadModeChange() {
+      this.clearAllFiles()
+      // this.folderStructure.clear()
+    },
+    /*
+        // 处理文件夹上传
+        handleFolderChange(file, fileList) {
+          if (fileList.length > 1) {
+            this.$message.warning('只能选择一个文件夹')
+            return false
+          }
+
+          this.folderFileList = fileList
+          this.processFolderFiles(file)
+          return false
+        },
+
+        // 递归处理文件夹文件
+        processFolderFiles(file) {
+          const path = file.webkitRelativePath || ''
+          const [rootFolder] = path.split('/')
+
+          // 构建虚拟文件对象
+          const virtualFile = {
+            ...file,
+            relativePath: path,
+            folderPath: path.split('/').slice(0, -1).join('/'),
+            tagPrefix: path.split('/').slice(0, -1).join('/')
+          }
+
+          // 添加到文件结构映射
+          if (!this.folderStructure.has(rootFolder)) {
+            this.folderStructure.set(rootFolder, new Set())
+          }
+          this.folderStructure.get(rootFolder).add(virtualFile)
+          console.log("【文件夹上传】folderStructure:",JSON.stringify(this.folderStructure))
+        },
+
+        // 处理文件夹删除
+        handleFolderRemove() {
+          this.folderFileList = []
+          this.folderStructure.clear()
+        },*/
     async fetchGroups() {
       try {
         const res = await this.$request.get('/group/all');
@@ -401,7 +502,7 @@ export default {
     },
 
     async submitUpload() {
-      if (this.fileList.length === 0) {
+      if (this.fileList.length === 0 && this.folderFileList.length === 0) {
         this.$message.warning('请先选择文件')
         return
       }
@@ -417,16 +518,37 @@ export default {
         console.log(this.activeCollapse)
         this.activeCollapse = [] // 提交后自动折叠面板
 
-        for (const file of this.fileList) {
+        let filesToUpload = []
+
+        if (this.enableFolderUpload) {
+          // 处理文件夹上传模式
+          filesToUpload = this.folderFileList.map(file => ({
+            fileName: file.name,
+            file: file,
+            tag: file.tag
+          }))
+        } else {
+          // 原有文件处理逻辑
+          filesToUpload = this.fileList.map(file => ({
+            fileName: file.name,
+            file: file,
+            tag: file.name.split('.')[0]
+          }))
+        }
+
+        for (const fileData of filesToUpload) {
+          const file = fileData.file
           const formData = new FormData()
           formData.append('file', file.raw)
+          formData.append('fileName', fileData.fileName)
           formData.append('deviceId', this.form.deviceId)
           formData.append('skipRows', this.form.skipRows)
           formData.append('mergeTimestampNum', this.form.mergeTimeStampNum)
           formData.append('batchSize', this.form.batchSize)
           console.log("fileName", file.name)
           if (this.usingFileNameAsTag) {
-            formData.append('tag', file.name.split('.')[0])
+            //把TAG的所有|替换为%，因为|是不合法的TAG字符
+            formData.append('tag', fileData.tag.replace(/\|/g, '%'))
           }
           try {
             const res = await this.$request.post('/files/upload', formData, {
@@ -435,6 +557,8 @@ export default {
 
             if (res.code === '200') {
               const taskId = res.data
+              console.log(`文件 "${file.name}" 上传成功, 任务ID: ${taskId}`)
+              // console.log(JSON.stringify(this.taskInfos))
               this.$set(this.taskInfos, taskId, {
                 fileName: file.name,
                 status: 'PENDING',
@@ -442,6 +566,7 @@ export default {
                 startTime: null,
                 endTime: null
               })
+              // console.log(JSON.stringify(this.taskInfos))
               this.startPolling(taskId)
             }
           } catch (error) {
@@ -458,6 +583,7 @@ export default {
     startPolling(taskId) {
       // 先停止已有轮询
       if (this.pollingMap.has(taskId)) {
+        console.log(`停止轮询任务${taskId}`)
         clearInterval(this.pollingMap.get(taskId))
       }
 
@@ -667,9 +793,16 @@ export default {
     },
 
     clearAllFiles() {
-      this.fileList = [];
-      this.fileSet.clear();
-      this.$message.success("已清空所有文件");
+      if (this.enableFolderUpload) {
+        this.folderFileList = []
+        // this.folderStructure.clear()
+        // this.$refs.folderUpload.clearFiles()
+      } else {
+        this.fileList = []
+        this.fileSet.clear()
+      }
+      console.log("已清空所有文件")
+      // this.$message.success("已清空所有文件")
     },
   }
 }

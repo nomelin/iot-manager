@@ -48,6 +48,7 @@ public class FileController {
     @PostMapping("/upload")
     public Result uploadFile(
             @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "fileName", required = false) String fileName,//为了避免上传文件夹时，文件名重复或者包含斜杠等特殊字符
             @RequestParam("skipRows") Integer skipRows,
             @RequestParam("deviceId") Integer deviceId,
             @RequestParam(value = "mergeTimestampNum", required = false,
@@ -70,13 +71,16 @@ public class FileController {
         if (ObjectUtil.isNull(device)) {
             throw new BusinessException(CodeMessage.DEVICE_NOT_EXIST_ERROR, "设备不存在");
         }
+        if (ObjectUtil.isNull(fileName)) {
+            fileName = file.getOriginalFilename();//获取原始文件名
+        }
         // 创建任务。
         String taskId = taskService.createTask(file);
         // 创建非临时目录的持久化文件,解决异步文件处理时，临时文件被删除的问题
-        File tempFile = new File(tempDir + UUID.randomUUID() + "_" + file.getOriginalFilename());
+        File tempFile = new File(tempDir + UUID.randomUUID() + "_" + fileName);
         try {
             file.transferTo(tempFile); // 将上传文件保存到持久化目录
-            log.info("文件保存到临时文件夹，文件名:{}", tempFile.getName());
+            log.info("文件保存到临时文件夹，临时文件名:{}，绝对路径:{}", tempFile.getName(), tempFile.getAbsolutePath());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
