@@ -6,12 +6,17 @@
       @closed="handleClose"
   >
     <div class="export-dialog">
-      <el-form label-position="left" >
+      <el-form label-position="left">
         <el-form-item label="导出格式">
           <el-radio-group v-model="exportFormat">
             <el-radio label="csv">CSV 合并多文件</el-radio>
             <el-radio label="zip">ZIP 压缩包</el-radio>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item label="是否包含设备名称列">
+          <el-checkbox v-model="needDeviceNameColumn"
+          >
+          </el-checkbox>
         </el-form-item>
         <el-form-item label="是否包含标签列">
           <el-checkbox v-model="needTagColumn"
@@ -82,13 +87,14 @@ export default {
       exportFormat: 'csv',
       exporting: false,
       needTagColumn: true,
+      needDeviceNameColumn: false,
     }
   },
   watch: {
     exportFormat(val) {
       if (val === 'csv') {
         this.needTagColumn = true
-      }else if (val === 'zip') {
+      } else if (val === 'zip') {
         this.needTagColumn = false
       }
     },
@@ -129,7 +135,7 @@ export default {
           .filter(Boolean)
     },
     formatTagList() {
-      return (deviceId) => this.sortTags([...this.selectedTags[deviceId] || []]).join('/')|| '无'
+      return (deviceId) => this.sortTags([...this.selectedTags[deviceId] || []]).join('/') || '无'
     },
   },
   methods: {
@@ -168,7 +174,7 @@ export default {
 
     async exportZIP() {
       const devices = this.prepareExportData()
-      if (!devices.length){
+      if (!devices.length) {
         this.$message.warning('没有数据可供导出')
         return
       }
@@ -204,6 +210,9 @@ export default {
 
       const rows = []
       const headers = ['标签', '序号', ...fields]
+      if(this.needDeviceNameColumn){
+        headers.unshift('设备名称')
+      }
       rows.push(headers.join(','))
 
       tags.forEach(tag => {
@@ -227,6 +236,9 @@ export default {
 
         for (let seq = 1; seq <= maxSequence; seq++) {
           const row = [formattedTag, seq]
+          if (this.needDeviceNameColumn) {
+            row.unshift(name)
+          }
           fields.forEach(field => {
             row.push(sequenceMap[seq]?.[field] ?? '')
           })
@@ -255,6 +267,9 @@ export default {
       if (this.needTagColumn) {
         headers.unshift('标签')
       }
+      if (this.needDeviceNameColumn) {
+        headers.unshift('设备名称')
+      }
       rows.push(headers.join(','))
 
       const sequenceMap = {}
@@ -276,10 +291,12 @@ export default {
 
       for (let seq = 1; seq <= maxSequence; seq++) {
         let row = []
+        row = [seq]
         if (this.needTagColumn) {
-          row = [formattedTag, seq]
-        } else {
-          row = [seq]
+          row = [formattedTag, ...row]
+        }
+        if (this.needDeviceNameColumn) {
+          row = [name, ...row]
         }
         fields.forEach(field => {
           row.push(sequenceMap[seq]?.[field] ?? '')
@@ -453,7 +470,7 @@ export default {
   white-space: pre-wrap;
 }
 
-.export-preview{
+.export-preview {
   max-height: 20vh;
   flex: 1;
   margin-top: 10px;
