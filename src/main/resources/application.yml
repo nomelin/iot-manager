@@ -12,7 +12,7 @@ spring:
       max-file-size: 100MB
       max-request-size: 100MB
 server:
-  port: 12345
+  port: 34567
   tomcat:
     threads:
       max: 100
@@ -43,9 +43,8 @@ iotdb:
   username: root
   password: root
   storage:
-    root: root
-    ts_encoding: PLAIN
-    compression_type: UNCOMPRESSED
+    ts-encoding: PLAIN
+    compression-type: GZIP
     compatible:
       batch-query: true
   #      dont-merge: true
@@ -53,6 +52,9 @@ iotdb:
     timeout: 3000
 file:
   tempDir: D:\lib\毕业设计\project\iot\temp\upload\
-  processor:
-    csv:
-      batch-size: 500
+
+task:
+  auto-clean:
+    fail_expired_days: 1
+    ongoing_expired_days: 7
+

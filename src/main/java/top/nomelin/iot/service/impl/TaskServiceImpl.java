@@ -2,9 +2,11 @@ package top.nomelin.iot.service.impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.model.dto.FileTask;
@@ -27,6 +29,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TaskServiceImpl implements TaskService {
     public static final Logger log = LoggerFactory.getLogger(TaskServiceImpl.class);
     private final Map<String, TaskMetadata> tasks = new ConcurrentHashMap<>();
+
+    @Value("${task.auto-clean.fail_expired_days:1}")
+    private int autoCleanFailExpiredDays;
+
+    @Value("${task.auto-clean.ongoing_expired_days:7}")
+    private int autoCleanOngoingExpiredDays;
 
     @Override
     public String createTask(MultipartFile file) {
@@ -93,9 +101,9 @@ public class TaskServiceImpl implements TaskService {
     }
 
     /**
-     * 定时清理过期任务（每1min执行一次）
+     * 定时清理过期任务（每5min执行一次）
      */
-    @Scheduled(fixedRate = 1000 * 60)
+    @Scheduled(fixedRate = Constants.TASK_AUTO_CLEAN_INTERVAL)
     public void cleanupExpiredTasks() {
         log.info("开始清理过期任务...");
         LocalDateTime now = LocalDateTime.now();
@@ -118,7 +126,7 @@ public class TaskServiceImpl implements TaskService {
                         break;
                     case FAILED:
                     case CANCELLED:
-                        if (shouldCleanFinalState(task, now, 1)) {
+                        if (shouldCleanFinalState(task, now, autoCleanFailExpiredDays)) {
                             iterator.remove();
                             log.info("清理失败/取消任务(超过1天): {}", taskId);
                             cleanedCount++;
@@ -127,7 +135,7 @@ public class TaskServiceImpl implements TaskService {
                     case QUEUED:
                     case PROCESSING:
                     case PAUSED:
-                        if (shouldCleanOngoingTask(createdAt, now, 7)) {
+                        if (shouldCleanOngoingTask(createdAt, now, autoCleanOngoingExpiredDays)) {
                             iterator.remove();
                             log.info("清理长期未完成任务(超过7天): {}", taskId);
                             cleanedCount++;
