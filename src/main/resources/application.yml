@@ -44,7 +44,7 @@ iotdb:
   password: root
   storage:
     ts-encoding: PLAIN
-    compression-type: GZIP
+    compression-type: LZ4
     compatible:
       batch-query: true
   #      dont-merge: true

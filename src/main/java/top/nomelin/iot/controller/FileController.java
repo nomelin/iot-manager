@@ -37,7 +37,7 @@ public class FileController {
     private final DeviceService deviceService;
 
     @Value("${file.tempDir}")
-    String tempDir;
+    private String tempDir;
 
     public FileController(FileProcessingService processingService, TaskService taskService, DeviceService deviceService) {
         this.processingService = processingService;

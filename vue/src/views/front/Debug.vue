@@ -93,6 +93,23 @@
         </el-descriptions>
       </div>
     </el-card>
+
+    <!-- 临时文件管理 -->
+    <el-card class="debug-section">
+      <div class="section-header">
+        <h3>临时文件</h3>
+        <div>
+          <el-button :loading="tempFilesLoading" type="primary" @click="getTempFiles">刷新文件列表</el-button>
+          <el-button type="danger" @click="deleteAllTempFiles">清空临时文件</el-button>
+        </div>
+      </div>
+      <div class="tags-container">
+        <el-tag v-for="file in tempFiles" :key="file" class="cache-key" type="info">{{ file }}</el-tag>
+        <div v-if="tempFiles.length === 0" class="empty-tip">暂无临时文件</div>
+      </div>
+    </el-card>
+
+
   </div>
 </template>
 
@@ -113,7 +130,11 @@ export default {
       taskIdsLoading: false,
       taskIdInput: '',
       currentTask: null,
-      taskDetailLoading: false
+      taskDetailLoading: false,
+
+      // 临时文件相关
+      tempFiles: [],
+      tempFilesLoading: false,
     }
   },
 
@@ -121,6 +142,7 @@ export default {
     this.getCacheKeys()
     this.getCacheStats()
     this.getTaskIds()
+    this.getTempFiles()
   },
 
   methods: {
@@ -236,7 +258,36 @@ export default {
 
     formatTime(time) {
       return time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '-'
-    }
+    },
+
+    // 临时文件操作
+    async getTempFiles() {
+      this.tempFilesLoading = true;
+      try {
+        const res = await this.$request.get('/debug/file/allTempFiles');
+        if (res.code === '200') {
+          this.tempFiles = res.data || [];
+        }
+      } finally {
+        this.tempFilesLoading = false;
+      }
+    },
+
+    async deleteAllTempFiles() {
+      try {
+        await this.$confirm('确定要清空所有临时文件吗？', '警告', {
+          type: 'warning'
+        });
+        const res = await this.$request.get('/debug/file/deleteAllTempFiles');
+        if (res.code === '200') {
+          this.$message.success('临时文件已清空');
+          await this.getTempFiles();
+        }
+      } catch (error) {
+        // 取消操作不提示
+      }
+    },
+
   }
 }
 </script>

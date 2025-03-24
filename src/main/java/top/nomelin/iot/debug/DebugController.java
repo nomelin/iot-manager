@@ -1,11 +1,20 @@
 package top.nomelin.iot.debug;
 
+import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import top.nomelin.iot.cache.CacheOperations;
 import top.nomelin.iot.common.Result;
 import top.nomelin.iot.service.TaskService;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * DebugController
@@ -16,9 +25,13 @@ import top.nomelin.iot.service.TaskService;
 @RestController
 @RequestMapping("/debug")
 public class DebugController {
+    public static final Logger log = org.slf4j.LoggerFactory.getLogger(DebugController.class);
     private final CacheOperations cacheOperations;
 
     private final TaskService taskService;
+
+    @Value("${file.tempDir}")
+    private String tempDir;
 
     public DebugController(CacheOperations cacheOperations, TaskService taskService) {
         this.cacheOperations = cacheOperations;
@@ -54,6 +67,36 @@ public class DebugController {
     @RequestMapping("/task/getTask/{taskId}")
     public Result getTask(@PathVariable String taskId) {
         return Result.success(taskService.getTask(taskId));
+    }
+
+    @RequestMapping("/file/allTempFiles")
+    public Result getTempDir() {
+        File folder = new File(tempDir);
+        if (!folder.exists() || !folder.isDirectory()) {
+            return Result.success(Collections.emptyList());
+        }
+        List<String> fileNames = Arrays.stream(Objects.requireNonNull(folder.listFiles()))
+                .filter(File::isFile)
+                .map(File::getName)
+                .collect(Collectors.toList());
+        return Result.success(fileNames);
+    }
+
+    @RequestMapping("/file/deleteAllTempFiles")
+    public Result deleteAllTempFiles() {
+        File folder = new File(tempDir);
+        if (!folder.exists() || !folder.isDirectory()) {
+            return Result.success("临时文件夹不存在或不是文件夹.");
+        }
+        for (File file : Objects.requireNonNull(folder.listFiles())) {
+            if (file.isFile()) {
+                boolean deleted = file.delete();
+                if (!deleted) {
+                    log.error("删除临时文件失败: " + file.getName());
+                }
+            }
+        }
+        return Result.success("成功删除所有临时文件.");
     }
 
 }
