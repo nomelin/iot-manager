@@ -161,7 +161,12 @@
               class="task-item"
           >
             <div class="task-meta">
-              <span class="filename">{{ task.fileName }}</span>
+              <span class="filename">文件名:{{ task.fileName }}
+                <span style="font-weight: normal">   /   TAG:{{ task.tag }}</span>
+                <span style="font-weight: normal">   /   设备ID:{{ task.device.id }}</span>
+                <span style="font-weight: normal">   /   设备名:{{ task.device.name }}</span>
+              </span>
+
               <div class="task-actions">
                 <el-tag :type="statusTagType(task.status)" size="small">
                   {{ statusText(task.status) }}
@@ -717,6 +722,7 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: #303133;
 }
 
 .progress-detail {

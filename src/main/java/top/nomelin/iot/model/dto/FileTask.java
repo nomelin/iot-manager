@@ -1,5 +1,7 @@
 package top.nomelin.iot.model.dto;
 
+import top.nomelin.iot.model.Device;
+
 /**
  * 文件处理任务
  *
@@ -8,6 +10,10 @@ package top.nomelin.iot.model.dto;
  **/
 public class FileTask extends Task {
     private String fileName;// 文件名
+
+    private Device device; // 写入的目标设备
+
+    private String tag; // 标签
     private int totalRows;// 总行数
     private int processedRows;// 已处理的行数
 
@@ -55,5 +61,21 @@ public class FileTask extends Task {
 
     public void setProcessedRows(int processedRows) {
         this.processedRows = processedRows;
+    }
+
+    public Device getDevice() {
+        return device;
+    }
+
+    public void setDevice(Device device) {
+        this.device = device;
+    }
+
+    public String getTag() {
+        return tag;
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
     }
 }
