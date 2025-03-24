@@ -13,6 +13,24 @@
         <div class="scrollable-container">
           <el-form :model="form" class="query-form" label-position="left" label-width="120px">
             <!-- 设备ID -->
+            <!-- 组选择 -->
+            <el-form-item label="选择组">
+              <el-select
+                  v-model="selectedGroup"
+                  placeholder="选择组(不选则为全部设备)"
+                  clearable
+                  @change="handleGroupChange"
+              >
+                <el-option
+                    v-for="group in groups"
+                    :key="group.id"
+                    :label="group.name"
+                    :value="group.id"
+                />
+              </el-select>
+            </el-form-item>
+
+            <!-- 设备ID -->
             <el-form-item label="设备">
               <el-select
                   v-model="form.deviceId"
@@ -20,19 +38,19 @@
                   @change="handleDeviceChange"
               >
                 <el-option
-                    v-for="device in allDevices"
+                    v-for="device in filteredDevices"
                     :key="device.id"
                     :label="device.name"
                     :value="device.id"
                 />
               </el-select>
-
+              <!-- 显示设备缩略卡片 -->
+              <div v-if="form.deviceId" class="device_preview">
+                <device-card-mini :device="selectedDevice"
+                                  :all-groups="groups"
+                                  :show-data-types="true"/>
+              </div>
             </el-form-item>
-            <!-- 显示设备缩略卡片 -->
-            <div v-if="form.deviceId" class="device_preview">
-              <device-card-mini :device="selectedDevice"
-                                :show-data-types="true"/>
-            </div>
 
             <!-- 时间范围 -->
             <el-form-item label="时间范围">
@@ -339,6 +357,10 @@ export default {
       currentPage: 1,                       // 当前页码，默认第1页
       pageSize: 100,                         // 每页显示数据数量，可根据需要调整
 
+      groups: [],
+      selectedGroup: null,
+      groupDevices: [],
+
     };
   },
   computed: {
@@ -358,6 +380,9 @@ export default {
       if (!this.selectedDevice || !this.selectedDevice.allTags) return [];
       return this.sortTags(this.selectedDevice.allTags)
     },
+    filteredDevices() {
+      return this.selectedGroup ? this.groupDevices : this.allDevices;
+    },
   },
   watch: {
     'form.selectMeasurements': {
@@ -373,9 +398,45 @@ export default {
   },
   created() {
     this.fetchAllDevices();
+    this.fetchGroups();
     this.loadAggregateFunctions();
   },
   methods: {
+    async fetchGroups() {
+      try {
+        const res = await this.$request.get('/group/all');
+        if (res.code === '200') {
+          this.groups = res.data;
+        } else {
+          this.$message.error(res.msg);
+        }
+      } catch (error) {
+        this.$message.error('获取组列表失败');
+      }
+    },
+
+    async fetchDevicesByGroup(groupId) {
+      try {
+        const res = await this.$request.get(`/group/getDevices/${groupId}`);
+        if (res.code === '200') {
+          this.groupDevices = res.data;
+        } else {
+          this.$message.error(res.msg);
+        }
+      } catch (error) {
+        this.$message.error('获取组设备失败');
+      }
+    },
+
+    handleGroupChange(groupId) {
+      if (groupId) {
+        this.fetchDevicesByGroup(groupId);
+      } else {
+        this.groupDevices = [];
+      }
+      this.form.deviceId = null; // 清空已选设备
+    },
+
     selectAllTags() {
       this.form.tagQuery = this.deviceTags;
     },
@@ -525,7 +586,7 @@ export default {
       }
     },
     transformData(deviceTable) {
-      console.log("deviceTable: " + JSON.stringify(deviceTable))
+      // console.log("deviceTable: " + JSON.stringify(deviceTable))
       this.tableData = []
 
       this.measurementsColumns = this.form.selectMeasurements;

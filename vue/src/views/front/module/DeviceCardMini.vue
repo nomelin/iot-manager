@@ -11,14 +11,14 @@
           {{ name }}: {{ type }}
         </el-tag>
       </div>
-      <div v-if="device.groups && device.groups.length > 0">
+      <div v-if="device.groupIds && device.groupIds.length > 0">
         所属组：
-        <el-tag v-for="groupId in device.groupIds" :key="group" class="group-tag">
-          {{ groupId }}
+        <el-tag v-for="groupName in groupNames " :key="groupName" class="group-tag">
+          {{ groupName }}
         </el-tag>
       </div>
       <div v-else>所属组：不属于任何组</div>
-      <div v-if="device.tags">
+      <div v-if="device.tags && device.tags.length > 0">
         标签：
         <el-tag v-for="tag in device.tags" :key="tag" class="group-tag">
           {{ tag }}
@@ -36,6 +36,10 @@ export default {
       type: Object,
       required: true
     },
+    allGroups: {
+      type: Array,
+      required: false
+    },
     // 是否显示数据类型标签
     showDataTypes: {
       type: Boolean,
@@ -45,6 +49,12 @@ export default {
   computed: {
     storageMode() {
       return this.device.config.storageMode;
+    },
+    groupNames() {
+      if (this.allGroups && this.allGroups.length > 0) {
+        return this.allGroups.filter(group => this.device.groupIds.includes(group.id)).map(group => group.name);
+      }
+      return [];
     }
   }
 }

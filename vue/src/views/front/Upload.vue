@@ -48,6 +48,23 @@
                 </el-button>
               </el-form-item>
 
+              <!-- 组选择 -->
+              <el-form-item label="选择组">
+                <el-select
+                    v-model="selectedGroup"
+                    placeholder="选择组(不选则为全部设备)"
+                    clearable
+                    @change="handleGroupChange"
+                >
+                  <el-option
+                      v-for="group in groups"
+                      :key="group.id"
+                      :label="group.name"
+                      :value="group.id"
+                  />
+                </el-select>
+              </el-form-item>
+
               <!-- 设备ID -->
               <el-form-item label="设备">
                 <el-select
@@ -55,7 +72,7 @@
                     placeholder="请选择设备"
                 >
                   <el-option
-                      v-for="device in allDevices"
+                      v-for="device in filteredDevices"
                       :key="device.id"
                       :label="device.name"
                       :value="device.id"
@@ -64,9 +81,9 @@
                 <!-- 显示设备缩略卡片 -->
                 <div v-if="form.deviceId" class="device_preview">
                   <device-card-mini :device="selectedDevice"
+                                    :all-groups="groups"
                                     :show-data-types="true"/>
                 </div>
-
               </el-form-item>
 
               <el-form-item label="是否使用文件名作为数据标签">
@@ -264,10 +281,15 @@ export default {
       isUploading: false,
       fileSet: new Set(), // 用于文件名去重
       usingFileNameAsTag: true,// 是否使用文件名作为标签
+
+      groups: [],
+      selectedGroup: null,
+      groupDevices: [],
     }
   },
   created() {
     this.fetchAllDevices()
+    this.fetchGroups();
     this.restoreFailedTasks();
   },
   beforeUnmount() {
@@ -290,8 +312,46 @@ export default {
         return new Date(taskB.startTime) - new Date(taskA.startTime);
       });
     },
+    filteredDevices() {
+      return this.selectedGroup ? this.groupDevices : this.allDevices;
+    },
   },
   methods: {
+    async fetchGroups() {
+      try {
+        const res = await this.$request.get('/group/all');
+        if (res.code === '200') {
+          this.groups = res.data;
+        } else {
+          this.$message.error(res.msg);
+        }
+      } catch (error) {
+        this.$message.error('获取组列表失败');
+      }
+    },
+
+    async fetchDevicesByGroup(groupId) {
+      try {
+        const res = await this.$request.get(`/group/getDevices/${groupId}`);
+        if (res.code === '200') {
+          this.groupDevices = res.data;
+        } else {
+          this.$message.error(res.msg);
+        }
+      } catch (error) {
+        this.$message.error('获取组设备失败');
+      }
+    },
+
+    handleGroupChange(groupId) {
+      if (groupId) {
+        this.fetchDevicesByGroup(groupId);
+      } else {
+        this.groupDevices = [];
+      }
+      this.form.deviceId = null; // 清空已选设备
+    },
+
     extractErrorMessages(errorMessage) {
       let errorMessages = '';
       const regex = /msg='(.*?)'.*?extraMessage='(.*?)'/g;
