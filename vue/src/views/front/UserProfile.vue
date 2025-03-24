@@ -1,9 +1,19 @@
 <template>
   <div class="main-content">
     <el-card class="card">
-      <div class="password">
-        <el-button class="primary-button" style="margin-right: 10rem" type="primary" @click="updatePassword">修改密码
-        </el-button>
+      <div class="header-bar">
+        <div class="control">
+          <el-tooltip content="全局配置" placement="bottom" transition="none">
+            <i class="el-icon-setting icon" @click="goToConfig"></i>
+          </el-tooltip>
+          <el-tooltip content="Debug" placement="bottom" transition="none">
+            <i class="el-icon-data-analysis icon" @click="goToDebug"></i>
+          </el-tooltip>
+        </div>
+        <div class="password">
+          <el-button class="primary-button" style="margin-right: 10rem" type="primary" @click="updatePassword">修改密码
+          </el-button>
+        </div>
       </div>
       <el-form :model="user" class="form" label-width="80px">
         <div style="margin: 15px; text-align: center;align-items: center; justify-content: center;width: 100%;">
@@ -138,7 +148,14 @@ export default {
           })
         }
       })
-    }
+    },
+    goToConfig() {
+      this.$message.info("全局配置待开发");
+    },
+    goToDebug() {
+      // this.$router.push("/debug");
+      window.open('/debug', '_blank');
+    },
   }
 }
 </script>
@@ -193,11 +210,24 @@ export default {
   margin: 2rem auto 0;
 }
 
-.password {
-  text-align: right;
-  width: 100%;
-  height: 5vh;
+.header-bar {
+  padding-left: 3rem;
+  display: flex; /* 使用flex布局 */
+  justify-content: space-between; /* 左右两边对齐 */
+  align-items: center; /* 垂直居中对齐 */
+  width: 100%; /* 宽度占满父容器 */
+  margin-bottom: 1rem; /* 底部留空，避免贴近表单 */
+}
 
+.control {
+  display: flex; /* 让左侧按钮横向排列 */
+  align-items: center; /* 垂直居中 */
+}
+
+.password {
+
+  display: flex; /* 右侧按钮对齐 */
+  align-items: center; /* 垂直居中 */
 }
 
 .form {
@@ -228,6 +258,12 @@ export default {
 
 .dialog {
   border-radius: 0.5rem;
+}
+
+.icon {
+  font-size: 2rem;
+  margin-right: 1.5rem;
+  cursor: pointer;
 }
 
 </style>
