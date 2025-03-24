@@ -3,6 +3,9 @@
     <!-- 顶部操作栏 -->
     <div class="operation-bar">
       <el-button icon="el-icon-plus" type="primary" @click="showCreateDialog">新建分组</el-button>
+      <el-button :disabled="selectedGroups.length === 0" icon="el-icon-delete" type="danger"
+                 @click="handleBatchDelete">批量删除
+      </el-button>
     </div>
 
     <!-- 分组卡片展示 -->
@@ -11,6 +14,13 @@
         <el-card class="group-card" shadow="hover" @click.native="showDetail(group)">
           <div class="card-content">
             <div class="meta-info">
+              <div class="card-header">
+                <!-- 多选复选框 -->
+                <div class="card-checkbox">
+                  <el-checkbox v-model="selectedGroups" :label="group.id" @click.native.stop><br></el-checkbox>
+                </div>
+                <div class="group-id">ID: {{ group.id }}</div>
+              </div>
               <div class="group-name">{{ group.name }}</div>
               <div class="group-desc">{{ group.description || '暂无描述' }}</div>
               <div class="device-count">设备数量: {{ group.deviceIds?.length || 0 }}</div>
@@ -176,7 +186,9 @@ export default {
       selectedDevices: [],
       newDevices: [],
       editType: 'name',
-      editContent: ''
+      editContent: '',
+
+      selectedGroups: []
     }
   },
   computed: {},
@@ -339,7 +351,28 @@ export default {
     getDeviceName(deviceId) {
       const device = this.getDeviceById(deviceId)
       return device ? device.name : '未知设备'
-    }
+    },
+    async handleBatchDelete() {
+      if (this.selectedGroups.length === 0) return
+
+      this.$confirm(`确定删除选中的 ${this.selectedGroups.length} 个分组吗？`, '警告', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          const requests = this.selectedGroups.map(id =>
+              this.$request.post(`/group/delete/${id}`)
+          )
+          await Promise.all(requests)
+          this.$message.success('批量删除成功')
+          this.selectedGroups = []
+          await this.fetchGroups()
+        } catch (error) {
+          this.$message.error('部分删除失败')
+        }
+      }).catch(() => {})
+    },
   }
 }
 </script>

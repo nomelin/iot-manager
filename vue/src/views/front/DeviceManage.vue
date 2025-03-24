@@ -3,14 +3,31 @@
     <!-- 顶部操作栏 -->
     <div class="operation-bar">
       <el-button icon="el-icon-plus" type="primary" @click="showCreateDialog">新建设备</el-button>
-      <!--      <el-button :disabled="selectedDevices.length === 0" icon="el-icon-delete" type="danger"-->
-      <!--                 @click="handleBatchDelete">批量删除-->
-      <!--      </el-button>-->
+      <el-button :disabled="selectedDevices.length === 0" icon="el-icon-delete" type="danger"
+                 @click="handleBatchDelete">批量删除
+      </el-button>
+      <el-select v-model="selectedGroup" clearable placeholder="选择组" style="margin-left: 10px;">
+        <el-option
+            v-for="group in groups"
+            :key="group.id"
+            :label="group.name"
+            :value="group.id">
+        </el-option>
+      </el-select>
+
+      <el-input v-model="nameSearch" clearable placeholder="搜索名称(空格分割多关键字)"
+                style="width: 300px; margin-left: 10px;"
+      ></el-input>
+      <el-tooltip content="搜索范围包括设备id，名称，标签；组id，名称；模板名称；传感器名称" placement="bottom">
+        <el-input v-model="fullSearch" clearable
+                  placeholder="全文搜索(空格分割多关键字)" style="width: 400px; margin-left: 10px;"></el-input>
+      </el-tooltip>
+      <el-button icon="el-icon-search" type="primary" @click="handleClearSearch">清空</el-button>
     </div>
 
     <!-- 设备卡片展示 -->
     <el-row :gutter="20" class="card-row">
-      <el-col v-for="device in devices" :key="device.id" :lg="6" :md="8" :sm="12" :xs="24">
+      <el-col v-for="device in filteredDevices" :key="device.id" :lg="6" :md="8" :sm="12" :xs="24">
         <el-card class="device-card" shadow="hover" @click.native="showDetail(device)">
           <!-- 设备基本信息 -->
           <div class="card-content">
@@ -202,7 +219,10 @@ export default {
       inputTag: '',
       newTag: '',
       newName: '',
-      storageModes: []
+      storageModes: [],
+      selectedGroup: null,
+      nameSearch: '',
+      fullSearch: ''
     }
   },
   computed: {
@@ -217,7 +237,65 @@ export default {
     //设备详情的存储模式
     currentStorageMode() {
       return this.storageModes.find(m => m.code === this.currentDevice?.config?.storageMode) || {}
-    }
+    },
+    // 筛选后的设备列表
+    filteredDevices() {
+      let filtered = this.devices
+
+      // 组筛选
+      if (this.selectedGroup) {
+        console.log("[设备搜索]selectedGroup:", this.selectedGroup)
+        filtered = filtered.filter(d => d.groupIds.includes(this.selectedGroup))
+      }
+
+      // 名称搜索
+      if (this.nameSearch.trim()) {
+        const keywords = this.nameSearch.toLowerCase().split(' ').filter(k => k)
+        console.log("[设备搜索]名称搜索keywords:", keywords)
+        if (keywords.length) {
+          filtered = filtered.filter(d => {
+            const name = d.name.toLowerCase()
+            return keywords.every(k => name.includes(k))
+          })
+        }
+      }
+
+      // 全文搜索
+      if (this.fullSearch.trim()) {
+        const keywords = this.fullSearch.toLowerCase().split(' ').filter(k => k)
+        console.log("[设备搜索]全文搜索keywords:", keywords)
+        if (keywords.length) {
+          filtered = filtered.filter(d => {
+            // 收集所有搜索字段
+            const groupNames = this.groups
+                .filter(g => d.groupIds.includes(g.id))
+                .map(g => g.name.toLowerCase())
+                .join(' ')
+
+            const template = this.templates.find(t => t.id === d.templateId)
+            const templateName = template ? template.name.toLowerCase() : ''
+            const tags = (d.tags || []).join(' ').toLowerCase()
+            const sensorNames = d.config.dataTypes
+                ? Object.keys(d.config.dataTypes).join(' ').toLowerCase()
+                : ''
+
+            const searchContent = [
+              d.id.toString(),
+              d.name.toLowerCase(),
+              d.groupIds.join(' '),
+              groupNames,
+              templateName,
+              tags,
+              sensorNames
+            ].join(' ')
+
+            return keywords.every(k => searchContent.includes(k))
+          })
+        }
+      }
+
+      return filtered
+    },
   },
   created() {
     this.fetchDevices()
@@ -443,7 +521,34 @@ export default {
         console.log(e)
         this.$message.info('取消清空设备数据')
       })
-    }
+    },
+    async handleBatchDelete() {
+      if (this.selectedDevices.length === 0) return
+
+      this.$confirm(`确定删除选中的 ${this.selectedDevices.length} 个设备吗？`, '警告', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          const requests = this.selectedDevices.map(id =>
+              this.$request.post(`/device/delete/${id}`)
+          )
+          await Promise.all(requests)
+          this.$message.success('批量删除成功')
+          this.selectedDevices = []
+          await this.fetchDevices()
+        } catch (error) {
+          this.$message.error('部分删除失败')
+        }
+      }).catch(() => {
+      })
+    },
+    handleClearSearch() {
+      this.nameSearch = ''
+      this.fullSearch = ''
+      this.selectedGroup = null
+    },
   }
 }
 </script>
@@ -487,6 +592,7 @@ export default {
   align-items: center;
   border-bottom: 1px solid #eee;
 }
+
 .device-card:hover {
   transform: translateY(-3px);
 }

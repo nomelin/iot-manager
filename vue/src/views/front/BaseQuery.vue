@@ -12,7 +12,6 @@
         </template>
         <div class="scrollable-container">
           <el-form :model="form" class="query-form" label-position="left" label-width="120px">
-            <!-- 设备ID -->
             <!-- 组选择 -->
             <el-form-item label="选择组">
               <el-select
