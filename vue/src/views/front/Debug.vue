@@ -119,6 +119,11 @@
         <div class="db-status-item">
           <span :class="iotdbStatusClass" class="status-dot"></span>
           IoTDB 状态：{{ getDbStatusText(iotdbStatus) }}
+          <div>
+            <el-button :loading="iotdbLoading" type="success" @click="startIoTDB">启动</el-button>
+            <el-button :loading="iotdbLoading" type="danger" @click="stopIoTDB">停止</el-button>
+            <el-button :loading="iotdbLoading" type="warning" @click="restartIoTDB">重启</el-button>
+          </div>
         </div>
         <div class="db-status-item">
           <span :class="mysqlStatusClass" class="status-dot"></span>
@@ -157,7 +162,8 @@ export default {
       // 数据库状态相关
       dbStatusLoading: false,
       iotdbStatus: 'unknown', // 'ok', 'error', 'unknown'
-      mysqlStatus: 'unknown'
+      mysqlStatus: 'unknown',
+      iotdbLoading: false,
     }
   },
   computed: {
@@ -359,6 +365,33 @@ export default {
         error: 'status-dot-red',
         unknown: 'status-dot-gray'
       }[status];
+    },
+
+    async controlIoTDB(action) {
+      this.iotdbLoading = true;
+      try {
+        const res = await this.$request.get(`/debug/iotdb/${action}`);
+        if (res.code === '200') {
+          this.$message.success(`IoTDB ${action} 成功`);
+        } else {
+          this.$message.error(`IoTDB ${action} 失败: ${res.msg}`);
+        }
+      } finally {
+        this.iotdbLoading = false;
+        await this.checkDbStatus();
+      }
+    },
+
+    startIoTDB() {
+      this.controlIoTDB('start');
+    },
+
+    stopIoTDB() {
+      this.controlIoTDB('stop');
+    },
+
+    restartIoTDB() {
+      this.controlIoTDB('restart');
     },
 
   }

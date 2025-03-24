@@ -86,7 +86,7 @@ public class TokenInterceptor implements HandlerInterceptor {
         } catch (JWTVerificationException e) {
             throw new BusinessException(CodeMessage.TOKEN_CHECK_ERROR);
         }
-        log.info("token验证通过，用户:" + user);
+//        log.info("token验证通过，用户:" + user);
         currentUserCache.setCurrentUser(user);// 将用户信息存储到缓存中,以便使用
         return true;
     }

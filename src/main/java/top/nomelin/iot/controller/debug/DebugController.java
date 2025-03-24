@@ -8,14 +8,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import top.nomelin.iot.cache.CacheOperations;
 import top.nomelin.iot.common.Result;
+import top.nomelin.iot.common.enums.CodeMessage;
+import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.service.TaskService;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
@@ -37,6 +41,12 @@ public class DebugController {
 
     @Value("${file.tempDir}")
     private String tempDir;
+
+    @Value("${iotdb.startPath}")
+    private String startIoTDBPath;
+
+    @Value("${iotdb.stopPath}")
+    private String stopIoTDBPath;
 
     public DebugController(CacheOperations cacheOperations, TaskService taskService, IoTDBDao iotDBDao, JdbcTemplate jdbcTemplate) {
         this.cacheOperations = cacheOperations;
@@ -108,16 +118,81 @@ public class DebugController {
 
     @RequestMapping("/iotdb/checkConnection")
     public Result checkIoTDBConnection() {
-        return Result.success(iotDBDao.checkConnection());
+        try {
+            iotDBDao.checkConnection();//aop 获取session失败返回，会直接抛出异常
+            return Result.success(true);
+        } catch (Exception e) {
+            log.error("IoTDB 连接失败.", e);
+            return Result.success(false);
+        }
     }
 
     @RequestMapping("/mysql/checkConnection")
     public Result checkMySQLConnection() {
         try {
             jdbcTemplate.execute("SELECT 1");
+            log.info("MySQL 连接成功.");
             return Result.success(true);
         } catch (Exception e) {
+            log.error("MySQL 连接失败.", e);
             return Result.success(false);
+        }
+    }
+
+    /**
+     * 启动 IoTDB
+     */
+    @RequestMapping("/iotdb/start")
+    public Result startIoTDB() {
+        return executeCommand(startIoTDBPath);
+    }
+
+    /**
+     * 停止 IoTDB
+     */
+    @RequestMapping("/iotdb/stop")
+    public Result stopIoTDB() {
+        return executeCommand(stopIoTDBPath);
+    }
+
+    /**
+     * 重启 IoTDB
+     */
+    @RequestMapping("/iotdb/restart")
+    public Result restartIoTDB() {
+        Result stopResult = executeCommand(stopIoTDBPath);
+        if (!"200".equals(stopResult.getCode())) {
+            log.error("停止 IoTDB 失败：");
+            throw new SystemException(CodeMessage.SYSTEM_ERROR, "停止 IoTDB 失败：");
+        }
+        try {
+            Thread.sleep(3000); // 停止后等待, 再启动，避免端口未释放
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return executeCommand(startIoTDBPath);
+    }
+
+    /**
+     * 执行外部命令
+     */
+    private Result executeCommand(String commandPath) {
+        try {
+            File scriptFile = new File(commandPath);
+            if (!scriptFile.exists()) {
+                log.error("命令文件不存在：" + commandPath);
+                throw new SystemException(CodeMessage.NOT_FOUND_ERROR, "命令文件不存在：" + commandPath);
+            }
+
+            // 执行命令并将输出独立线程处理，避免阻塞
+            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", "start /min " + scriptFile.getAbsolutePath());
+            builder.redirectErrorStream(true);
+            Process process = builder.start();
+            Executors.newSingleThreadExecutor().submit(() -> process.getInputStream().transferTo(System.out));
+            return Result.success("命令执行成功：" + commandPath);
+        } catch (IOException e) {
+            log.error("命令执行失败：" + commandPath, e);
+            throw new SystemException(CodeMessage.SYSTEM_ERROR, "命令执行失败：" + commandPath);
         }
     }
 

@@ -362,7 +362,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
         try (SessionDataSet sessionDataSet = executeQueryStatement("show databases")) {
             log.info("IoTDB 连接成功");
             return true;
-        } catch (IoTDBConnectionException | StatementExecutionException e) {
+        } catch (Exception e) {
             log.error("IoTDB 连接失败", e);
             return false;
         }
