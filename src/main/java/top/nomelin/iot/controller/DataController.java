@@ -10,6 +10,7 @@ import top.nomelin.iot.controller.request.DataInsertRequest;
 import top.nomelin.iot.controller.request.DataQueryRequest;
 import top.nomelin.iot.controller.response.EnumInfo;
 import top.nomelin.iot.model.dto.DeviceTable;
+import top.nomelin.iot.model.enums.DeviceType;
 import top.nomelin.iot.model.enums.IotDataType;
 import top.nomelin.iot.model.enums.QueryAggregateFunc;
 import top.nomelin.iot.model.enums.StorageMode;
@@ -89,6 +90,22 @@ public class DataController {
             ));
         }
         return Result.success(modes);
+    }
+
+    /**
+     * 获取所有设备类型
+     */
+    @GetMapping("/deviceTypes")
+    public Result getDeviceTypes() {
+        List<EnumInfo> types = new ArrayList<>();
+        for (DeviceType type : DeviceType.values()) {
+            types.add(new EnumInfo(
+                    type.name(),
+                    type.getName(),
+                    null
+            ));
+        }
+        return Result.success(types);
     }
 
     /**

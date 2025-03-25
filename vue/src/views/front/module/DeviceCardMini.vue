@@ -1,5 +1,7 @@
 <template>
-  <div class="device-card-mini">
+  <div class="device-card-mini"
+       :style="{ backgroundColor: device.config.deviceType === 'DATASET' ? '#E6E0F2' : '#f8f9fa' }"
+  >
     <div class="device-name">{{ device.name }}</div>
     <div class="device-id">ID: {{ device.id }}</div>
     <div class="device-config">

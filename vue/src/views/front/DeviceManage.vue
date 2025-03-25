@@ -6,6 +6,10 @@
       <el-button :disabled="selectedDevices.length === 0" icon="el-icon-delete" type="danger"
                  @click="handleBatchDelete">批量删除
       </el-button>
+      <el-select v-model="deviceTypeFilter" placeholder="类型" clearable style="width: 100px; margin-left: 10px;">
+        <el-option v-for="type in deviceTypes" :key="type.code" :label="type.name" :value="type.code"></el-option>
+        <el-option label="其它" value="OTHER"></el-option>
+      </el-select>
       <el-select v-model="selectedGroup" clearable placeholder="选择组" style="margin-left: 10px;">
         <el-option
             v-for="group in groups"
@@ -28,7 +32,9 @@
     <!-- 设备卡片展示 -->
     <el-row :gutter="20" class="card-row">
       <el-col v-for="device in filteredDevices" :key="device.id" :lg="6" :md="8" :sm="12" :xs="24">
-        <el-card class="device-card" shadow="hover" @click.native="showDetail(device)">
+        <el-card class="device-card" shadow="hover" @click.native="showDetail(device)"
+                 :style="{ backgroundColor: device.config.deviceType === 'DATASET' ? '#E6E0F2' : '#f8f9fa' }"
+        >
           <!-- 设备基本信息 -->
           <div class="card-content">
             <div class="meta-info">
@@ -106,6 +112,10 @@
               currentStorageMode.name
             }})
           </el-descriptions-item>
+          <el-descriptions-item label="类型">{{ currentDeviceType.code }} ({{
+              currentDeviceType.name
+            }})
+          </el-descriptions-item>
           <el-descriptions-item label="传感器数据类型配置">
             <el-tag v-for="(type, name) in currentDevice.config.dataTypes" :key="name"
                     class="data-type-tag">
@@ -167,6 +177,17 @@
             </el-option>
           </el-select>
         </el-form-item>
+        <!-- 设备类型 -->
+        <el-form-item label="设备类型">
+          <el-select v-model="newDevice.config.deviceType" placeholder="模板配置设备类型">
+            <el-option
+                v-for="type in deviceTypes"
+                :key="type.code"
+                :label="`${type.code} (${type.name})`"
+                :value="type.code">
+            </el-option>
+          </el-select>
+        </el-form-item>
       </el-form>
       <span slot="footer">
         <el-button @click="createVisible = false">取消</el-button>
@@ -222,10 +243,16 @@ export default {
       storageModes: [],
       selectedGroup: null,
       nameSearch: '',
-      fullSearch: ''
+      fullSearch: '',
+      deviceTypes: [],
+      deviceTypeFilter: '',
     }
   },
   computed: {
+    // 当前设备类型
+    currentDeviceType() {
+      return this.deviceTypes.find(t => t.code === this.currentDevice?.config?.deviceType) || {}
+    },
     // 当前选中的模板
     selectedTemplate() {
       return this.templates.find(t => t.id === this.selectedTemplateId)
@@ -246,6 +273,15 @@ export default {
       if (this.selectedGroup) {
         console.log("[设备搜索]selectedGroup:", this.selectedGroup)
         filtered = filtered.filter(d => d.groupIds.includes(this.selectedGroup))
+      }
+
+      // 按设备类型筛选
+      if (this.deviceTypeFilter) {
+        if (this.deviceTypeFilter === 'OTHER') {
+          filtered = filtered.filter(t => !t.config?.deviceType || !this.deviceTypes.some(d => d.code === t.config.deviceType));
+        } else {
+          filtered = filtered.filter(t => t.config?.deviceType === this.deviceTypeFilter);
+        }
       }
 
       // 名称搜索
@@ -302,6 +338,7 @@ export default {
     this.fetchTemplates()
     this.fetchGroups()
     this.loadStorageModes()
+    this.loadDeviceTypes()
   },
   methods: {
     async fetchDevices() {
@@ -474,6 +511,14 @@ export default {
         return
       }
       this.storageModes = res.data || []
+    },
+    async loadDeviceTypes() {
+      const res = await this.$request.get('/data/deviceTypes')
+      if (res.code !== '200') {
+        this.$message.error('获取设备类型失败')
+        return
+      }
+      this.deviceTypes = res.data || []
     },
     handleDelete(deviceId) {
       this.$confirm('此操作将永久删除该设备，并删除此设备的所有数据！', '警告', {

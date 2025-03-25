@@ -96,7 +96,6 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     //把模板的配置和接口传入的设备配置合并。只处理部分配置项。
-    //目前只处理storageMode。
     private Config mergeConfig(Template template, Device device) {
         if (ObjectUtil.isNull(template.getConfig())) {
             throw new BusinessException(CodeMessage.PARAM_LOST_ERROR, "模板config为空,模板id:" + template.getId());
@@ -111,6 +110,10 @@ public class DeviceServiceImpl implements DeviceService {
         if (ObjectUtil.isNotNull(deviceConfig.getStorageMode())) {
             newConfig.setStorageMode(deviceConfig.getStorageMode());
             log.info("设备config包含storageMode,覆盖模板config的storageMode，templateId: {}", template.getId());
+        }
+        if (ObjectUtil.isNotNull(deviceConfig.getDeviceType())) {
+            newConfig.setDeviceType(deviceConfig.getDeviceType());
+            log.info("设备config包含deviceType,覆盖模板config的deviceType，templateId: {}", template.getId());
         }
         return newConfig;
     }

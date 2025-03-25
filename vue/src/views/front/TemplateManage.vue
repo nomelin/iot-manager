@@ -6,6 +6,10 @@
       <el-button :disabled="selectedTemplates.length === 0" icon="el-icon-delete" type="danger"
                  @click="handleBatchDelete">批量删除
       </el-button>
+      <el-select v-model="deviceTypeFilter" placeholder="类型" clearable style="width: 150px; margin-left: 10px;">
+        <el-option v-for="type in deviceTypes" :key="type.code" :label="type.name" :value="type.code"></el-option>
+        <el-option label="其它" value="OTHER"></el-option>
+      </el-select>
       <el-input v-model="nameSearch" clearable placeholder="搜索名称(空格分割多关键字)"
                 style="width: 300px; margin-left: 10px;"
       ></el-input>
@@ -14,7 +18,9 @@
     <!-- 模板卡片展示 -->
     <el-row :gutter="20" class="card-row">
       <el-col v-for="template in filteredTemplates" :key="template.id" :lg="6" :md="8" :sm="12" :xs="24">
-        <el-card class="template-card" shadow="hover" @click.native="showDetail(template)">
+        <el-card class="template-card" shadow="hover" @click.native="showDetail(template)"
+                 :style="{ backgroundColor: template.config.deviceType === 'DATASET' ? '#E6E0F2' : '#f8f9fa' }"
+        >
           <!-- 模板基本信息 -->
           <div class="card-content">
             <div class="meta-info">
@@ -52,6 +58,10 @@
             </el-descriptions-item>
             <el-descriptions-item label="存储模式">{{ currentStorageMode.code }} ({{
                 currentStorageMode.name
+              }})
+            </el-descriptions-item>
+            <el-descriptions-item label="类型">{{ currentDeviceType.code }} ({{
+                currentDeviceType.name
               }})
             </el-descriptions-item>
 
@@ -128,6 +138,17 @@
             </el-option>
           </el-select>
         </el-form-item>
+        <!-- 设备类型 -->
+        <el-form-item label="设备类型">
+          <el-select v-model="newTemplate.config.deviceType" placeholder="请选择">
+            <el-option
+                v-for="type in deviceTypes"
+                :key="type.code"
+                :label="`${type.code} (${type.name})`"
+                :value="type.code">
+            </el-option>
+          </el-select>
+        </el-form-item>
       </el-form>
       <span slot="footer">
       <el-button @click="createVisible = false">取消</el-button>
@@ -152,21 +173,28 @@ export default {
         config: {
           dataTypes: [{}], // 初始空数据项
           aggregationTime: 1,
-          storageMode: 'COVER'
+          storageMode: 'COVER',
+          deviceType: 'DATASET',
         }
       },
       storageModes: [],
       dataTypeOptions: [],
       storageAggregationTimes: [],
+      deviceTypes: [],
       nameSearch: '',
+      deviceTypeFilter: '',
     }
   },
   computed: {
     currentStorageMode() {
       return this.storageModes.find(m => m.code === this.currentTemplate?.config?.storageMode) || {}
     },
+    currentDeviceType() {
+      return this.deviceTypes.find(t => t.code === this.currentTemplate?.config?.deviceType) || {}
+    },
     filteredTemplates() {
       let filtered = this.templates
+      // 按名称筛选
       if (this.nameSearch.trim()) {
         const keywords = this.nameSearch.toLowerCase().split(' ').filter(k => k)
         console.log("[模板搜索]名称搜索keywords:", keywords)
@@ -175,6 +203,14 @@ export default {
             const name = t.name.toLowerCase()
             return keywords.every(k => name.includes(k))
           })
+        }
+      }
+      // 按设备类型筛选
+      if (this.deviceTypeFilter) {
+        if (this.deviceTypeFilter === 'OTHER') {
+          filtered = filtered.filter(t => !t.config?.deviceType || !this.deviceTypes.some(d => d.code === t.config.deviceType));
+        } else {
+          filtered = filtered.filter(t => t.config?.deviceType === this.deviceTypeFilter);
         }
       }
       return filtered
@@ -358,19 +394,22 @@ export default {
     },
     async loadEnums() {
       try {
-        const [modesRes, typesRes, timesRes] = await Promise.all([
+        const [modesRes, typesRes, timesRes, deviceTypesRes] = await Promise.all([
           this.$request.get('/data/storageModes'),
           this.$request.get('/data/dataTypes'),
-          this.$request.get('/data/StorageAggregationTimes')
+          this.$request.get('/data/StorageAggregationTimes'),
+          this.$request.get('/data/deviceTypes')
         ]);
 
         this.storageModes = modesRes.data || [];
         this.dataTypeOptions = typesRes.data || [];
         this.storageAggregationTimes = timesRes.data || [];
+        this.deviceTypes = deviceTypesRes.data || [];
 
         console.log("storageModes", JSON.stringify(this.storageModes));
         console.log("dataTypeOptions", JSON.stringify(this.dataTypeOptions));
         console.log("storageAggregationTimes", JSON.stringify(this.storageAggregationTimes));
+        console.log("deviceTypes", JSON.stringify(this.deviceTypes));
 
       } catch (error) {
         this.$message.error('配置项加载失败');

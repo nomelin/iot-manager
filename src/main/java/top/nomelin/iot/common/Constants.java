@@ -44,7 +44,7 @@ public class Constants {
     public static final String ALL_ARGS_KEY = "#ALL_ARGS#";
     public static final int TASK_AUTO_CLEAN_INTERVAL = 1000 * 60 * 5; // 5分钟
     public static TSEncoding TS_ENCODING = TSEncoding.PLAIN;
-    public static CompressionType COMPRESSION_TYPE = CompressionType.UNCOMPRESSED;
+    public static CompressionType COMPRESSION_TYPE = CompressionType.UNCOMPRESSED;//考虑将压缩配置作为每个设备特有的配置。
 
     @Value("${iotdb.storage.ts-encoding:PLAIN}")
     public void setTsEncoding(String tsEncoding) {
