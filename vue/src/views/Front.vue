@@ -9,13 +9,14 @@
 
       </div>
       <div class="front-header-right">
-        <router-link to="/front/message_center">
+        <router-link class="message-icon" to="/front/message_center">
           <img
               alt="消息"
               class="icon-svg"
               src="@/assets/imgs/msg_box.svg"
               style="width: 3rem; height: 3rem; opacity: 0.8; "
-          >
+          />
+          <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
         </router-link>
         <div class="user-info" @click="goToUserProfile">
           <el-avatar
@@ -71,6 +72,7 @@
           <el-menu-item class="el-menu-item" index="/front/message_center">
             <i class="el-icon-message-solid"></i>
             <span slot="title" class="words">消息中心</span>
+            <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/third_party">
             <i class="el-icon-link"></i>
@@ -107,12 +109,19 @@ export default {
     return {
       user: getItemWithExpiry("user"),
       defaultAvatar: defaultAvatar,
+      unreadCount: 0, // 未读消息数量
     }
   },
 
   mounted() {
+    this.fetchUnreadCount();
+    // 每隔10s刷新未读消息数量
+    this.unreadInterval = setInterval(this.fetchUnreadCount, 10 * 1000);
   },
   updated() {
+  },
+  beforeDestroy() {
+    clearInterval(this.unreadInterval); // 清理定时器
   },
   computed: {},
   methods: {
@@ -145,6 +154,16 @@ export default {
     },
     goToUserProfile() {
       this.$router.push('/front/user_profile');
+    },
+    async fetchUnreadCount() {
+      try {
+        const response = await this.$request.get("/message/unread-count");
+        if (response.code === "200") {
+          this.unreadCount = response.data > 99 ? "99+" : response.data;
+        }
+      } catch (error) {
+        console.error("获取未读消息数量失败", error);
+      }
     },
   }
 
@@ -198,9 +217,6 @@ export default {
   /*padding-top: 10%;*/
 }
 
-.avatar {
-  margin-right: 1.4rem; /* 头像与用户名之间的间距 */
-}
 
 .user-name {
   font-size: 1rem; /* 可根据需要调整用户名的样式 */
@@ -239,6 +255,7 @@ export default {
   height: 3.5rem;
   padding-top: 2px; /* 增加上边距 */
   /*margin-top: 0.5rem; !* 修正菜单项的高度 *!*/
+
 }
 
 .main-right {
@@ -314,7 +331,7 @@ export default {
 }
 
 .icon-svg {
-  margin-right: 30px;
+  margin-right: 1rem;
 }
 
 .front-header-dropdown {
@@ -364,8 +381,35 @@ export default {
 }
 
 .avatar {
+  border-radius: 50%;
+  margin-right: 1rem;
+  overflow: hidden; /* 防止头像溢出 */
+}
 
+.message-icon {
+  position: relative; /* 关键，确保 .badge 基于此定位 */
+}
+
+.badge {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.8rem;
+  background-color: #fa155a;
+  color: #f8f9fa;
+  border-radius: 50%;
+  width: 1.2rem; /* 控制红点大小 */
+  height: 1.2rem; /* 控制红点大小 */
+  font-size: 0.8rem; /* 字体大小 */
+  line-height: 1.2rem; /* 垂直居中 */
+  display: flex; /* 让数字在圆点中居中 */
+  justify-content: center;
+  align-items: center;
+  transform: translate(50%, -50%);
 }
 
 
+.username {
+  white-space: nowrap; /* 确保用户名不换行 */
+  overflow: hidden; /* 防止超出隐藏 */
+}
 </style>

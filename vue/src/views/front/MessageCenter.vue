@@ -129,7 +129,7 @@ export default {
       currentPage: 1,
       pageSize: 10,
       total: 0,
-      filterStatus: null,
+      filterStatus: 'UNREAD',
       filterType: null,
       searchKeyword: '',
       detailVisible: false,

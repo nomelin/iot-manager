@@ -21,6 +21,7 @@
     <!-- 告警规则表格 -->
     <el-table
         :data="filteredAlerts"
+        class="alert-table"
         height="calc(100vh - 160px)"
         style="width: 100%"
         @row-click="showDetail"
@@ -154,10 +155,11 @@
         <el-form-item label="通知渠道" required>
           <el-checkbox-group v-model="currentAlert.actionConfig.channels">
             <el-checkbox
-                v-for="channel in alertChannels"
-                :key="channel"
-                :label="channel"
-            >{{ channel }}
+                v-for="(label, value) in alertChannelMap"
+                :key="value"
+                :label="value"
+            >
+              {{ label }}
             </el-checkbox>
           </el-checkbox-group>
         </el-form-item>
@@ -186,14 +188,14 @@
           </el-input-number>
         </el-form-item>
         <el-form-item v-if="this.dialogType === 'edit'" label="创建时间">
-            {{ currentAlert.createdTime | formatTime }}
+          {{ currentAlert.createdTime | formatTime }}
         </el-form-item>
         <el-form-item v-if="this.dialogType === 'edit'" label="最后修改">
           {{ currentAlert.updatedTime | formatTime }}
         </el-form-item>
       </el-form>
       <span slot="footer">
-        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="cancelAlert">取消</el-button>
         <el-button type="primary" @click="submitAlert">确定</el-button>
       </span>
     </el-dialog>
@@ -224,6 +226,11 @@ export default {
 
       // 枚举选项
       alertChannels: ['IN_MSG', 'WECHAT_PP'],
+      // 定义映射表，key 是值，value 是显示文本
+      alertChannelMap: {
+        'IN_MSG': '站内信',
+        'WECHAT_PP': '微信公众号'
+      },
       messageTypes: ['NOTICE', 'WARNING', 'ERROR'],
       enableDuration: true,  // 控制持续时间开关
       enableSilent: false,    // 控制静默时间开关
@@ -243,8 +250,8 @@ export default {
   methods: {
     getEmptyAlert() {
       // console.log("this.user",JSON.stringify(this.user))
-      let user=getItemWithExpiry("user");
-      this.user=user;
+      let user = getItemWithExpiry("user");
+      this.user = user;
       return {
         id: null,
         name: '默认告警规则',
@@ -273,6 +280,7 @@ export default {
         const res = await this.$request.get('/alert/all')
         if (res.code === '200') {
           this.alerts = res.data
+          console.log("获取所有告警规则成功")
         }
       } catch (error) {
         this.$message.error('获取告警列表失败')
@@ -288,6 +296,11 @@ export default {
       this.currentAlert = {...row}
       this.dialogType = 'edit'
       this.dialogVisible = true
+    },
+
+    cancelAlert() {
+      this.dialogVisible = false;
+      this.fetchAlerts();
     },
 
     async submitAlert() {
@@ -360,10 +373,15 @@ export default {
 .alert-management {
   padding: 20px;
   font-weight: bold;
+  height: 100%;
 }
 
 .operation-bar {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+}
+
+.alert-table {
+  margin-bottom: 10px;
 }
 
 .threshold-inputs {
