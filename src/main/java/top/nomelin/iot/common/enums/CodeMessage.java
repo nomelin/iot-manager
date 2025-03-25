@@ -42,6 +42,8 @@ public enum CodeMessage {
     INVALID_TAG_ERROR("612", "非法标识"),
     TAG_MEASUREMENT_CONFLICT("613", "标识属性冲突"),
 
+    INVALID_ALERT_RULE_ERROR("620", "非法告警规则"),
+
     INVALID_STATUS_ERROR("701", "消息不能更新到该状态"),
 
 

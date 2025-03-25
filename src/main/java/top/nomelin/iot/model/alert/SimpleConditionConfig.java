@@ -84,4 +84,14 @@ public class SimpleConditionConfig {
     public void setMinValue(Double minValue) {
         this.minValue = minValue;
     }
+
+    @Override
+    public String toString() {
+        return "SimpleConditionConfig{" +
+                "duration=" + duration +
+                ", metric='" + metric + '\'' +
+                ", maxValue=" + maxValue +
+                ", minValue=" + minValue +
+                '}';
+    }
 }

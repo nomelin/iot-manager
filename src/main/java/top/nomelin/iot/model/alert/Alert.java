@@ -14,8 +14,8 @@ public class Alert {
     private SimpleConditionConfig conditionConfig;//触发条件配置（JSON格式）
     private ActionConfig actionConfig;//触发后动作配置（JSON格式）
     private Boolean enable;
-    private Integer deviceId;//关联设备ID（与群组二选一）
-    private Integer groupId;//关联群组ID（与设备二选一）,优先
+    private Integer deviceId;//关联设备ID，和群组ID至少有一个不为空
+    private Integer groupId;//关联群组ID，和设备ID至少有一个不为空
     private Long createdTime;
     private Long updatedTime;
 
@@ -36,6 +36,11 @@ public class Alert {
     }
 
     public Alert() {
+    }
+
+    public boolean isValid() {
+        return (deviceId != null || groupId != null) && name != null && conditionConfig != null
+                && actionConfig != null && conditionConfig.isValid() && actionConfig.isValid();
     }
 
     public Integer getId() {
@@ -124,5 +129,22 @@ public class Alert {
 
     public void setUpdatedTime(Long updatedTime) {
         this.updatedTime = updatedTime;
+    }
+
+    @Override
+    public String toString() {
+        return "Alert{" +
+                "id=" + id +
+                ", userId=" + userId +
+                ", name='" + name + '\'' +
+                ", description='" + description + '\'' +
+                ", conditionConfig=" + conditionConfig +
+                ", actionConfig=" + actionConfig +
+                ", enable=" + enable +
+                ", deviceId=" + deviceId +
+                ", groupId=" + groupId +
+                ", createdTime=" + createdTime +
+                ", updatedTime=" + updatedTime +
+                '}';
     }
 }

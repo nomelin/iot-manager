@@ -66,7 +66,7 @@ public class DeviceServiceImpl implements DeviceService {
             throw new BusinessException(CodeMessage.NOT_FOUND_ERROR);
         }
         if (!device.getUserId().equals(currentUserCache.getCurrentUser().getId())) {
-            log.warn("非法操作, 非设备拥有者操作设备 deviceId: {}, userId: {}", deviceId, device.getUserId());
+            log.warn("非法操作, 非设备拥有者操作设备 deviceId: {}, userId: {}", deviceId, currentUserCache.getCurrentUser().getId());
             throw new BusinessException(CodeMessage.NO_PERMISSION_ERROR);
         }
         return device;
