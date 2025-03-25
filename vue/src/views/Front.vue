@@ -336,7 +336,7 @@ export default {
 }
 
 .icon-svg {
-  /*padding-right: 1rem;*/
+  margin-right: 10px;
 }
 
 .front-header-dropdown {
