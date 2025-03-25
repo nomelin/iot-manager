@@ -3,8 +3,11 @@ package top.nomelin.iot.service.alert.impl;
 import cn.hutool.core.util.ObjectUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import top.nomelin.iot.cache.CurrentUserCache;
+import top.nomelin.iot.common.annotation.CacheOp;
+import top.nomelin.iot.common.enums.CacheOpType;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.dao.AlertMapper;
@@ -15,6 +18,7 @@ import top.nomelin.iot.model.alert.AlertChannel;
 import top.nomelin.iot.service.DeviceService;
 import top.nomelin.iot.service.alert.AlertService;
 import top.nomelin.iot.service.alert.push.AlertPushStrategy;
+import top.nomelin.iot.service.alert.push.AlertPusherManager;
 
 import java.util.List;
 import java.util.Map;
@@ -25,17 +29,23 @@ public class AlertServiceImpl implements AlertService {
     public static final Logger log = LoggerFactory.getLogger(AlertServiceImpl.class);
     private final AlertMapper alertMapper;
     private final DeviceService deviceService;
-    private final Map<AlertChannel, AlertPushStrategy> pushStrategies = new ConcurrentHashMap<>();
-    private final CurrentUserCache currentUserCache;//TODO 清理机制
+    private final CurrentUserCache currentUserCache;
+
+    private final AlertPusherManager pusherManager;
 
 
-    // 记录告警状态：设备ID + 告警ID -> 告警状态。每个设备对应每个告警配置都单独计时。
+    // 记录告警状态：设备ID + 告警ID -> 告警状态。每个设备对应每个告警配置都单独计时。//TODO 清理机制
     private final Map<String, AlertState> alertStates = new ConcurrentHashMap<>();
 
-    public AlertServiceImpl(AlertMapper alertMapper, DeviceService deviceService, CurrentUserCache currentUserCache) {
+    private final AlertService selfProxy;
+
+    public AlertServiceImpl(AlertMapper alertMapper, DeviceService deviceService, CurrentUserCache currentUserCache,
+                            AlertPusherManager pusherManager, @Lazy AlertService selfProxy) {
         this.alertMapper = alertMapper;
         this.deviceService = deviceService;
         this.currentUserCache = currentUserCache;
+        this.pusherManager = pusherManager;
+        this.selfProxy = selfProxy;
     }
 
     @Override
@@ -99,13 +109,14 @@ public class AlertServiceImpl implements AlertService {
     }
 
     @Override
-    public void processDeviceData(int deviceId, Device device, Map<String, Object> metrics) {
+    public void processDeviceData(Integer deviceId, Device device, Map<String, Object> metrics) {
         List<Alert> deviceAlerts;
+//        log.info("开始处理告警：设备ID：{}", deviceId);
         if (ObjectUtil.isNotNull(deviceId)) {
             device = deviceService.getDeviceById(deviceId);
-            deviceAlerts = getAlertsByDevice(device);
+            deviceAlerts = selfProxy.getAlertsByDevice(device);
         } else if (ObjectUtil.isNotNull(device)) {
-            deviceAlerts = getAlertsByDevice(device);
+            deviceAlerts = selfProxy.getAlertsByDevice(device);
         } else {
             log.warn("判断告警配置时未指定设备或设备ID");
             return;
@@ -115,25 +126,28 @@ public class AlertServiceImpl implements AlertService {
             if (!alert.getEnable()) {
                 continue;
             }
-            String stateKey = deviceId + "-" + alert.getId();
+            String stateKey = device.getId() + "-" + alert.getId();
             AlertState state = alertStates.computeIfAbsent(stateKey, k -> new AlertState());
             // 检查静默期
             if (isInSilentPeriod(alert.getActionConfig(), state)) {
+                log.info("告警配置[{}]处于静默期{}s，不触发", stateKey, alert.getActionConfig().getSilentDuration());
                 continue;
             }
             // 评估触发条件
             if (alert.getConditionConfig().evaluate(metrics)) {
+//                log.info("不在静默期，且符合告警配置[{}],静默期{}s", stateKey,alert.getActionConfig().getSilentDuration());
                 handleTriggeredAlert(alert, device, metrics, state);
             } else {
+//                log.info("不在静默期，但不符合告警配置[{}],静默期{}s,重置开始时间", stateKey,alert.getActionConfig().getSilentDuration());
                 state.resetStartTime();//条件不满足，重置开始时间。
             }
         }
     }
 
-    /**
-     * 获取设备相关的所有告警配置（直接关联+群组关联）
-     */
-    private List<Alert> getAlertsByDevice(Device device) {
+
+    @Override
+    @CacheOp(type = CacheOpType.GET, key = "#device.id", prefix = "alert")
+    public List<Alert> getAlertsByDevice(Device device) {
         // 获取直接关联设备的告警
         Alert query = new Alert();
         query.setDeviceId(device.getId());
@@ -146,7 +160,7 @@ public class AlertServiceImpl implements AlertService {
             query.setGroupId(groupId);
             alerts.addAll(alertMapper.selectAll(query));
         });
-
+        log.warn("未触发缓存，查询数据库获取设备[{}]的告警配置", device.getId());
         return alerts;
     }
 
@@ -155,6 +169,9 @@ public class AlertServiceImpl implements AlertService {
         // 没有静默期
         if (actionConfig.getSilentDuration() == null || actionConfig.getSilentDuration() <= 0) {
             return false;
+        }
+        if (state.getLastTriggerTime() == null) {
+            return false;// 第一次触发，触发时间为null。
         }
         return System.currentTimeMillis() - state.getLastTriggerTime()
                 < actionConfig.getSilentDuration() * 1000L;
@@ -171,26 +188,21 @@ public class AlertServiceImpl implements AlertService {
 
         long duration = (currentTime - state.getStartTime()) / 1000;
         if (duration >= alert.getConditionConfig().getDuration()) {
-            triggerActions(alert, device, metrics);
+            triggerActions(alert, device, metrics, currentTime);
             state.updateLastTrigger(currentTime);// 更新上次触发时间
 //            state.resetStartTime();
+        }else{
+//            log.info("告警配置[{}]未达到持续时间要求，目前持续时间：{}秒", alert.getId(), duration);
         }
     }
 
-    private void triggerActions(Alert alert, Device device, Map<String, Object> triggerValue) {
+    private void triggerActions(Alert alert, Device device, Map<String, Object> triggerValue, Long triggerTime) {
         ActionConfig actionConfig = alert.getActionConfig();
         for (AlertChannel channel : actionConfig.getChannels()) {
-            AlertPushStrategy strategy = pushStrategies.get(channel);
-            if (strategy != null) {
-                strategy.push(alert, triggerValue, device);
-            }
+            AlertPushStrategy strategy = pusherManager.getPushStrategy(channel);
+            strategy.push(alert, triggerValue, device, triggerTime);
         }
         log.info("触发告警动作: id：{}, 设备Id: {}, 触发值: {}", alert.getId(), device.getId(), triggerValue);
-    }
-
-    @Override
-    public void registerPushStrategy(AlertChannel channel, AlertPushStrategy strategy) {
-        pushStrategies.put(channel, strategy);
     }
 
     // 内部状态跟踪类，用来计算告警持续时间和告警推送静默时间

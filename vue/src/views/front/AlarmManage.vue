@@ -127,12 +127,11 @@
         <el-form-item label="监测指标" prop="conditionConfig.metric" required>
           <el-input v-model="currentAlert.conditionConfig.metric"></el-input>
         </el-form-item>
-        <el-form-item label="持续时长(S)">
-          <el-switch v-model="enableDuration" active-text="立即" inactive-text="持续"></el-switch>
+        <el-form-item label="持续时长(S)(0表示立即)">
+<!--          <el-switch v-model="enableDuration" active-text="立即" inactive-text="持续"></el-switch>-->
           <el-input-number
-              v-if="!enableDuration"
               v-model="currentAlert.conditionConfig.duration"
-              :min="1">
+              :min="0">
           </el-input-number>
         </el-form-item>
         <el-form-item label="阈值范围">
@@ -179,12 +178,11 @@
               type="textarea"
           ></el-input>
         </el-form-item>
-        <el-form-item label="静默时间(S)">
-          <el-switch v-model="enableSilent" active-text="不静默" inactive-text="静默"></el-switch>
+        <el-form-item label="静默时间(S)(0表示不静默)">
+<!--          <el-switch v-model="enableSilent" active-text="不静默" inactive-text="静默"></el-switch>-->
           <el-input-number
-              v-if="!enableSilent"
               v-model="currentAlert.actionConfig.silentDuration"
-              :min="1">
+              :min="0">
           </el-input-number>
         </el-form-item>
         <el-form-item v-if="this.dialogType === 'edit'" label="创建时间">
@@ -232,8 +230,8 @@ export default {
         'WECHAT_PP': '微信公众号'
       },
       messageTypes: ['NOTICE', 'WARNING', 'ERROR'],
-      enableDuration: true,  // 控制持续时间开关
-      enableSilent: false,    // 控制静默时间开关
+      // enableDuration: true,  // 控制持续时间开关
+      // enableSilent: false,    // 控制静默时间开关
     }
   },
   computed: {
@@ -296,6 +294,10 @@ export default {
       this.currentAlert = {...row}
       this.dialogType = 'edit'
       this.dialogVisible = true
+
+      // 根据已有告警数据设置持续时间和静默时间开关状态
+      // this.enableDuration = this.currentAlert.conditionConfig.duration > 0;
+      // this.enableSilent = this.currentAlert.actionConfig.silentDuration > 0;
     },
 
     cancelAlert() {
@@ -306,6 +308,7 @@ export default {
     async submitAlert() {
       try {
         const url = this.dialogType === 'create' ? '/alert/add' : '/alert/update'
+        console.log("提交告警规则", JSON.stringify(this.currentAlert))
         const res = await this.$request.post(url, this.currentAlert)
         if (res.code === '200') {
           this.$message.success('操作成功')

@@ -115,8 +115,8 @@ export default {
 
   mounted() {
     this.fetchUnreadCount();
-    // 每隔10s刷新未读消息数量
-    this.unreadInterval = setInterval(this.fetchUnreadCount, 10 * 1000);
+    // 每隔5s刷新未读消息数量
+    this.unreadInterval = setInterval(this.fetchUnreadCount, 5 * 1000);
   },
   updated() {
   },
@@ -174,7 +174,12 @@ export default {
 
 .front-layout {
   /*display: flex;*/
+  margin: 0;
+  padding: 0;
   height: 100vh;
+  width: 100vw;
+  overflow-x: hidden; /* 避免水平滚动条 */
+  box-sizing: border-box;
 }
 
 .main-body {
@@ -331,7 +336,7 @@ export default {
 }
 
 .icon-svg {
-  margin-right: 1rem;
+  /*padding-right: 1rem;*/
 }
 
 .front-header-dropdown {
@@ -411,5 +416,7 @@ export default {
 .username {
   white-space: nowrap; /* 确保用户名不换行 */
   overflow: hidden; /* 防止超出隐藏 */
+  text-overflow: ellipsis; /* 超出显示省略号 */
+  max-width: 120px; /* 根据需要设置合适的最大宽度 */
 }
 </style>

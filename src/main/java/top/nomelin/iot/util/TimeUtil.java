@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter;
  * @since 2024/12/15 15:59
  **/
 public class TimeUtil {
+    private static final DateTimeFormatter DATE_TIME_FORMATTER_S = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
      * 将毫秒时间戳转换为日期字符串
@@ -31,6 +32,11 @@ public class TimeUtil {
 
         // 格式化并返回日期字符串
         return dateTime.format(formatter);
+    }
+
+    public static String timestampToDateStringS(long timestamp) {
+        LocalDateTime dateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
+        return dateTime.format(DATE_TIME_FORMATTER_S);
     }
 
     /**

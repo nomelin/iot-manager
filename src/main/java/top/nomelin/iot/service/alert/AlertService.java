@@ -2,8 +2,6 @@ package top.nomelin.iot.service.alert;
 
 import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.alert.Alert;
-import top.nomelin.iot.model.alert.AlertChannel;
-import top.nomelin.iot.service.alert.push.AlertPushStrategy;
 
 import java.util.List;
 import java.util.Map;
@@ -37,13 +35,10 @@ public interface AlertService {
      * @param device   设备信息，和deviceId参数二选一。如果传递此参数，则会少查一次设备表。
      * @param metrics  设备指标数据
      */
-    void processDeviceData(int deviceId, Device device, Map<String, Object> metrics);
+    void processDeviceData(Integer deviceId, Device device, Map<String, Object> metrics);
 
     /**
-     * 注册推送策略
-     *
-     * @param channel  告警渠道
-     * @param strategy 策略实现
+     * 获取设备相关的所有告警配置（直接关联+群组关联）
      */
-    void registerPushStrategy(AlertChannel channel, AlertPushStrategy strategy);
+    List<Alert> getAlertsByDevice(Device device);
 }

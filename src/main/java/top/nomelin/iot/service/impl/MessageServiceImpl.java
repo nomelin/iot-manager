@@ -14,7 +14,6 @@ import top.nomelin.iot.model.enums.MessageStatus;
 import top.nomelin.iot.model.enums.MessageType;
 import top.nomelin.iot.service.MessageService;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -39,7 +38,7 @@ public class MessageServiceImpl implements MessageService {
         message.setContent(content);
         message.setType(type);
         message.setStatus(MessageStatus.UNREAD);
-        message.setCreateTime(Instant.now().getEpochSecond());
+        message.setCreateTime(System.currentTimeMillis());
 
         messageMapper.insert(message);
         log.info("系统消息发送成功 | receiveId:{} | title:{} | type:{}", receiveId, title, type);

@@ -7,6 +7,7 @@ import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.enums.IotDataType;
 import top.nomelin.iot.service.DataService;
 import top.nomelin.iot.service.DeviceService;
+import top.nomelin.iot.service.alert.AlertService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,13 +30,15 @@ public class DeviceBuffer {
     private final ReentrantLock lock = new ReentrantLock();//控制写入和刷新操作的锁
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final List<String> measurementList; // 来自设备配置的固定测量项
-    // 双缓冲区结构
+    private final AlertService alertService;
+    // 缓冲区
     private List<DataPoint> currentBuffer;
     private List<DataPoint> backBuffer;
 
-    public DeviceBuffer(int deviceId, DataService dataService, DeviceService deviceService, int bufferSize, long flushInterval) {
+    public DeviceBuffer(int deviceId, DataService dataService, DeviceService deviceService, AlertService alertService, int bufferSize, long flushInterval) {
         this.deviceId = deviceId;
         this.dataService = dataService;
+        this.alertService = alertService;
         this.bufferSize = bufferSize;
         this.flushInterval = flushInterval;
         this.device = deviceService.getDeviceByIdWithoutCheck(deviceId);
@@ -66,6 +69,7 @@ public class DeviceBuffer {
 
     //解析数据，将原始数据转换为DataPoint对象，并放入buffer中
     private void parseData(Map<String, Object> rawData, List<DataPoint> targetBuffer) {
+        //遍历每个时间戳
         for (Map.Entry<String, Object> entry : rawData.entrySet()) {
             long timestamp;
             try {
@@ -78,7 +82,7 @@ public class DeviceBuffer {
             List<Map<String, Object>> dataPoints = (List<Map<String, Object>>) entry.getValue();
 
             for (Map<String, Object> point : dataPoints) {
-                Map<String, Object> convertedPoint = new HashMap<>();
+                Map<String, Object> convertedPoint = new HashMap<>();//处理数据类型转换
                 for (String measurement : measurementList) {
                     Object value = point.get(measurement);
                     if (value == null) {
@@ -93,6 +97,7 @@ public class DeviceBuffer {
                     Object convertedValue = convertValue(value, dataType);
                     convertedPoint.put(measurement, convertedValue);
                 }
+                alertService.processDeviceData(null, device, convertedPoint);//告警判断
                 targetBuffer.add(new DataPoint(timestamp, convertedPoint));
             }
         }

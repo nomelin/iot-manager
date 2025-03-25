@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 import top.nomelin.iot.service.DataService;
 import top.nomelin.iot.service.DeviceService;
+import top.nomelin.iot.service.alert.AlertService;
 import top.nomelin.iot.service.buffer.BufferManager;
 import top.nomelin.iot.service.buffer.DeviceBuffer;
 
@@ -21,20 +22,22 @@ public class BufferManagerImpl implements BufferManager {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(BufferManagerImpl.class);
     private final DataService dataService;
     private final DeviceService deviceService;
+    private final AlertService alertService;
     private final ConcurrentHashMap<Integer, DeviceBuffer> buffers = new ConcurrentHashMap<>();
     private final int defaultBufferSize = 100; // TODO: 从配置获取
     private final long defaultFlushInterval = 5000; // TODO: 从配置获取
 
-    public BufferManagerImpl(DataService dataService, DeviceService deviceService) {
+    public BufferManagerImpl(DataService dataService, DeviceService deviceService, AlertService alertService) {
         this.dataService = dataService;
         this.deviceService = deviceService;
+        this.alertService = alertService;
     }
 
     @Override
     public void addData(int deviceId, Map<String, Object> data) {
         // 缓冲区不存在则创建,随后添加数据
         buffers.computeIfAbsent(deviceId, id ->
-                new DeviceBuffer(id, dataService, deviceService, defaultBufferSize, defaultFlushInterval)
+                new DeviceBuffer(id, dataService, deviceService, alertService, defaultBufferSize, defaultFlushInterval)
         ).addData(data);
     }
 

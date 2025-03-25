@@ -242,6 +242,8 @@ export default {
               this.devices = res.data;
               //填充组内全部设备
               this.selectedDeviceIds = this.groups.find(group => group.id === this.selectedGroup).deviceIds;
+              //将时间设置为最近15分钟。
+              this.selectQuickRange('15m');
             } else {
               this.$message.error("加载设备信息失败：" + res.msg);
             }

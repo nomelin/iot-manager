@@ -57,7 +57,8 @@ public enum CodeMessage {
 
     FILE_HANDLER_ERROR("806", "文件处理异常"),
     UNSUPPORTED_FILE_TYPE_ERROR("807", "不支持的文件类型"),
-    FILE_EMPTY_ERROR("808", "文件为空"),
+    UNSUPPORTED_ALERT_CHANNEL_ERROR("808", "不支持的告警渠道"),
+    FILE_EMPTY_ERROR("809", "文件为空"),
     DATA_FORMAT_ERROR("810", "数据格式异常"),
     TIME_FORMAT_ERROR("813", "时间格式处理异常, 或者不支持的时间格式"),
     TASK_CANCELLED("815", "任务已取消"),

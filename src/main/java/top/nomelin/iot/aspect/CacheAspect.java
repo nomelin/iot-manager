@@ -21,6 +21,7 @@ import top.nomelin.iot.common.annotation.CacheOp;
 import top.nomelin.iot.common.enums.CacheOpType;
 
 import static top.nomelin.iot.common.Constants.ALL_ARGS_KEY;
+import static top.nomelin.iot.common.Constants.log;
 
 /**
  * 适用于简单的缓存场景。如果需要更复杂的缓存逻辑，此aop无法满足。
@@ -40,6 +41,7 @@ public class CacheAspect {
 
     @Around("@annotation(cacheOp)")
     public Object around(ProceedingJoinPoint joinPoint, CacheOp cacheOp) throws Throwable {
+//        log.info("执行缓存操作，注解信息：{}", cacheOp);
         // 解析SpEL表达式生成缓存键
         String key = evaluateKeyExpression(joinPoint, cacheOp.key());
         String prefix = cacheOp.prefix();
@@ -56,6 +58,7 @@ public class CacheAspect {
                     return cacheResult.getData();
                 }
                 // 缓存未命中，执行方法并缓存结果
+                log.warn("缓存未命中，执行方法并缓存结果, key:{}", fullKey);
                 result = joinPoint.proceed();
                 cacheOperations.put(fullKey, result);
             }

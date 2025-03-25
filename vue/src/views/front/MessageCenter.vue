@@ -100,7 +100,7 @@
             <span v-else>{{ currentMessage.sendId }}</span>
           </p>
           <p><strong>发送时间：</strong>{{ formatTime(currentMessage.createTime) }}</p>
-          <div class="message-content">{{ currentMessage.content }}</div>
+          <div class="message-content" v-html="currentMessage.content"></div>
         </div>
 
         <div slot="footer">
@@ -152,9 +152,12 @@ export default {
 
   computed: {
     paginatedMessages() {
-      const start = (this.currentPage - 1) * this.pageSize
-      return this.messages.slice(start, start + this.pageSize)
-    }
+      const start = (this.currentPage - 1) * this.pageSize;
+      return this.messages
+          .slice()
+          .sort((a, b) => new Date(b.createTime) - new Date(a.createTime)) // 按创建时间降序排序
+          .slice(start, start + this.pageSize);
+    },
   },
 
   watch: {
@@ -417,6 +420,7 @@ export default {
   padding: 10px;
   background-color: #f9f9f9;
   border-radius: 4px;
+  font-weight: normal !important; /* 取消正文的粗体 */
 }
 
 .pagination-container {
