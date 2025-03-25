@@ -125,18 +125,18 @@
             </el-form-item>
 
             <!-- 标签筛选 -->
-            <el-form-item label="标签筛选">
+            <el-form-item label="标识筛选">
               <el-select
                   v-model="form.tagQuery"
                   clearable
                   multiple
-                  placeholder="请选择标签"
+                  placeholder="请选择标识"
                   style="width: 70%"
               >
                 <el-option
                     v-for="tag in deviceTags"
                     :key="tag"
-                    :label="tag === 'NO_TAG' ? '无标签' : tag"
+                    :label="tag === 'NO_TAG' ? '无标识' : tag"
                     :value="tag"
                 />
               </el-select>
@@ -250,7 +250,7 @@
           <!-- 标签列 -->
           <el-table-column
               fixed="left"
-              label="标签"
+              label="标识"
               prop="tag"
               width="120"
           >
@@ -659,7 +659,7 @@ export default {
           ? new Date(this.form.endTime).toLocaleString()
           : '无限制';
       const selectMeasurements = this.form.selectMeasurements.join('/');
-      const tagQuery = this.form.tagQuery ? `标签筛选: ${this.form.tagQuery}` : '所有标签';
+      const tagQuery = this.form.tagQuery ? `标识筛选: ${this.form.tagQuery}` : '所有标签';
       const aggregation = this.form.aggregationTime === 0
           ? '不聚合'
           : `查询聚合时间粒度: ${this.aggregationTimeOptions.find(o => o.value === this.form.aggregationTime)?.label}, 查询聚合函数: ${this.form.queryAggregateFunc}`;

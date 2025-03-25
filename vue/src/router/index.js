@@ -26,7 +26,7 @@ const routes = [
             {
                 path: 'tag_view',
                 name: 'tagView',
-                meta: {name: '标签视图'},
+                meta: {name: '标识视图'},
                 component: () => import('../views/front/TagView.vue')
             },
             {

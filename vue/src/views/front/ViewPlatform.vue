@@ -171,7 +171,7 @@ export default {
         '1y': 365 * 24 * 60 * 60 * 1000,
       },
 
-      // 新增聚合相关数据
+      // 聚合相关数据
       aggregationTime: 0,
       queryAggregateFunc: null,
       aggregationTimeOptions: [

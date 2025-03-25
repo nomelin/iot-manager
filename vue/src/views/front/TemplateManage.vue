@@ -139,7 +139,7 @@
           </el-select>
         </el-form-item>
         <!-- 设备类型 -->
-        <el-form-item label="设备类型">
+        <el-form-item label="类型">
           <el-select v-model="newTemplate.config.deviceType" placeholder="请选择">
             <el-option
                 v-for="type in deviceTypes"

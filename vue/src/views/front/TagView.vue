@@ -37,7 +37,7 @@
       </el-col>
 
       <el-col :span="2">
-        <el-button type="primary" @click="showTagDialog = true">选择标签</el-button>
+        <el-button type="primary" @click="showTagDialog = true">选择标识</el-button>
       </el-col>
 
       <!-- 传感器筛选输入框 -->
@@ -100,7 +100,7 @@
         custom-class="tag-drawer"
         label="rtl"
         size="35%"
-        title="选择标签"
+        title="选择标识"
         @open="handleDrawerOpen"
     >
       <div class="tag-drawer-content">
@@ -118,7 +118,7 @@
                 :key="device.id"
                 class="device-tag-section"
             >
-              <h3>{{ device.name }} 标签</h3>
+              <h3>{{ device.name }} 标识</h3>
               <div class="tag-selector">
                 <el-checkbox
                     v-model="allTagsSelected[device.id]"
@@ -159,7 +159,7 @@
                 :key="device.id"
                 class="device-tag-section"
             >
-              <h3>{{ device.name }} 标签</h3>
+              <h3>{{ device.name }} 标识</h3>
               <div class="tag-selector">
                 <el-checkbox
                     v-model="pendingAllSelected[device.id]"
@@ -459,7 +459,7 @@ export default {
         return a.localeCompare(b)
       })
     },
-    // 新增方法：解析高级查询语法
+    // 方法：解析高级查询语法
     parseFilterSyntax(input) {
       // 辅助方法：转义正则特殊字符
       function escapeRegExp(string) {
@@ -580,7 +580,7 @@ export default {
       sortedRecords.forEach(({records}) => {
         records.forEach(record => {
           const tag = record.tag
-          const formattedTag = tag === 'NO_TAG' ? '无标签' : tag
+          const formattedTag = tag === 'NO_TAG' ? '无标识' : tag
 
           Object.entries(record.fields).forEach(([field, value]) => {
             if (field === 'tag') return
@@ -606,7 +606,7 @@ export default {
     },
 
     formatTagDisplay(tag) {
-      return tag === 'NO_TAG' ? '无标签' : tag
+      return tag === 'NO_TAG' ? '无标识' : tag
     },
 
     handleSelectAll(deviceId, val) {

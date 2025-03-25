@@ -39,8 +39,8 @@ public enum CodeMessage {
 
     QUERY_AGGREGATION_TIME_ERROR("610", "查询聚合时间粒度不能小于存储聚合时间粒度"),
     INVALID_QUERY_AGGREGATION_TIME_ERROR("611", "不支持的查询聚合时间粒度"),
-    INVALID_TAG_ERROR("612", "非法标签"),
-    TAG_MEASUREMENT_CONFLICT("613", "标签属性冲突"),
+    INVALID_TAG_ERROR("612", "非法标识"),
+    TAG_MEASUREMENT_CONFLICT("613", "标识属性冲突"),
 
     INVALID_STATUS_ERROR("701", "消息不能更新到该状态"),
 
