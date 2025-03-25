@@ -1,5 +1,7 @@
 package top.nomelin.iot.model.alert;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * Alter
  *
@@ -38,6 +40,7 @@ public class Alert {
     public Alert() {
     }
 
+    @JsonIgnore
     public boolean isValid() {
         return (deviceId != null || groupId != null) && name != null && conditionConfig != null
                 && actionConfig != null && conditionConfig.isValid() && actionConfig.isValid();

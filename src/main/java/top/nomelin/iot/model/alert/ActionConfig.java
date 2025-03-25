@@ -1,5 +1,6 @@
 package top.nomelin.iot.model.alert;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import top.nomelin.iot.model.enums.MessageType;
 
 import java.util.List;
@@ -39,6 +40,7 @@ public class ActionConfig {
         this.silentDuration = silentDuration;
     }
 
+    @JsonIgnore
     public boolean isValid() {
         return notifyUsers!= null && channels!= null && messageType!= null;
     }

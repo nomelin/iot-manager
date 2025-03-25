@@ -59,6 +59,7 @@ public class AlertServiceImpl implements AlertService {
         alert.setUserId(currentUserCache.getCurrentUser().getId());
         alert.setEnable(true);
         alertMapper.insert(alert);
+        log.info("创建告警配置成功: {}", alert);
         return alert;
     }
 
@@ -67,6 +68,7 @@ public class AlertServiceImpl implements AlertService {
         checkPermission(alert.getId());
         alert.setUpdatedTime(System.currentTimeMillis());
         alertMapper.update(alert);
+        log.info("更新告警配置成功: {}", alert);
         return alert;
     }
 
@@ -93,6 +95,7 @@ public class AlertServiceImpl implements AlertService {
     public void deleteAlert(int id) {
         checkPermission(id);
         alertMapper.delete(id);
+        log.info("删除告警配置成功: id: {}", id);
     }
 
     @Override
@@ -182,6 +185,7 @@ public class AlertServiceImpl implements AlertService {
                 strategy.push(alert, triggerValue, device);
             }
         }
+        log.info("触发告警动作: id：{}, 设备Id: {}, 触发值: {}", alert.getId(), device.getId(), triggerValue);
     }
 
     @Override

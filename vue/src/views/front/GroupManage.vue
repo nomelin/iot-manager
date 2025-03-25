@@ -64,8 +64,8 @@
               <device-card-mini
                   v-for="deviceId in selectedDevices"
                   :key="deviceId"
-                  :device="getDeviceById(deviceId)"
                   :all-groups="groups"
+                  :device="getDeviceById(deviceId)"
                   :show-data-types="true"
                   class="preview-item"/>
             </div>
@@ -110,8 +110,8 @@
               <device-card-mini
                   v-for="deviceId in currentGroup.deviceIds"
                   :key="deviceId"
-                  :device="getDeviceById(deviceId)"
                   :all-groups="groups"
+                  :device="getDeviceById(deviceId)"
                   :show-data-types="true"
                   class="preview-item"/>
             </div>
@@ -154,8 +154,8 @@
           <device-card-mini
               v-for="deviceId in newDevices"
               :key="deviceId"
-              :device="getDeviceById(deviceId)"
               :all-groups="groups"
+              :device="getDeviceById(deviceId)"
               :show-data-types="true"
               class="preview-item"/>
         </div>
@@ -170,16 +170,17 @@
 
 <script>
 import DeviceCardMini from '@/views/front/module/DeviceCardMini'
+import deviceMixin from "@/mixins/device";
+import groupMixin from "@/mixins/group";
 
 export default {
   name: 'GroupManagement',
   components: {
     DeviceCardMini
   },
+  mixins: [deviceMixin, groupMixin],
   data() {
     return {
-      groups: [],
-      allDevices: [],
       createVisible: false,
       detailVisible: false,
       editVisible: false,
@@ -215,33 +216,8 @@ export default {
       return filtered
     }
   },
-  created() {
-    this.fetchGroups()
-    this.fetchAllDevices()
-  },
+  created() {},
   methods: {
-    async fetchGroups() {
-      try {
-        const res = await this.$request.get('/group/all')
-        if (res.code === '200') {
-          this.groups = res.data
-          console.log("groups", JSON.stringify(this.groups))
-        }
-      } catch (error) {
-        this.$message.error('获取分组列表失败')
-      }
-    },
-
-    async fetchAllDevices() {
-      try {
-        const res = await this.$request.get('/device/all')
-        if (res.code === '200') {
-          this.allDevices = res.data
-        }
-      } catch (error) {
-        this.$message.error('获取设备列表失败')
-      }
-    },
     handleDeviceSelect() {
       this.newGroup.deviceIds = this.selectedDevices
     },
@@ -273,7 +249,7 @@ export default {
         if (res.code === '200') {
           this.createVisible = false
           this.$message.success('创建成功')
-          this.fetchGroups()
+          await this.fetchAllGroups()
         }
       } catch (error) {
         this.$message.error('创建失败')
@@ -390,7 +366,7 @@ export default {
           await Promise.all(requests)
           this.$message.success('批量删除成功')
           this.selectedGroups = []
-          await this.fetchGroups()
+          await this.fetchAllGroups()
         } catch (error) {
           this.$message.error('部分删除失败')
         }
@@ -475,10 +451,12 @@ export default {
 .selected-devices {
   margin-top: 10px;
 }
+
 .group-id {
   font-size: 12px;
   color: #909399;
 }
+
 .selected-title {
   font-size: 14px;
   color: #666;
