@@ -329,8 +329,8 @@ export default {
     this.fetchDevices()
     this.fetchTemplates()
     this.fetchGroups()
-    this.loadStorageModes()
-    this.loadDeviceTypes()
+    // this.loadStorageModes()
+    // this.loadDeviceTypes()
   },
   methods: {
     async fetchDevices() {
@@ -552,7 +552,7 @@ export default {
   transition: transform 0.2s;
   background: #f8f9fa;
   border-radius: 1.5rem;
-  height: 20vh;
+  height: 18vh;
   overflow: auto;
 }
 

@@ -2,11 +2,11 @@
   <div class="template-management">
     <!-- 顶部操作栏 -->
     <div class="operation-bar">
-      <el-button icon="el-icon-plus" type="primary" @click="showCreateDialog">新建模板</el-button>
+      <el-button icon="el-icon-plus" type="primary" @click="showTemplateCreateDialog">新建模板</el-button>
       <el-button :disabled="selectedTemplates.length === 0" icon="el-icon-delete" type="danger"
                  @click="handleBatchDelete">批量删除
       </el-button>
-      <el-select v-model="deviceTypeFilter" placeholder="类型" clearable style="width: 150px; margin-left: 10px;">
+      <el-select v-model="deviceTypeFilter" clearable placeholder="类型" style="width: 150px; margin-left: 10px;">
         <el-option v-for="type in deviceTypes" :key="type.code" :label="type.name" :value="type.code"></el-option>
         <el-option label="其它" value="OTHER"></el-option>
       </el-select>
@@ -18,8 +18,8 @@
     <!-- 模板卡片展示 -->
     <el-row :gutter="20" class="card-row">
       <el-col v-for="template in filteredTemplates" :key="template.id" :lg="6" :md="8" :sm="12" :xs="24">
-        <el-card class="template-card" shadow="hover" @click.native="showDetail(template)"
-                 :style="{ backgroundColor: template.config.deviceType === 'DATASET' ? '#E6E0F2' : '#f8f9fa' }"
+        <el-card :style="{ backgroundColor: template.config.deviceType === 'DATASET' ? '#E6E0F2' : '#f8f9fa' }" class="template-card" shadow="hover"
+                 @click.native="showDetail(template)"
         >
           <!-- 模板基本信息 -->
           <div class="card-content">
@@ -35,6 +35,13 @@
               </div>
               <div class="template-name">{{ template.name }}</div>
             </div>
+            <el-button
+                icon="el-icon-plus"
+                type="text"
+                @click.stop="handleCreateDevice(template)"
+                class="create-device-btn"
+            >创建设备
+            </el-button>
             <el-button class="delete-btn" icon="el-icon-delete" type="text"
                        @click.stop="handleDelete(template.id)">删除模板
             </el-button>
@@ -77,7 +84,7 @@
     </el-dialog>
 
     <!-- 创建模板对话框 -->
-    <el-dialog :visible.sync="createVisible" title="创建新模板" width="40%">
+    <el-dialog :visible.sync="templateCreateVisible" title="创建新模板" width="40%">
       <el-form ref="createForm" :model="newTemplate" label-width="120px">
         <el-form-item :rules="[{ required: true, message: '请输入模板名称', trigger: 'blur' }]" label="模板名称"
                       prop="name" required>
@@ -151,22 +158,101 @@
         </el-form-item>
       </el-form>
       <span slot="footer">
-      <el-button @click="createVisible = false">取消</el-button>
-      <el-button type="primary" @click="validateCreate">确 定</el-button>
+      <el-button @click="templateCreateVisible = false">取消</el-button>
+      <el-button type="primary" @click="validateCreateTemplate">确 定</el-button>
     </span>
+    </el-dialog>
+
+
+    <!-- 创建设备对话框 -->
+    <el-dialog :visible.sync="createVisible" title="创建设备" width="40%">
+      <el-form ref="createForm" :model="newDevice" label-width="120px">
+        <el-form-item :rules="[{ required: true, message: '请输入设备名称', trigger: 'blur' }]" label="设备名称"
+                      prop="name" required>
+          <el-input v-model="newDevice.name" placeholder="请输入设备名称"></el-input>
+        </el-form-item>
+
+        <el-form-item label="创建模板" required>
+          <el-select v-model="selectedTemplateId">
+            <el-option
+                v-for="template in templates"
+                :key="template.id"
+                :label="template.name"
+                :value="template.id">
+            </el-option>
+          </el-select>
+          <div v-if="selectedTemplate" class="template-preview">
+            <h4>模板预览：</h4>
+            <template-card-mini :show-data-types="true" :template="selectedTemplate"/>
+          </div>
+        </el-form-item>
+
+        <el-form-item label="设备标签">
+          <el-tag
+              v-for="(tag, index) in newDevice.tags"
+              :key="index"
+              closable
+              @close="handleNewTagClose(index)">
+            {{ tag }}
+          </el-tag>
+          <el-input
+              v-model="inputTag"
+              class="input-new-tag"
+              placeholder="添加标签"
+              size="small"
+              @blur="handleNewTagAdd"
+              @keyup.enter.native="handleNewTagAdd">
+          </el-input>
+        </el-form-item>
+        <el-form-item label="存储模式">
+          <el-select v-model="newDevice.config.storageMode" placeholder="模板配置存储模式">
+            <el-option
+                v-for="storageMode in storageModes"
+                :key="storageMode.code"
+                :label="storageMode.code + '（' + storageMode.name+ '）'"
+                :value="storageMode.code">
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <!-- 设备类型 -->
+        <el-form-item label="类型">
+          <el-select v-model="newDevice.config.deviceType" placeholder="模板配置设备类型">
+            <el-option
+                v-for="type in deviceTypes"
+                :key="type.code"
+                :label="`${type.code} (${type.name})`"
+                :value="type.code">
+            </el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <span slot="footer">
+        <el-button @click="createVisible = false">取消</el-button>
+        <el-button type="primary" @click="validateCreate">确 定</el-button>
+      </span>
     </el-dialog>
   </div>
 </template>
 
 <script>
+import deviceCreationMixin from "@/mixins/deviceCreationMixin";
+import TemplateCardMini from './module/TemplateCardMini.vue'
+import GroupCardMini from "@/views/front/module/GroupCardMini";
+
+
 export default {
   name: 'TemplateManagement',
+  components: {
+    TemplateCardMini,
+    GroupCardMini
+  },
+  mixins: [deviceCreationMixin],
   data() {
     return {
       templates: [],
       selectedTemplates: [],
       detailVisible: false,
-      createVisible: false,
+      templateCreateVisible: false,
       currentTemplate: null,
       newTemplate: {
         name: null,
@@ -177,10 +263,10 @@ export default {
           deviceType: 'DATASET',
         }
       },
-      storageModes: [],
+      // storageModes: [],
       dataTypeOptions: [],
       storageAggregationTimes: [],
-      deviceTypes: [],
+      // deviceTypes: [],
       nameSearch: '',
       deviceTypeFilter: '',
     }
@@ -221,6 +307,9 @@ export default {
     this.fetchTemplates()
   },
   methods: {
+    handleCreateDevice(template) {
+      this.showCreateDialog(template.id)
+    },
     // 获取模板列表
     async fetchTemplates() {
       try {
@@ -296,7 +385,7 @@ export default {
       // console.log("newTemplate", JSON.stringify(this.newTemplate));
     },
     // 验证方法
-    validateCreate() {
+    validateCreateTemplate() {
       this.$refs.createForm.validate(valid => {
         if (valid) {
           // 验证数据类型映射
@@ -366,7 +455,7 @@ export default {
         const res = await this.$request.post('/template/add', postData)
         if (res.code === '200') {
           this.$message.success('创建成功')
-          this.createVisible = false
+          this.templateCreateVisible = false
           this.resetForm()
           await this.fetchTemplates()
         } else {
@@ -389,27 +478,27 @@ export default {
       }
     },
 
-    showCreateDialog() {
-      this.createVisible = true
+    showTemplateCreateDialog() {
+      this.templateCreateVisible = true
     },
     async loadEnums() {
       try {
-        const [modesRes, typesRes, timesRes, deviceTypesRes] = await Promise.all([
-          this.$request.get('/data/storageModes'),
+        const [typesRes, timesRes] = await Promise.all([
+          // this.$request.get('/data/storageModes'),
           this.$request.get('/data/dataTypes'),
           this.$request.get('/data/StorageAggregationTimes'),
-          this.$request.get('/data/deviceTypes')
+          // this.$request.get('/data/deviceTypes')
         ]);
 
-        this.storageModes = modesRes.data || [];
+        // this.storageModes = modesRes.data || [];
         this.dataTypeOptions = typesRes.data || [];
         this.storageAggregationTimes = timesRes.data || [];
-        this.deviceTypes = deviceTypesRes.data || [];
+        // this.deviceTypes = deviceTypesRes.data || [];
 
-        console.log("storageModes", JSON.stringify(this.storageModes));
+        // console.log("storageModes", JSON.stringify(this.storageModes));
         console.log("dataTypeOptions", JSON.stringify(this.dataTypeOptions));
         console.log("storageAggregationTimes", JSON.stringify(this.storageAggregationTimes));
-        console.log("deviceTypes", JSON.stringify(this.deviceTypes));
+        // console.log("deviceTypes", JSON.stringify(this.deviceTypes));
 
       } catch (error) {
         this.$message.error('配置项加载失败');
@@ -509,7 +598,7 @@ export default {
   transition: transform 0.2s;
   background: #f8f9fa;
   border-radius: 1.5rem;
-  height: 20vh;
+  height: 15vh;
   overflow: auto;
 }
 
@@ -550,6 +639,12 @@ export default {
   margin-top: 8px;
 }
 
+.create-device-btn {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 8px;
+}
 .delete-btn {
   position: absolute;
   right: 10px;
