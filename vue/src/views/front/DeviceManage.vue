@@ -2,7 +2,7 @@
   <div class="device-management">
     <!-- 顶部操作栏 -->
     <div class="operation-bar">
-      <el-button icon="el-icon-plus" type="primary" @click="showCreateDialog">新建设备</el-button>
+      <el-button icon="el-icon-plus" type="primary" @click="showCreateDialog(null)">新建设备</el-button>
       <el-button :disabled="selectedDevices.length === 0" icon="el-icon-delete" type="danger"
                  @click="handleBatchDelete">批量删除
       </el-button>
@@ -213,6 +213,7 @@
 <script>
 import TemplateCardMini from './module/TemplateCardMini.vue'
 import GroupCardMini from "@/views/front/module/GroupCardMini";
+import deviceCreationMixin from "@/mixins/deviceCreationMixin";
 
 export default {
   name: 'DeviceManagement',
@@ -220,31 +221,22 @@ export default {
     TemplateCardMini,
     GroupCardMini
   },
+  mixins: [deviceCreationMixin],
   data() {
     return {
       devices: [],
       templates: [],//当前用户的模板列表
       groups: [],//当前用户的组列表
       selectedDevices: [],
-      selectedTemplateId: null,
       detailVisible: false,
-      createVisible: false,
       nameEditVisible: false,
       currentDevice: null,
       currentTemplate: null,
-      newDevice: {
-        name: '',
-        tags: [],
-        config: {}
-      },
-      inputTag: '',
       newTag: '',
       newName: '',
-      storageModes: [],
       selectedGroup: null,
       nameSearch: '',
       fullSearch: '',
-      deviceTypes: [],
       deviceTypeFilter: '',
     }
   },
@@ -390,57 +382,6 @@ export default {
       // this.newDevice.config.storageMode = storageMode
     },
 
-    showCreateDialog() {
-      this.createVisible = true
-      this.newDevice = {name: '', tags: [], config: {}}
-      this.selectedTemplateId = null
-      this.inputTag = ''
-    },
-
-    validateCreate() {
-      this.$refs.createForm.validate((valid) => {
-        if (valid) {
-          //校验参数
-          if (this.selectedTemplateId === null) {
-            this.$message.error('请选择模板')
-            return
-          }
-          this.createDevice()
-        }
-      })
-    },
-    async createDevice() {
-      console.log("newDevice", JSON.stringify(this.newDevice))
-      console.log("selectedTemplateId", this.selectedTemplateId)
-      try {
-        const res = await this.$request.post('/device/add', {
-          device: this.newDevice,
-          templateId: this.selectedTemplateId
-        })
-        if (res.code === '200') {
-          this.createVisible = false
-          this.$message.success('创建设备成功')
-          await this.fetchDevices()
-        } else {
-          this.$message.error(res.msg)
-        }
-      } catch (error) {
-        this.$message.error('创建设备失败')
-      }
-    },
-
-    //创建设备时，添加标签
-    handleNewTagAdd() {
-      if (this.inputTag && !this.newDevice.tags.includes(this.inputTag)) {
-        this.newDevice.tags.push(this.inputTag)
-        this.inputTag = ''
-      }
-    },
-
-    //创建设备时，关闭标签
-    handleNewTagClose(index) {
-      this.newDevice.tags.splice(index, 1)
-    },
 
     showDetail(device) {
       this.currentDevice = device
@@ -504,22 +445,6 @@ export default {
           })
     },
 
-    async loadStorageModes() {
-      const res = await this.$request.get('/data/storageModes')
-      if (res.code !== '200') {
-        this.$message.error('获取存储模式失败')
-        return
-      }
-      this.storageModes = res.data || []
-    },
-    async loadDeviceTypes() {
-      const res = await this.$request.get('/data/deviceTypes')
-      if (res.code !== '200') {
-        this.$message.error('获取设备类型失败')
-        return
-      }
-      this.deviceTypes = res.data || []
-    },
     handleDelete(deviceId) {
       this.$confirm('此操作将永久删除该设备，并删除此设备的所有数据！', '警告', {
         confirmButtonText: '确定',
