@@ -15,6 +15,13 @@
       ></el-input>
     </div>
 
+    <input
+        type="file"
+        ref="folderInput"
+        webkitdirectory
+        hidden
+        @change="handleFolderSelect"
+    >
     <!-- 模板卡片展示 -->
     <el-row :gutter="20" class="card-row">
       <el-col v-for="template in filteredTemplates" :key="template.id" :lg="6" :md="8" :sm="12" :xs="24">
@@ -35,6 +42,11 @@
               </div>
               <div class="template-name">{{ template.name }}</div>
             </div>
+            <el-button @click.stop="triggerFolderSelect(template)"
+                       icon="el-icon-plus"
+                       type="text"
+                       class="folder-select-btn"
+            >自动创建</el-button>
             <el-button
                 icon="el-icon-plus"
                 type="text"
@@ -107,7 +119,7 @@
           <el-button icon="el-icon-plus" type="text" @click="addDataType">添加数据类型</el-button>
         </el-form-item>
         <!-- 文件上传，自动识别部分 -->
-        <el-form-item label="自动识别类型">
+        <el-form-item label="自动识别类型(仅供参考)">
           <el-upload
               :auto-upload="false"
               :on-change="handleCsvUpload"
@@ -269,6 +281,7 @@ export default {
       // deviceTypes: [],
       nameSearch: '',
       deviceTypeFilter: '',
+      currentTemplateId: null, // 用于存储当前操作的模板ID
     }
   },
   computed: {
@@ -307,6 +320,7 @@ export default {
     this.fetchTemplates()
   },
   methods: {
+
     handleCreateDevice(template) {
       this.showCreateDialog(template.id)
     },
@@ -563,6 +577,86 @@ export default {
       // if (/^(true|false)$/i.test(value)) return 'BOOL';
       // return 'STRING';
     },
+    triggerFolderSelect(template) {
+      this.currentTemplateId = template.id; // 存储当前模板ID
+      this.$message({
+        message: '会以文件夹下的子文件夹名称作为设备名称，父文件夹名称作为设备标签，忽略空文件夹',
+        type: 'success',
+        duration: 10000,
+      });
+      this.$refs.folderInput.click();
+    },
+
+    async handleFolderSelect(event) {
+      const files = Array.from(event.target.files);
+      if (files.length === 0) return;
+
+      // 解析文件夹结构
+      const structure = this.parseFolderStructure(files);
+
+      // 创建设备
+      try {
+        await this.bulkCreateDevices(structure);
+        alert(`成功创建 ${structure.devices.length} 个设备`);
+      } catch (error) {
+        alert(`创建失败: ${error.message}`);
+      }
+    },
+
+    parseFolderStructure(files) {
+      const structure = {
+        tag: '',
+        devices: []
+      };
+
+      // 获取相对路径示例：父文件夹/子文件夹/文件.txt
+      const samplePath = files[0].webkitRelativePath;
+      const pathSegments = samplePath.split('/');
+
+      // 验证目录结构
+      if (pathSegments.length < 2) {
+        throw new Error('请选择包含子文件夹的目录');
+      }
+
+      // 提取父文件夹名称作为标签
+      structure.tag = pathSegments[0];
+
+      // 收集子文件夹名称
+      const subFolders = new Set();
+      files.forEach(file => {
+        const segments = file.webkitRelativePath.split('/');
+        if (segments.length > 1) {
+          subFolders.add(segments[1]);
+        }
+      });
+
+      // 转换为设备列表
+      structure.devices = Array.from(subFolders).map(name => ({
+        name: name,
+        tag: structure.tag
+      }));
+
+      return structure;
+    },
+
+    async bulkCreateDevices({ tag, devices }) {
+      const requests = devices.map(device =>
+          this.$request.post('/device/add', {
+            device: {
+              name: device.name,
+              tags: [tag],
+            },
+            templateId: this.currentTemplateId // 使用存储的模板ID
+          })
+      );
+
+      try {
+        await Promise.all(requests);
+        this.$message.success(`成功创建 ${devices.length} 个设备`);
+      } catch (error) {
+        this.$message.error('部分设备创建失败');
+      }
+    }
   },
 
 
@@ -638,7 +732,12 @@ export default {
 .template-name {
   margin-top: 8px;
 }
-
+.folder-select-btn{
+  position: absolute;
+  left: 10px;
+  bottom: 30px;
+  padding: 8px;
+}
 .create-device-btn {
   position: absolute;
   left: 10px;
