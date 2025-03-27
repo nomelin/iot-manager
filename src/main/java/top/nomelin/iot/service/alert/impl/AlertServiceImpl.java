@@ -130,7 +130,7 @@ public class AlertServiceImpl implements AlertService {
             AlertState state = alertStates.computeIfAbsent(stateKey, k -> new AlertState());
             // 检查静默期
             if (isInSilentPeriod(alert.getActionConfig(), state)) {
-                log.info("告警配置[{}]处于静默期{}s，不触发", stateKey, alert.getActionConfig().getSilentDuration());
+                log.debug("告警配置[{}]处于静默期{}s，不触发", stateKey, alert.getActionConfig().getSilentDuration());
                 continue;
             }
             // 评估触发条件
