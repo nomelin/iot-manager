@@ -56,10 +56,10 @@ public class DeviceBuffer {
     public void addData(Map<String, Object> rawData) {
         lock.lock();
         try {
-            log.info("接收到设备ID: {}的数据，数据内容: {}", deviceId, rawData);
+            log.debug("接收到设备ID: {}的数据，数据内容: {}", deviceId, rawData);
             parseData(rawData, currentBuffer);
             if (currentBuffer.size() >= bufferSize) {
-                log.info("设备ID: {}，数据达到缓冲区大小{}，触发刷盘", deviceId, bufferSize);
+                log.debug("设备ID: {}，数据达到缓冲区大小{}，触发刷盘", deviceId, bufferSize);
                 swapAndFlush();
             }
         } finally {

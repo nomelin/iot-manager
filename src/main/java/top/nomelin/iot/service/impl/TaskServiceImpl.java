@@ -42,8 +42,8 @@ public class TaskServiceImpl implements TaskService {
         FileTask task = new FileTask();
         task.setId(taskId);
         task.setFileName(file.getOriginalFilename());
-        tasks.put(taskId, new TaskMetadata(task, LocalDateTime.now()));
         task.queue();
+        tasks.put(taskId, new TaskMetadata(task, LocalDateTime.now()));
         log.info("任务创建: {}", taskId);
         return taskId;
     }

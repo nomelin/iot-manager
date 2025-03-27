@@ -36,7 +36,7 @@ class CaffeineCacheOperations<K, V> implements CacheOperations<K, V> {
                 log.debug("Cache hit - Key: {}", key);
                 return CacheResult.hit(value);
             }
-            log.info("Cache miss - Key: {}", key);
+            log.debug("Cache miss - Key: {}", key);
             return CacheResult.miss();
         } catch (Exception e) {
             log.error("Cache get error - Key: {}", key, e);
