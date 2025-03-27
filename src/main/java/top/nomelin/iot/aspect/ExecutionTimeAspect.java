@@ -58,7 +58,7 @@ public class ExecutionTimeAspect {
                                 String methodName,
                                 Object[] args) {
         if (annotation.logArgs()) {
-            log.info("[{}#{}] 方法执行开始 | 参数: {}",
+            log.debug("[{}#{}] 方法执行开始 | 参数: {}",
                     className, methodName, formatArguments(args));
         }
     }

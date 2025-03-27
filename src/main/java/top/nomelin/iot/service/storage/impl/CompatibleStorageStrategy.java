@@ -47,7 +47,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
                         TSEncoding.PLAIN,// 强制转为PLAIN
                         Constants.COMPRESSION_TYPE))
                 .toList());
-        log.info("COMPATIBLE: 模板节点从 {} 转换为 {}",
+        log.debug("COMPATIBLE: 模板节点从 {} 转换为 {}",
                 originalNodes.stream().map(MeasurementNode::getName).toList(),
                 resultNodes.stream().map(MeasurementNode::getName).toList());
         return resultNodes;
@@ -64,18 +64,18 @@ public class CompatibleStorageStrategy implements StorageStrategy {
                           List<List<String>> measurementsList, List<List<TSDataType>> typesList,
                           List<List<Object>> valuesList, int aggregationTime, int mergeTimestampNum) {
         int storageGranularity = util.adjustStorageGranularity(aggregationTime);
-        log.info("Adjusted storage granularity from {} to {}", aggregationTime, storageGranularity);
+        log.debug("Adjusted storage granularity from {} to {}", aggregationTime, storageGranularity);
 
         // 聚合当前批次数据到时间窗口
         Map<Long, Map<String, List<Object>>> windowData = aggregateCurrentBatch(
                 timestamps, measurementsList, valuesList, storageGranularity);
 
         if (mergeTimestampNum != 0) {
-            log.info("mergeTimestampNum is {}, start merging existing data", mergeTimestampNum);
+            log.debug("mergeTimestampNum is {}, start merging existing data", mergeTimestampNum);
             List<Long> windowTsToMerge = determineWindowsToMerge(windowData.keySet(), mergeTimestampNum);
             mergeExistingData(devicePath, windowData, windowTsToMerge);
         } else {
-            log.info("mergeTimestampNum is 0, skip merging existing data");
+            log.debug("mergeTimestampNum is 0, skip merging existing data");
         }
 
         // 生成存储记录
@@ -108,7 +108,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
                 measurements.computeIfAbsent(measurement, k -> new ArrayList<>()).add(value);
             }
         }
-        log.info("Aligned timestamps from {} to windows: {}", timestamps, windowData.keySet());
+        log.debug("Aligned timestamps from {} to windows: {}", timestamps, windowData.keySet());
         return windowData;
     }
 
@@ -134,7 +134,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
 
     private void mergeExistingData(String devicePath, Map<Long, Map<String, List<Object>>> windowData,
                                    List<Long> windowTsToMerge) {
-        log.info("查询开关batchQueryEnabled：{}", batchQueryEnabled);
+        log.debug("查询开关batchQueryEnabled：{}", batchQueryEnabled);
         if (batchQueryEnabled) {
             batchMerge(devicePath, windowData, windowTsToMerge);
         } else {

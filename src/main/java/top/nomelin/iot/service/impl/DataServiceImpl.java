@@ -91,7 +91,7 @@ public class DataServiceImpl implements DataService {
         config.getDataTypes().put(Constants.TAG, IotDataType.STRING);
         // 对齐时间窗口
         Long[] alignedTimeRange = alignTimeRange(timestamps.get(0), timestamps.get(timestamps.size() - 1), config.getAggregationTime());
-        log.info("insertBatchRecord 原始时间范围:{}-{}, 对齐后:{}-{}", timestamps.get(0), timestamps.get(timestamps.size() - 1), alignedTimeRange[0], alignedTimeRange[1]);
+        log.debug("insertBatchRecord 原始时间范围:{}-{}, 对齐后:{}-{}", timestamps.get(0), timestamps.get(timestamps.size() - 1), alignedTimeRange[0], alignedTimeRange[1]);
         // 把config中的物理量的类型转换为TSDataType
         List<TSDataType> types = measurements.stream()
                 .map(m -> IotDataType.convertToTsDataType(config.getDataTypes().get(m))).toList();
@@ -106,7 +106,7 @@ public class DataServiceImpl implements DataService {
                 mergeTimestampNum
         );
 
-        log.info("insertBatchRecord: devicePath={}, timestamps={}, measurements={}, types={}, values={}",
+        log.debug("insertBatchRecord: devicePath={}, timestamps={}, measurements={}, types={}, values={}",
                 devicePath, timestamps, measurements, types, values);
     }
 
@@ -162,20 +162,20 @@ public class DataServiceImpl implements DataService {
 
         // 阈值过滤（COUNT模式不处理）
         if (shouldApplyThreshold(queryAggregateFunc, thresholds)) {
-            log.info("queryRecord 应用阈值过滤, selectMeasurements={}, thresholds={}", selectMeasurements, thresholds);
+            log.debug("queryRecord 应用阈值过滤, selectMeasurements={}, thresholds={}", selectMeasurements, thresholds);
             applyThresholdFilter(rawTable, selectMeasurements, thresholds);
         } else {
-            log.info("queryRecord 不应用阈值过滤, selectMeasurements={}, thresholds={}", selectMeasurements, thresholds);
+            log.debug("queryRecord 不应用阈值过滤, selectMeasurements={}, thresholds={}", selectMeasurements, thresholds);
         }
         DeviceTable aggregatedTable;
 
         // 查询聚合处理
         if (aggregationTime == 0 || ObjectUtil.isNull(queryAggregateFunc)) {
-            log.info("queryRecord 不聚合, selectMeasurements={}, aggregationTime={}, QueryAggregateFunc={}",
+            log.debug("queryRecord 不聚合, selectMeasurements={}, aggregationTime={}, QueryAggregateFunc={}",
                     selectMeasurements, aggregationTime, queryAggregateFunc);
             aggregatedTable = rawTable;//不聚合直接返回原始数据
         } else {
-            log.info("queryRecord 应用聚合, selectMeasurements={}, aggregationTime={}, QueryAggregateFunc={}",
+            log.debug("queryRecord 应用聚合, selectMeasurements={}, aggregationTime={}, QueryAggregateFunc={}",
                     selectMeasurements, aggregationTime, queryAggregateFunc);
             try {
                 aggregatedTable = aggregateRawData(rawTable, aggregationTime, queryAggregateFunc);
@@ -191,9 +191,9 @@ public class DataServiceImpl implements DataService {
         aggregatedTable.setTypes(types);
 
         log.info("queryRecord: device={}, startTime={}, endTime={}, selectMeasurements={}, aggregationTime={}, " +
-                        "QueryAggregateFunc={}, thresholds={}",
+                        "QueryAggregateFunc={}, thresholds={}, tags={}",
                 device, startTime, endTime, selectMeasurements, aggregationTime,
-                queryAggregateFunc, thresholds);
+                queryAggregateFunc, thresholds, tags);
         log.info("共查询到{}条时间戳（每个时间戳可能有多条记录，这里不统计）", aggregatedTable.getRecords().size());
 
         return aggregatedTable;
@@ -224,11 +224,11 @@ public class DataServiceImpl implements DataService {
     //应用标签过滤
     private void applyTagFilter(DeviceTable table, String[] tags) {
         if (tags == null) {
-            log.info("queryRecord 不应用标签过滤");
+            log.debug("queryRecord 不应用标签过滤");
             return;//不进行过滤
         }
         List<String> tagList = Arrays.asList(tags);
-        log.info("queryRecord 应用标签过滤, tags={}", tagList);
+        log.debug("queryRecord 应用标签过滤, tags={}", tagList);
 
         table.getRecords().replaceAll((timestamp, records) ->
                 records.stream()

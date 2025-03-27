@@ -121,7 +121,7 @@ public class TaskServiceImpl implements TaskService {
                 switch (task.getStatus()) {
                     case COMPLETED:
                         iterator.remove();
-                        log.info("清理成功任务: {}", taskId);
+                        log.debug("清理成功任务: {}", taskId);
                         cleanedCount++;
                         break;
                     case FAILED:

@@ -35,10 +35,10 @@ public class CoverStorageStrategy implements StorageStrategy {
                           List<List<Object>> valuesList, int aggregationTime, int mergeTimestampNum) {
         // 调整存储粒度
         int storageGranularity = util.adjustStorageGranularity(aggregationTime);
-        log.info("调整存储粒度，从{}调整到{}", aggregationTime, storageGranularity);
+        log.debug("调整存储粒度，从{}调整到{}", aggregationTime, storageGranularity);
         // 对齐时间戳
         List<Long> alignedTimestamps = util.alignTimestamps(timestamps, storageGranularity);
-        log.info("对齐时间戳，从{}调整到{}", timestamps, alignedTimestamps);
+        log.debug("对齐时间戳，从{}调整到{}", timestamps, alignedTimestamps);
         // 写入原始数据
         iotDBDao.insertBatchAlignedRecordsOfOneDevice(
                 devicePath, alignedTimestamps, measurementsList, typesList, valuesList);

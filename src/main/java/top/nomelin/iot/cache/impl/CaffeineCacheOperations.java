@@ -33,7 +33,7 @@ class CaffeineCacheOperations<K, V> implements CacheOperations<K, V> {
         try {
             V value = cache.getIfPresent(key);
             if (value != null) {
-                log.info("Cache hit - Key: {}", key);
+                log.debug("Cache hit - Key: {}", key);
                 return CacheResult.hit(value);
             }
             log.info("Cache miss - Key: {}", key);
@@ -48,7 +48,7 @@ class CaffeineCacheOperations<K, V> implements CacheOperations<K, V> {
     public Map<K, V> getAll(@NonNull Set<K> keys) {
         try {
             Map<K, V> result = cache.getAllPresent(keys);
-            log.info("Batch get - Request keys: {}, Found keys: {}", keys.size(), result.size());
+            log.debug("Batch get - Request keys: {}, Found keys: {}", keys.size(), result.size());
             return result;
         } catch (Exception e) {
             log.error("Batch get error - Keys: {}", keys, e);
