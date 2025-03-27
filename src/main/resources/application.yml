@@ -60,3 +60,6 @@ task:
     fail_expired_days: 1
     ongoing_expired_days: 7
 
+debug:
+  print-extra-info: true
+

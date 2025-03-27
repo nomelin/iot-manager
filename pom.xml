@@ -10,7 +10,7 @@
     </parent>
     <groupId>top.nomelin</groupId>
     <artifactId>iot</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>iot</name>
     <description>iot</description>
     <url/>

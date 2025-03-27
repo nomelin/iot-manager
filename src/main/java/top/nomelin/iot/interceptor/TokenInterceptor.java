@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
@@ -36,6 +37,9 @@ public class TokenInterceptor implements HandlerInterceptor {
     private final UserService userService;
     private final CurrentUserCache currentUserCache;
 
+    @Value("${debug.print-extra-info:false}")
+    private boolean printExtraInfo;
+
     @Autowired
     public TokenInterceptor(UserService userService, CurrentUserCache currentUserCache) {
         this.userService = userService;
@@ -45,9 +49,13 @@ public class TokenInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         HttpSession session = request.getSession();
-        log.info("session id:" + session.getId() + ",请求路径：" + request.getRequestURI());
+        if (printExtraInfo) {
+            log.info("session id:" + session.getId() + ",请求路径：" + request.getRequestURI());
+        }
         if (!ObjectUtil.isNull(currentUserCache.getCurrentUser())) {
-            log.info("从session缓存bean中取到用户信息，跳过token解析。");
+            if (printExtraInfo) {
+                log.info("从session缓存bean中取到用户信息，跳过token解析。");
+            }
             return true;
         }
         //从http请求的header中获取token

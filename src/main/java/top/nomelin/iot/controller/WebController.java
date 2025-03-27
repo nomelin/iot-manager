@@ -32,7 +32,7 @@ public class WebController {
         this.userService = userService;
     }
 
-    @GetMapping("/")
+    @GetMapping("/hello")
     public Result hello() {
         return Result.success("hello, iot manager");
     }
