@@ -1,8 +1,11 @@
 package top.nomelin.iot.controller.debug;
 
 import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,10 +19,7 @@ import top.nomelin.iot.service.alert.AlertService;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
@@ -42,6 +42,8 @@ public class DebugController {
     private final IoTDBDao iotDBDao;
     private final JdbcTemplate jdbcTemplate;
 
+    private final ThreadPoolTaskExecutor executor;
+
     @Value("${file.tempDir}")
     private String tempDir;
 
@@ -51,12 +53,15 @@ public class DebugController {
     @Value("${iotdb.stopPath}")
     private String stopIoTDBPath;
 
-    public DebugController(CacheOperations cacheOperations, TaskService taskService, AlertService alertService, IoTDBDao iotDBDao, JdbcTemplate jdbcTemplate) {
+    public DebugController(CacheOperations cacheOperations, TaskService taskService, AlertService alertService,
+                           IoTDBDao iotDBDao, JdbcTemplate jdbcTemplate,
+                           @Qualifier("fileProcessingExecutor") ThreadPoolTaskExecutor executor) {
         this.cacheOperations = cacheOperations;
         this.taskService = taskService;
         this.alertService = alertService;
         this.iotDBDao = iotDBDao;
         this.jdbcTemplate = jdbcTemplate;
+        this.executor = executor;
     }
 
     @RequestMapping("/hello")
@@ -226,5 +231,48 @@ public class DebugController {
             throw new SystemException(CodeMessage.SYSTEM_ERROR, "命令执行失败：" + commandPath);
         }
     }
+
+    @GetMapping("/file-thread-pool/states")
+    public Result getThreadPoolStates() {
+        return Result.success(getThreadPoolStats());
+    }
+
+    private Map<String, Object> getThreadPoolStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("threadPoolName", executor.getThreadNamePrefix()); // 线程池名称
+        stats.put("activeCount", executor.getActiveCount()); // 当前活动线程数
+        stats.put("poolSize", executor.getPoolSize()); // 当前线程池大小
+        stats.put("corePoolSize", executor.getCorePoolSize()); // 核心线程数
+        stats.put("maxPoolSize", executor.getMaxPoolSize()); // 最大线程数
+        stats.put("queueSize", executor.getThreadPoolExecutor().getQueue().size()); // 当前队列大小
+        stats.put("queueCapacity", executor.getQueueCapacity()); // 队列容量
+        stats.put("completedTaskCount", executor.getThreadPoolExecutor().getCompletedTaskCount()); // 已完成任务数
+        stats.put("largestPoolSize", executor.getThreadPoolExecutor().getLargestPoolSize()); // 线程池曾达到的最大线程数
+        stats.put("taskCount", executor.getThreadPoolExecutor().getTaskCount()); // 线程池已接收的任务总数
+        stats.put("isShutdown", executor.getThreadPoolExecutor().isShutdown()); // 线程池是否已关闭
+        stats.put("isTerminated", executor.getThreadPoolExecutor().isTerminated()); // 线程池是否已终止
+        return stats;
+    }
+
+    @RequestMapping("/file-thread-pool/shutdown")
+    public Result shutdownThreadPool() {
+        if (executor.getThreadPoolExecutor().isShutdown()) {
+            return Result.success("文件处理线程池已经关闭.");
+        }
+        executor.shutdown();
+        log.info("文件处理线程池关闭中...");
+        return Result.success("文件处理线程池关闭成功.");
+    }
+
+    @RequestMapping("/file-thread-pool/start")
+    public Result startThreadPool() {
+        if (!executor.getThreadPoolExecutor().isShutdown()) {
+            return Result.success("文件处理线程池已经启动.");
+        }
+        executor.initialize();
+        log.info("文件处理线程池启动中...");
+        return Result.success("文件处理线程池启动成功.");
+    }
+
 
 }

@@ -66,3 +66,9 @@ debug:
 connect:
   default-buffer-size: 1024
   default-flush-interval: 10
+
+file-thread-pool:
+  core-pool-size: 16         # 核心线程数，默认10
+  max-pool-size: 32          # 最大线程数，默认20
+  queue-capacity: 8192        # 队列容量，默认500
+  thread-name-prefix: "FileProcessor-"

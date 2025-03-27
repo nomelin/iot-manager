@@ -143,10 +143,44 @@
       </div>
       <div class="tags-container">
         <el-tag v-for="(state, key) in alertStates" :key="key" class="cache-key" type="warning">
-          {{ key }} / 上次告警开始：{{ formatTime(state.startTime)}} / 上次触发推送：{{ formatTime(state.lastTriggerTime)}}
+          {{ key }} / 上次告警开始：{{ formatTime(state.startTime) }} /
+          上次触发推送：{{ formatTime(state.lastTriggerTime) }}
         </el-tag>
         <div v-if="Object.keys(alertStates).length === 0" class="empty-tip">暂无告警状态跟踪数据</div>
       </div>
+    </el-card>
+
+    <el-card class="debug-section">
+      <div class="section-header">
+        <h3>文件处理线程池监测</h3>
+        <div>
+          <el-button :loading="threadPoolLoading" type="primary" @click="shutDownThreadPool">关闭线程池</el-button>
+          <el-button :loading="threadPoolLoading" type="primary" @click="startThreadPool">启动线程池</el-button>
+          <el-button :loading="threadPoolLoading" type="primary" @click="getThreadPoolStats">刷新线程池状态</el-button>
+        </div>
+      </div>
+      <el-table :data="threadPoolStats" border style="width: 100%">
+        <el-table-column label="线程池名称" prop="threadPoolName"></el-table-column>
+        <el-table-column label="当前活动线程数" prop="activeCount"></el-table-column>
+        <el-table-column label="当前线程池大小" prop="poolSize"></el-table-column>
+        <el-table-column label="核心线程数" prop="corePoolSize"></el-table-column>
+        <el-table-column label="最大线程数" prop="maxPoolSize"></el-table-column>
+        <el-table-column label="队列大小" prop="queueSize"></el-table-column>
+        <el-table-column label="队列容量" prop="queueCapacity"></el-table-column>
+        <el-table-column label="已完成任务数" prop="completedTaskCount"></el-table-column>
+        <el-table-column label="历史最大线程数" prop="largestPoolSize"></el-table-column>
+        <el-table-column label="接收总任务数" prop="taskCount"></el-table-column>
+        <el-table-column label="关闭" prop="isShutdown">
+          <template #default="{row}">
+            {{ row.isShutdown ? '已关闭' : '运行中' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="中止" prop="isTerminated">
+          <template #default="{row}">
+            {{ row.isTerminated ? '已中止' : '运行中' }}
+          </template>
+        </el-table-column>
+      </el-table>
     </el-card>
 
 
@@ -185,6 +219,10 @@ export default {
       // 告警触发状态缓存相关
       alertStates: {},
       alertStateLoading: false,
+
+      // 线程池监测相关
+      threadPoolStats: [],
+      threadPoolLoading: false
     }
   },
   computed: {
@@ -202,6 +240,8 @@ export default {
     this.getTaskIds()
     this.getTempFiles()
     this.checkDbStatus();
+    this.getAlertStates();
+    this.getThreadPoolStats();
   },
 
   methods: {
@@ -441,6 +481,51 @@ export default {
         // 取消操作不提示
       }
     },
+    async getThreadPoolStats() {
+      this.threadPoolLoading = true;
+      try {
+        const res = await this.$request.get('/debug/file-thread-pool/states');
+        if (res.code === '200') {
+          console.log("线程池状态", JSON.stringify(res.data));
+          this.threadPoolStats = res.data ? [res.data] : [];
+        }
+      } finally {
+        this.threadPoolLoading = false;
+      }
+    },
+    async shutDownThreadPool() {
+      try {
+        await this.$confirm('确定要关闭文件处理线程池吗？此操作不可恢复！', '警告', {
+          type: 'warning',
+        });
+        this.threadPoolLoading = true;
+        const res = await this.$request.get('/debug/file-thread-pool/shutdown');
+        if (res.code === '200') {
+          this.$message.success('文件处理线程池已关闭');
+          await this.getThreadPoolStats();
+        }
+      } catch (error) {
+        // 取消操作不提示
+      }finally {
+        this.threadPoolLoading = false;
+      }
+    },
+
+    async startThreadPool() {
+      try {
+        this.threadPoolLoading = true;
+        const res = await this.$request.get('/debug/file-thread-pool/start');
+        if (res.code === '200') {
+          this.$message.success('文件处理线程池已启动');
+          await this.getThreadPoolStats();
+        }
+      } catch (error) {
+        this.$message.error('文件处理线程池启动失败');
+        console.log(error);
+      }finally{
+        this.threadPoolLoading = false;
+      }
+    }
 
   }
 }

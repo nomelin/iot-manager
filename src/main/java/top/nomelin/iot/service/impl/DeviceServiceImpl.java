@@ -81,6 +81,7 @@ public class DeviceServiceImpl implements DeviceService {
         Config config = mergeConfig(template, device);//合并模板和设备的配置
         device.setConfig(config);
         StorageStrategy storageStrategy = storageStrategyManager.getStrategy(config.getStorageMode());
+        device.setAllTags(new HashSet<>());
         //插入mysql。因为后面要使用id，所以必须先插入mysql。
         deviceMapper.insert(device);
         log.info("添加设备到mysql成功, device: {}", device);
