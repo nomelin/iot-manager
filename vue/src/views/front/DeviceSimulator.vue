@@ -170,7 +170,7 @@ import {Message} from 'element-ui';
 
 // 创建专用的axios实例
 const deviceApi = axios.create({
-  baseURL: 'http://localhost:23456', // 设备模拟器专用接口地址
+  baseURL: process.env.VUE_APP_DEVICE_SIM_BASEURL, // 设备模拟器专用接口地址
   timeout: 10000
 })
 
