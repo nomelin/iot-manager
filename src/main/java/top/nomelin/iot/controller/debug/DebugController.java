@@ -200,11 +200,26 @@ public class DebugController {
                 throw new SystemException(CodeMessage.NOT_FOUND_ERROR, "命令文件不存在：" + commandPath);
             }
 
-            // 执行命令并将输出独立线程处理，避免阻塞
-            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", "start /min " + scriptFile.getAbsolutePath());
+            String os = System.getProperty("os.name").toLowerCase();
+            ProcessBuilder builder;
+            if (os.contains("win")) {
+                // Windows 使用 cmd 启动 bat 文件
+                builder = new ProcessBuilder("cmd.exe", "/c", "start", "/min", scriptFile.getAbsolutePath());
+            } else {
+                // Linux/Unix 使用 sh 执行脚本
+                builder = new ProcessBuilder("sh", scriptFile.getAbsolutePath());
+            }
+
             builder.redirectErrorStream(true);
             Process process = builder.start();
-            Executors.newSingleThreadExecutor().submit(() -> process.getInputStream().transferTo(System.out));
+            // 异步处理输出流避免阻塞
+            Executors.newSingleThreadExecutor().submit(() -> {
+                try {
+                    process.getInputStream().transferTo(System.out);
+                } catch (IOException e) {
+                    log.error("处理命令输出流失败", e);
+                }
+            });
             return Result.success("命令执行成功：" + commandPath);
         } catch (IOException e) {
             log.error("命令执行失败：" + commandPath, e);
