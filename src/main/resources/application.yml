@@ -61,5 +61,8 @@ task:
     ongoing_expired_days: 7
 
 debug:
-  print-extra-info: true
+  print-extra-info: false
 
+connect:
+  default-buffer-size: 1024
+  default-flush-interval: 10

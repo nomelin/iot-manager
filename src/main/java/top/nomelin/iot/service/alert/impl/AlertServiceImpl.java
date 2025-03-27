@@ -109,6 +109,17 @@ public class AlertServiceImpl implements AlertService {
     }
 
     @Override
+    public Map<String, AlertState> getAlertStates() {
+        return alertStates;
+    }
+
+    @Override
+    public void clearAllAlertStates() {
+        alertStates.clear();
+        log.info("清空所有告警状态成功");
+    }
+
+    @Override
     public void processDeviceData(Integer deviceId, Device device, Map<String, Object> metrics) {
         List<Alert> deviceAlerts;
 //        log.info("开始处理告警：设备ID：{}", deviceId);
@@ -191,7 +202,7 @@ public class AlertServiceImpl implements AlertService {
             triggerActions(alert, device, metrics, currentTime);
             state.updateLastTrigger(currentTime);// 更新上次触发时间
 //            state.resetStartTime();
-        }else{
+        } else {
 //            log.info("告警配置[{}]未达到持续时间要求，目前持续时间：{}秒", alert.getId(), duration);
         }
     }
@@ -206,7 +217,7 @@ public class AlertServiceImpl implements AlertService {
     }
 
     // 内部状态跟踪类，用来计算告警持续时间和告警推送静默时间
-    private static class AlertState {
+    public static class AlertState {
         private Long startTime;// 告警开始时间
         private Long lastTriggerTime;// 上次触发推送时间
 

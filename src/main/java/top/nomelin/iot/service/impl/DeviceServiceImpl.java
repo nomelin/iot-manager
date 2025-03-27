@@ -203,6 +203,15 @@ public class DeviceServiceImpl implements DeviceService {
         if (ObjectUtil.isNull(oldTags)) {
             oldTags = new HashSet<>();
         }
+        //检查是否已经存在
+        for (String tag : tags) {
+            if (oldTags.contains(tag)) {
+                tags.remove(tag);
+            }
+        }
+        if (tags.isEmpty()) {
+            return device;
+        }
         //取并集
         oldTags.addAll(tags);
         device.setAllTags(oldTags);
@@ -218,6 +227,15 @@ public class DeviceServiceImpl implements DeviceService {
         Set<String> oldTags = device.getAllTags();
         if (ObjectUtil.isNull(oldTags)) {
             oldTags = new HashSet<>();
+        }
+        //检查是否已经存在
+        for (String tag : tags) {
+            if (oldTags.contains(tag)) {
+                tags.remove(tag);
+            }
+        }
+        if (tags.isEmpty()) {
+            return device;
         }
         //取并集
         oldTags.addAll(tags);

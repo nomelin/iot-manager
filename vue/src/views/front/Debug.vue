@@ -18,7 +18,7 @@
     <!-- 缓存统计信息 -->
     <el-card class="debug-section">
       <div class="section-header">
-        <h3>缓存统计</h3>
+        <h3>缓存统计信息</h3>
         <el-button :loading="statsLoading" type="primary" @click="getCacheStats">刷新统计</el-button>
       </div>
       <el-table :data="[cacheStats]" border style="width: 100%">
@@ -132,6 +132,23 @@
       </div>
     </el-card>
 
+    <!-- 告警触发状态缓存 -->
+    <el-card class="debug-section">
+      <div class="section-header">
+        <h3>告警触发状态跟踪</h3>
+        <div>
+          <el-button :loading="alertStateLoading" type="primary" @click="getAlertStates">刷新告警缓存</el-button>
+          <el-button type="danger" @click="clearAlertStates">清除告警缓存</el-button>
+        </div>
+      </div>
+      <div class="tags-container">
+        <el-tag v-for="(state, key) in alertStates" :key="key" class="cache-key" type="warning">
+          {{ key }} / 上次告警开始：{{ formatTime(state.startTime)}} / 上次触发推送：{{ formatTime(state.lastTriggerTime)}}
+        </el-tag>
+        <div v-if="Object.keys(alertStates).length === 0" class="empty-tip">暂无告警状态跟踪数据</div>
+      </div>
+    </el-card>
+
 
   </div>
 </template>
@@ -164,6 +181,10 @@ export default {
       iotdbStatus: 'unknown', // 'ok', 'error', 'unknown'
       mysqlStatus: 'unknown',
       iotdbLoading: false,
+
+      // 告警触发状态缓存相关
+      alertStates: {},
+      alertStateLoading: false,
     }
   },
   computed: {
@@ -392,6 +413,33 @@ export default {
 
     restartIoTDB() {
       this.controlIoTDB('restart');
+    },
+
+    async getAlertStates() {
+      this.alertStateLoading = true;
+      try {
+        const res = await this.$request.get('/debug/alert/getAlertStates');
+        if (res.code === '200') {
+          this.alertStates = res.data || {};
+        }
+      } finally {
+        this.alertStateLoading = false;
+      }
+    },
+
+    async clearAlertStates() {
+      try {
+        await this.$confirm('确定要清除全部告警缓存吗？此操作不可恢复！', '警告', {
+          type: 'warning',
+        });
+        const res = await this.$request.get('/debug/alert/clearAllAlerts');
+        if (res.code === '200') {
+          this.$message.success('告警缓存已清除');
+          await this.getAlertStates();
+        }
+      } catch (error) {
+        // 取消操作不提示
+      }
     },
 
   }

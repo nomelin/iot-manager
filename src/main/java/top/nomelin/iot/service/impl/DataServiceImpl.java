@@ -62,7 +62,10 @@ public class DataServiceImpl implements DataService {
                                   List<String> measurements, List<List<Object>> values, int mergeTimestampNum) {
         tag = validateTagForInsert(tag);
         List<String> measurementsCopy = addTagInMeasurementsAndValues(tag, measurements, values);
-        device = deviceService.addDataTagsWithoutCheck(device.getId(), Collections.singleton(tag));
+        //如果标签已经存在，则不再添加
+        if (!device.getAllTags().contains(tag)) {
+            device = deviceService.addDataTagsWithoutCheck(device.getId(), Collections.singleton(tag));
+        }
         Config config = device.getConfig();
         StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
         String devicePath = util.getDevicePath(device.getUserId(), device.getId());

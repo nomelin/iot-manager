@@ -26,7 +26,7 @@ public class DeviceBuffer {
     private final Device device;
     private final DataService dataService;
     private final int bufferSize;
-    private final long flushInterval;//刷新间隔，单位ms
+    private final int flushInterval;//刷新间隔，单位s
     private final ReentrantLock lock = new ReentrantLock();//控制写入和刷新操作的锁
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final List<String> measurementList; // 来自设备配置的固定测量项
@@ -35,7 +35,7 @@ public class DeviceBuffer {
     private List<DataPoint> currentBuffer;
     private List<DataPoint> backBuffer;
 
-    public DeviceBuffer(int deviceId, DataService dataService, DeviceService deviceService, AlertService alertService, int bufferSize, long flushInterval) {
+    public DeviceBuffer(int deviceId, DataService dataService, DeviceService deviceService, AlertService alertService, int bufferSize, int flushInterval) {
         this.deviceId = deviceId;
         this.dataService = dataService;
         this.alertService = alertService;
@@ -46,11 +46,11 @@ public class DeviceBuffer {
         currentBuffer = new ArrayList<>(bufferSize);
         backBuffer = new ArrayList<>(bufferSize);
         scheduleFlush();
-        log.info("创建设备缓冲区，设备ID: {}，数据缓冲区大小: {}，刷新间隔: {}ms", deviceId, bufferSize, flushInterval);
+        log.info("创建设备缓冲区，设备ID: {}，数据缓冲区大小: {}，刷新间隔: {}s", deviceId, bufferSize, flushInterval);
     }
 
     private void scheduleFlush() {
-        scheduler.scheduleAtFixedRate(this::flush, flushInterval, flushInterval, TimeUnit.MILLISECONDS);
+        scheduler.scheduleAtFixedRate(this::flush, flushInterval, flushInterval, TimeUnit.SECONDS);
     }
 
     public void addData(Map<String, Object> rawData) {
@@ -146,7 +146,7 @@ public class DeviceBuffer {
             }
 
             dataService.insertBatchRecord(
-                    deviceId,
+                    device,
                     timestamps,
                     null, // tag
                     measurementList,
@@ -155,7 +155,7 @@ public class DeviceBuffer {
             );
             log.info("刷新数据到设备ID: {}，共{}条数据", deviceId, buffer.size());
         } catch (Exception e) {
-            log.error("刷新数据到设备ID: {}失败，原因: {}", deviceId, e.getMessage());
+            log.error("刷新数据到设备ID: {}失败，原因: {}, 异常: {}", deviceId, e.getMessage(), e);
             throw new SystemException(CodeMessage.UPLOAD_DATA_FAILED,
                     "刷新数据到设备ID: " + deviceId + "失败，原因: " + e.getMessage(),
                     e);

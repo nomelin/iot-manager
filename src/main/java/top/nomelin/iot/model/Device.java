@@ -14,7 +14,7 @@ public class Device {
     private String name;
     private Integer userId;
     private Integer templateId;
-    private List<String> tags;//设备标签
+    private List<String> tags;//设备标签，不要和设备数据行的标签混淆。
 
     private Set<String> allTags;//设备数据行的所有标签
 
@@ -47,6 +47,9 @@ public class Device {
     }
 
 
+    /**
+     * 获取设备标签，不要和设备数据行的标签混淆。
+     */
     public List<String> getTags() {
         return tags;
     }
@@ -55,6 +58,9 @@ public class Device {
         this.tags = tags;
     }
 
+    /**
+     * 获取设备数据行的所有标签,不要和设备标签混淆。
+     */
     public Set<String> getAllTags() {
         return allTags;
     }

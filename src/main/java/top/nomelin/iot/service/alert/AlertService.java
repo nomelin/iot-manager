@@ -2,6 +2,7 @@ package top.nomelin.iot.service.alert;
 
 import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.alert.Alert;
+import top.nomelin.iot.service.alert.impl.AlertServiceImpl;
 
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,10 @@ public interface AlertService {
     List<Alert> getAllAlerts();
 
     void deleteAlert(int id);
+
+    Map<String, AlertServiceImpl.AlertState> getAlertStates();
+
+    void clearAllAlertStates();
 
     /**
      * 处理设备数据并触发告警检查

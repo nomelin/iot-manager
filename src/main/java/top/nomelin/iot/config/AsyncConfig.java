@@ -37,7 +37,6 @@ public class AsyncConfig implements AsyncConfigurer {
     }
 
     //Spring 异步方法中的异常不会直接被全局异常处理器捕获，因为这些异常是在线程池中的子线程中抛出的，而不是主线程中。
-    //TODO 异常处理整合
     @Override
     public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
         return (throwable, method, params) -> {

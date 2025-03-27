@@ -12,6 +12,7 @@ import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.service.TaskService;
+import top.nomelin.iot.service.alert.AlertService;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,6 +37,8 @@ public class DebugController {
 
     private final TaskService taskService;
 
+    private final AlertService alertService;
+
     private final IoTDBDao iotDBDao;
     private final JdbcTemplate jdbcTemplate;
 
@@ -48,9 +51,10 @@ public class DebugController {
     @Value("${iotdb.stopPath}")
     private String stopIoTDBPath;
 
-    public DebugController(CacheOperations cacheOperations, TaskService taskService, IoTDBDao iotDBDao, JdbcTemplate jdbcTemplate) {
+    public DebugController(CacheOperations cacheOperations, TaskService taskService, AlertService alertService, IoTDBDao iotDBDao, JdbcTemplate jdbcTemplate) {
         this.cacheOperations = cacheOperations;
         this.taskService = taskService;
+        this.alertService = alertService;
         this.iotDBDao = iotDBDao;
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -116,6 +120,17 @@ public class DebugController {
         return Result.success("成功删除所有临时文件.");
     }
 
+    @RequestMapping("/alert/getAlertStates")
+    public Result getAlertStates() {
+        return Result.success(alertService.getAlertStates());
+    }
+
+    @RequestMapping("/alert/clearAllAlerts")
+    public Result clearAllAlerts() {
+        alertService.clearAllAlertStates();
+        return Result.success();
+    }
+
     @RequestMapping("/iotdb/checkConnection")
     public Result checkIoTDBConnection() {
         try {
@@ -172,6 +187,7 @@ public class DebugController {
         }
         return executeCommand(startIoTDBPath);
     }
+
 
     /**
      * 执行外部命令

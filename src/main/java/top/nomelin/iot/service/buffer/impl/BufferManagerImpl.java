@@ -1,6 +1,7 @@
 package top.nomelin.iot.service.buffer.impl;
 
 import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import top.nomelin.iot.service.DataService;
 import top.nomelin.iot.service.DeviceService;
@@ -24,8 +25,12 @@ public class BufferManagerImpl implements BufferManager {
     private final DeviceService deviceService;
     private final AlertService alertService;
     private final ConcurrentHashMap<Integer, DeviceBuffer> buffers = new ConcurrentHashMap<>();
-    private final int defaultBufferSize = 100; // TODO: 从配置获取
-    private final long defaultFlushInterval = 5000; // TODO: 从配置获取
+    //TODO 缓冲区大小和刷新间隔可以每个设备单独配置
+    @Value("${connect.default-buffer-size:1024}")
+    private int defaultBufferSize;
+
+    @Value("${connect.default-flush-interval:30}")
+    private int defaultFlushInterval;// 单位:秒
 
     public BufferManagerImpl(DataService dataService, DeviceService deviceService, AlertService alertService) {
         this.dataService = dataService;
