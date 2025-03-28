@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
+import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.dto.FileTask;
 import top.nomelin.iot.service.TaskService;
 
@@ -37,11 +38,13 @@ public class TaskServiceImpl implements TaskService {
     private int autoCleanOngoingExpiredDays;
 
     @Override
-    public String createTask(MultipartFile file) {
+    public String createTask(MultipartFile file, Device device, String tag) {
         String taskId = UUID.randomUUID().toString();
         FileTask task = new FileTask();
         task.setId(taskId);
         task.setFileName(file.getOriginalFilename());
+        task.setDevice(device); // 设置设备信息
+        task.setTag(tag);
         task.queue();
         tasks.put(taskId, new TaskMetadata(task, LocalDateTime.now()));
         log.info("任务创建: {}", taskId);

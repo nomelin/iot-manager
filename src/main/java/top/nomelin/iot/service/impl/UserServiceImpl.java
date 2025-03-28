@@ -86,6 +86,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User updateById(User user) {
+        User dbUser = userMapper.selectByName(user.getName());
+        if (ObjectUtil.isNotNull(dbUser)) {
+            throw new BusinessException(CodeMessage.USER_NAME_EXIST_ERROR);//用户名已存在
+        }
         userMapper.updateById(user);
         log.info("更新用户成功：{}", user);
         return user;

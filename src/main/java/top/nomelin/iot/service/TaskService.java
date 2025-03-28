@@ -1,6 +1,7 @@
 package top.nomelin.iot.service;
 
 import org.springframework.web.multipart.MultipartFile;
+import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.dto.FileTask;
 
 import java.util.List;
@@ -12,9 +13,9 @@ import java.util.List;
  * @since 2025/02/04 15:33
  **/
 public interface TaskService {
-    String createTask(MultipartFile file);
-
 //    void updateTaskProgress(String taskId, int processed);
+
+    String createTask(MultipartFile file, Device device, String tag);
 
     void pauseTask(String taskId);
 

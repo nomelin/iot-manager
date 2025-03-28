@@ -100,7 +100,7 @@ export default {
     },
     sendRegister() {
       // 对密码进行哈希和加盐处理
-      let saltedPassword = this.form.name + this.form.password;
+      let saltedPassword = this.form.id + this.form.password;
       // 使用哈希过的密码
       let hashedPassword = CryptoJS.SHA256(saltedPassword).toString();
       console.log("hashedPassword: "+hashedPassword)

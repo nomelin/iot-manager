@@ -75,7 +75,7 @@ public class FileController {
             fileName = file.getOriginalFilename();//获取原始文件名
         }
         // 创建任务。
-        String taskId = taskService.createTask(file);
+        String taskId = taskService.createTask(file, device,tag);
         // 创建非临时目录的持久化文件,解决异步文件处理时，临时文件被删除的问题
         File tempFile = new File(tempDir + UUID.randomUUID() + "_" + fileName);
         try {

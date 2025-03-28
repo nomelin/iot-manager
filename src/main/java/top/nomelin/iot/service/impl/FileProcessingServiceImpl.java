@@ -46,8 +46,8 @@ public class FileProcessingServiceImpl implements FileProcessingService {
             throw new BusinessException(CodeMessage.FILE_EMPTY_ERROR, "文件为空:" + taskId);
         }
         FileTask task = taskService.getTask(taskId);
-        task.setDevice(device);
-        task.setTag(tag);
+//        task.setDevice(device);
+//        task.setTag(tag);
         task.start();
         log.info("异步处理文件:，任务ID:{}, 文件名:{}, 设备:{}，文件类型:{}, skipRows:{}, mergeTimestampNum:{}, batchSize:{}",
                 taskId, task.getFileName(), device, task.getFileType(), skipRows, mergeTimestampNum, batchSize);

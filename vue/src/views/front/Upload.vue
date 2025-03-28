@@ -616,6 +616,8 @@ export default {
               clearInterval(interval)
               this.pollingMap.delete(taskId)
             }
+          }else {
+            console.error(`轮询任务${taskId}返回失败代码:`, res)
           }
         } catch (error) {
           console.error(`轮询任务${taskId}失败:`, error)

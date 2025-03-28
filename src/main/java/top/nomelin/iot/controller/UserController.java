@@ -43,6 +43,9 @@ public class UserController {
      */
     @PutMapping("")
     public Result updateById(@RequestBody User user) {
+        if(ObjectUtil.isNull(user.getId())){
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR);// 参数缺失
+        }
         userService.updateById(user);
         return Result.success();
     }
