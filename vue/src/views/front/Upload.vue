@@ -132,6 +132,24 @@
                 >
                 </el-switch>
               </el-form-item>
+
+              <el-form-item label="自动处理错误时间戳">
+                <div class="timestamp-options">
+                  <el-tooltip content="直接抛出异常">
+                    <el-radio v-model="form.autoHandleErrorTimeStamp" :label="0">失败</el-radio>
+                  </el-tooltip>
+                  <el-tooltip content="尝试将时间戳修改为相邻时间戳，如果无法修改则抛出异常">
+                    <el-radio v-model="form.autoHandleErrorTimeStamp" :label="1">修改或失败</el-radio>
+                  </el-tooltip>
+                  <el-tooltip content="尝试将时间戳修改为相邻时间戳，如果无法修改则删除对应行">
+                    <el-radio v-model="form.autoHandleErrorTimeStamp" :label="2">修改或删除</el-radio>
+                  </el-tooltip>
+                  <el-tooltip content="直接删除对应行">
+                    <el-radio v-model="form.autoHandleErrorTimeStamp" :label="3">删除</el-radio>
+                  </el-tooltip>
+                </div>
+              </el-form-item>
+
               <!-- 跳过行数 -->
               <el-form-item label="跳过行数" prop="skipRows">
                 <el-input
@@ -159,7 +177,7 @@
                 </el-input>
               </el-form-item>
               <!--合并时间戳数量-->
-              <el-form-item label="每批次合并旧时间戳数量(-1为全量)" prop="mergeTimeStampNum">
+              <el-form-item label="每批次合并旧时间戳数量(-1为全量,不建议修改)" prop="mergeTimeStampNum">
                 <el-input
                     v-model.number="form.mergeTimeStampNum"
                     min="-1"
@@ -301,6 +319,7 @@ export default {
         skipRows: 1,
         mergeTimeStampNum: -1,
         batchSize: 500,
+        autoHandleErrorTimeStamp: 0,
       },
       rules: {
         deviceId: [
@@ -544,6 +563,7 @@ export default {
           formData.append('skipRows', this.form.skipRows)
           formData.append('mergeTimestampNum', this.form.mergeTimeStampNum)
           formData.append('batchSize', this.form.batchSize)
+          formData.append('autoHandleErrorTimeStamp', this.form.autoHandleErrorTimeStamp)
           console.log("fileName", file.name)
           if (this.usingFileNameAsTag) {
             //把TAG的所有|替换为%，因为|是不合法的TAG字符
@@ -615,7 +635,7 @@ export default {
               clearInterval(interval)
               this.pollingMap.delete(taskId)
             }
-          }else {
+          } else {
             console.error(`轮询任务${taskId}返回失败代码:`, res)
           }
         } catch (error) {
@@ -763,9 +783,9 @@ export default {
             if (res.code === '200') {
               this.$set(this.taskInfos, taskId, res.data);
               this.startPolling(taskId); // 重启轮询
-            }else{
+            } else {
               console.error(`恢复任务${taskId}详情失败:`, res)
-              if(res.code==='509'){
+              if (res.code === '509') {
 
               }
             }

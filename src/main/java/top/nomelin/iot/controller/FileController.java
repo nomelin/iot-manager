@@ -55,7 +55,8 @@ public class FileController {
                     defaultValue = Constants.DEFAULT_MERGE_TIMESTAMP_NUM_STR) int mergeTimestampNum,
             @RequestParam(value = "batchSize", required = false,
                     defaultValue = Constants.DEFAULT_FILE_BATCH_SIZE_STR) int batchSize,
-            @RequestParam(value = "tag", required = false) String tag
+            @RequestParam(value = "tag", required = false) String tag,
+            @RequestParam(value = "autoHandleErrorTimeStamp", required = false, defaultValue = "0") int autoHandleErrorTimeStamp
     ) {
         if (file.isEmpty()) {
             throw new BusinessException(CodeMessage.PARAM_ERROR, "文件为空");
@@ -75,7 +76,7 @@ public class FileController {
             fileName = file.getOriginalFilename();//获取原始文件名
         }
         // 创建任务。
-        String taskId = taskService.createTask(file, device,tag);
+        String taskId = taskService.createTask(file, device, tag);
         // 创建非临时目录的持久化文件,解决异步文件处理时，临时文件被删除的问题
         File tempFile = new File(tempDir + UUID.randomUUID() + "_" + fileName);
         try {
@@ -87,7 +88,7 @@ public class FileController {
 
         //异步处理文件，必须先查询Device对象并传入异步方法，否则由于session用户缓存不存在，异步方法内无法获取到设备信息
         processingService.processAsync(taskId, tempFile.getAbsolutePath(), device,
-                skipRows, mergeTimestampNum, batchSize, tag);
+                skipRows, mergeTimestampNum, batchSize, tag, autoHandleErrorTimeStamp);
         log.info("上传文件成功, 异步处理任务，直接返回。taskId: {}", taskId);
         return Result.success(taskId);
     }

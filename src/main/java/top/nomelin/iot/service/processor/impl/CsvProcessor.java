@@ -36,7 +36,8 @@ public class CsvProcessor implements FileProcessor {
     @LogExecutionTime
     @Override
     public void process(InputStream inputStream, Device device, FileTask task,
-                        int skipRows, int mergeTimestampNum, int batchSize, String tag) throws IOException {
+                        int skipRows, int mergeTimestampNum, int batchSize, String tag,
+                        int autoHandleErrorTimeStamp) throws IOException {
         // 包装为支持 mark/reset 的流
         BufferedInputStream bufferedStream = new BufferedInputStream(inputStream);
         bufferedStream.mark(Integer.MAX_VALUE);
@@ -45,7 +46,7 @@ public class CsvProcessor implements FileProcessor {
             log.info("开始处理CSV文件: {}", task.getFileName());
             // 第一阶段：前置校验并计算总行数
             List<String> headers = new ArrayList<>();
-            int totalRows = preCheckAndCalculateTotalRows(bufferedStream, device, skipRows, headers);
+            int totalRows = preCheckAndCalculateTotalRows(bufferedStream, device, skipRows, headers, autoHandleErrorTimeStamp);
             task.setTotalRows(totalRows);
             log.info("文件总数据行数: {}", totalRows);
 
@@ -53,8 +54,7 @@ public class CsvProcessor implements FileProcessor {
             bufferedStream.reset();
             log.info("流已重置到起始位置");
 
-            // 第二阶段：数据处理
-            processData(bufferedStream, device, task, skipRows, mergeTimestampNum, batchSize, tag);
+            processData(bufferedStream, device, task, skipRows, mergeTimestampNum, batchSize, tag, autoHandleErrorTimeStamp);
             log.info("CSV文件处理完成: {}", task.getFileName());
         } catch (Exception e) {
             task.fail("CSV处理失败: " + e);
@@ -75,11 +75,15 @@ public class CsvProcessor implements FileProcessor {
     }
 
     private int preCheckAndCalculateTotalRows(InputStream stream, Device device,
-                                              int skipLines, List<String> headers) throws IOException {
+                                              int skipLines, List<String> headers,
+                                              int autoHandleErrorTimeStamp) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-        // 跳过指定的skipLines行
+        int lineNumber = 0;
+
+        // 跳过指定的行
         for (int i = 0; i < skipLines; i++) {
             String line = reader.readLine();
+            lineNumber++;
             if (line == null) {
                 throw new IOException("文件行数不足，无法跳过" + skipLines + "行");
             }
@@ -87,6 +91,7 @@ public class CsvProcessor implements FileProcessor {
 
         // 读取表头行
         String headerLine = reader.readLine();
+        lineNumber++;
         if (headerLine == null) {
             throw new IOException("无法读取表头行");
         }
@@ -126,18 +131,23 @@ public class CsvProcessor implements FileProcessor {
         try {
             for (CSVRecord record : parser) {
                 totalRows++;
-                // 检查时间戳
-                try {
-                    TimestampConverter.convertToMillis(record.get(0));
-                } catch (Exception e) {
-                    throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
-                            "第" + (totalRows + skipLines + 1) + "行时间戳格式错误", e);
-                }
+                lineNumber++;
+
                 // 检查列数
                 if (record.size() != headers.size()) {
                     throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
-                            "第" + (totalRows + skipLines + 1) + "行列数与表头不符，预期" + headers.size() +
+                            "第" + lineNumber + "行列数与表头不符，预期" + headers.size() +
                                     "列，实际" + record.size() + "列");
+                }
+
+                // 仅在autoHandleErrorTimeStamp为0时检查时间戳
+                if (autoHandleErrorTimeStamp == 0) {
+                    try {
+                        TimestampConverter.convertToMillis(record.get(0));
+                    } catch (Exception e) {
+                        throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
+                                "第" + lineNumber + "行时间戳格式错误", e);
+                    }
                 }
             }
         } finally {
@@ -149,35 +159,33 @@ public class CsvProcessor implements FileProcessor {
 
     @LogExecutionTime
     private void processData(InputStream stream, Device device, FileTask task,
-                             int skipLines, int mergeTimestampNum, int batchSize, String tag)
-            throws IOException {
+                             int skipLines, int mergeTimestampNum, int batchSize, String tag,
+                             int autoHandleErrorTimeStamp) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+        int lineNumber = 0;
+
         // 跳过指定行数
         for (int i = 0; i < skipLines; i++) {
             String line = reader.readLine();
+            lineNumber++;
             if (line == null) {
                 throw new IOException("文件行数不足，无法跳过 " + skipLines + " 行");
             }
         }
         log.info("CSV文件{}已跳过 {} 行", task.getFileName(), skipLines);
 
-        //手动读取表头
-        String line = reader.readLine();
-        if (line == null) {
+        // 读取表头行
+        String headerLine = reader.readLine();
+        lineNumber++;
+        if (headerLine == null) {
             throw new IOException("文件行数不足，无法读取表头(时间戳与属性名行)");
         }
-        String[] split = line.split(",");
-        List<String> headers = new ArrayList<>(Arrays.asList(split));
+        List<String> headers = Arrays.asList(headerLine.split(","));
         log.info("CSV文件{}的表头: {}", task.getFileName(), headers);
 
-        // 配置 CSV 格式
         try (CSVParser parser = new CSVParser(
-//                new InputStreamReader(stream),
                 reader,
                 CSVFormat.DEFAULT.builder()
-//                        .setHeader()//自动解析标题行
-//                        .setSkipHeaderRecord(false)// 不跳过标题行，标题行是文件表头
-//                        .setCommentMarker('#')  // 设置注释标识符，以#开头的行将被忽略
                         .setIgnoreEmptyLines(true)
                         .setTrim(true)
                         .build()
@@ -198,11 +206,45 @@ public class CsvProcessor implements FileProcessor {
             //时间戳和数据值的批次缓存列表
             List<Long> timestamps = new ArrayList<>(batchSize);
             List<List<Object>> valuesBatch = new ArrayList<>(batchSize);
+            Long lastValidTimestamp = null;
 
             for (CSVRecord record : parser) {
+                lineNumber++;
                 checkTaskStatus(task); // 状态检查
 
-                processSingleRecord(record, timestamps, valuesBatch, dataTypes); // 传入dataTypes
+                long currentTimestamp;
+//                boolean timestampValid = true;
+                try {
+                    currentTimestamp = TimestampConverter.convertToMillis(record.get(0));
+                    lastValidTimestamp = currentTimestamp;
+                } catch (Exception e) {
+//                    timestampValid = false;
+                    //按照用户选择，处理错误时间戳数据行
+                    if (autoHandleErrorTimeStamp == 0) {
+                        throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
+                                "第" + lineNumber + "行时间戳错误", e);
+                    } else if (autoHandleErrorTimeStamp == 1 || autoHandleErrorTimeStamp == 2) {
+                        if (lastValidTimestamp == null) {
+                            if (autoHandleErrorTimeStamp == 1) {
+                                throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
+                                        "第" + lineNumber + "行时间戳错误，且没有有效的上一行时间戳", e);
+                            } else {
+                                log.warn("删除第{}行，时间戳错误且没有有效的上一行时间戳", lineNumber);
+                                continue;
+                            }
+                        } else {
+                            currentTimestamp = lastValidTimestamp;
+                            log.warn("第{}行时间戳错误，已替换为上一行的有效时间戳{}", lineNumber, currentTimestamp);
+                        }
+                    } else if (autoHandleErrorTimeStamp == 3) {
+                        log.warn("删除第{}行，时间戳错误", lineNumber);
+                        continue;
+                    } else {
+                        throw new SystemException(CodeMessage.PARAM_ERROR,
+                                "不支持的autoHandleErrorTimeStamp值: " + autoHandleErrorTimeStamp);
+                    }
+                }
+                processSingleRecord(record, timestamps, valuesBatch, dataTypes, currentTimestamp, lineNumber);
 
                 if (shouldFlushBatch(timestamps, batchSize)) {
                     flushBatch(device, measurements, timestamps, valuesBatch, task, mergeTimestampNum, tag);
@@ -247,10 +289,11 @@ public class CsvProcessor implements FileProcessor {
 
     // 解析单行数据，并将其添加到批次中
     private void processSingleRecord(CSVRecord record, List<Long> timestamps,
-                                     List<List<Object>> valuesBatch, List<IotDataType> dataTypes) {
+                                     List<List<Object>> valuesBatch, List<IotDataType> dataTypes,
+                                     long timestamp, int lineNumber) {
         try {
             //将任意对象自动转换为毫秒时间戳
-            long timestamp = TimestampConverter.convertToMillis(record.get(0));
+//            long timestamp = TimestampConverter.convertToMillis(record.get(0));
 //            log.info("timestamp: {}->{}", record.get(0), timestamp);
             List<Object> values = new ArrayList<>();
 
@@ -269,7 +312,7 @@ public class CsvProcessor implements FileProcessor {
             valuesBatch.add(values);
         } catch (Exception e) {
             throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
-                    String.format("第%d行数据格式错误", record.getRecordNumber()) + 2, e);
+                    String.format("第%d行数据格式错误", lineNumber), e);
         }
     }
 
