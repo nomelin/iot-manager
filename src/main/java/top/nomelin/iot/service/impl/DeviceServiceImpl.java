@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * DeviceServiceImpl
@@ -205,19 +206,17 @@ public class DeviceServiceImpl implements DeviceService {
             oldTags = new HashSet<>();
         }
         //检查是否已经存在
-        for (String tag : tags) {
-            if (oldTags.contains(tag)) {
-                tags.remove(tag);
-            }
+        Set<String> finalOldTags = oldTags;
+        Set<String> newTags = tags.stream()
+                .filter(tag -> !finalOldTags.contains(tag))
+                .collect(Collectors.toSet());
+
+        if (!newTags.isEmpty()) {
+            oldTags.addAll(newTags);//取并集
+            device.setAllTags(oldTags);
+            deviceMapper.update(device);
+            log.info("添加设备数据标签成功, deviceId: {}, tags: {}", device.getId(), newTags);
         }
-        if (tags.isEmpty()) {
-            return device;
-        }
-        //取并集
-        oldTags.addAll(tags);
-        device.setAllTags(oldTags);
-        deviceMapper.update(device);
-        log.info("添加设备数据标签成功, deviceId: {}, tags: {}", deviceId, tags);
         return device;
     }
 
@@ -230,19 +229,17 @@ public class DeviceServiceImpl implements DeviceService {
             oldTags = new HashSet<>();
         }
         //检查是否已经存在
-        for (String tag : tags) {
-            if (oldTags.contains(tag)) {
-                tags.remove(tag);
-            }
+        Set<String> finalOldTags = oldTags;
+        Set<String> newTags = tags.stream()
+                .filter(tag -> !finalOldTags.contains(tag))
+                .collect(Collectors.toSet());
+
+        if (!newTags.isEmpty()) {
+            oldTags.addAll(newTags);//取并集
+            device.setAllTags(oldTags);
+            deviceMapper.update(device);
+            log.info("添加设备数据标签成功, deviceId: {}, tags: {}", device.getId(), newTags);
         }
-        if (tags.isEmpty()) {
-            return device;
-        }
-        //取并集
-        oldTags.addAll(tags);
-        device.setAllTags(oldTags);
-        deviceMapper.update(device);
-        log.info("添加设备数据标签成功, deviceId: {}, tags: {}", device.getId(), tags);
         return device;
     }
 

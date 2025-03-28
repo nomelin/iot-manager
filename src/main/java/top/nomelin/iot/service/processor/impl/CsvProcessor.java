@@ -318,6 +318,7 @@ public class CsvProcessor implements FileProcessor {
             timestamps.clear();
             valuesBatch.clear();
         } catch (Exception e) {
+            log.error("批次数据插入失败: {}，error: {}", e.getMessage(), e);
             throw new SystemException(CodeMessage.INSERT_DATA_ERROR,
                     "批次数据插入失败", e);
         }

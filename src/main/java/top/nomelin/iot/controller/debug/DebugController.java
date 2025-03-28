@@ -182,7 +182,7 @@ public class DebugController {
     public Result restartIoTDB() {
         Result stopResult = executeCommand(stopIoTDBPath);
         if (!"200".equals(stopResult.getCode())) {
-            log.error("停止 IoTDB 失败：");
+            log.error("停止 IoTDB 失败");
             throw new SystemException(CodeMessage.SYSTEM_ERROR, "停止 IoTDB 失败：");
         }
         try {

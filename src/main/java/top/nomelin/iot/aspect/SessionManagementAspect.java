@@ -63,7 +63,7 @@ public class SessionManagementAspect {
         try {
             session.open(false);
         } catch (IoTDBConnectionException e) {
-            log.error("创建Session失败: {}", e.getMessage());
+            log.error("创建Session失败: {}, error: {}", e.getMessage(), e);
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
         SessionContext.setCurrentSession(session);
@@ -74,7 +74,7 @@ public class SessionManagementAspect {
             try {
                 session.open(false);
             } catch (IoTDBConnectionException e) {
-                log.error("打开Session失败: {}", e.getMessage());
+                log.error("打开Session失败: {}, error: {}", e.getMessage(), e);
                 throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
             }
         }
@@ -86,7 +86,7 @@ public class SessionManagementAspect {
                 session.close();
             }
         } catch (IoTDBConnectionException e) {
-            log.error("关闭Session失败: {}", e.getMessage());
+            log.error("关闭Session失败: {}, error: {}", e.getMessage(), e);
             throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
         }
     }

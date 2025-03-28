@@ -53,6 +53,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
             }
             getSession().createSchemaTemplate(template);
         } catch (StatementExecutionException | IoTDBConnectionException | IOException e) {
+            log.error("创建模板失败，模板名称：{}，error:{}", schemaName, e);
             throw new SystemException(CodeMessage.IOT_DB_ERROR, "模板名称：" + schemaName, e);
         }
         log.info("创建 元数据模板 {} 成功", schemaName);
