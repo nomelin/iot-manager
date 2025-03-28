@@ -218,8 +218,8 @@
             <div class="task-meta">
               <span class="filename">文件名:{{ task.fileName }}
                 <span style="font-weight: normal">   /   TAG:{{ task.tag }}</span>
-                <span style="font-weight: normal">   /   设备ID:{{ task.device.id }}</span>
-                <span style="font-weight: normal">   /   设备名:{{ task.device.name }}</span>
+                <span style="font-weight: normal">   /   设备ID:{{ task.device?.id }}</span>
+                <span style="font-weight: normal">   /   设备名:{{ task.device?.name }}</span>
               </span>
 
               <div class="task-actions">
@@ -270,7 +270,6 @@
               />
               <div class="progress-detail">
                 <span>已处理：{{ task.processedRows || 0 }}/{{ task.totalRows || '?' }}行</span>
-                <span v-if="task.speed">速度：{{ task.speed }}/s</span>
               </div>
               <div v-if="task.errorMessage" class="error-message">
                 <pre v-html="extractErrorMessages(task.errorMessage)"></pre>
@@ -764,6 +763,11 @@ export default {
             if (res.code === '200') {
               this.$set(this.taskInfos, taskId, res.data);
               this.startPolling(taskId); // 重启轮询
+            }else{
+              console.error(`恢复任务${taskId}详情失败:`, res)
+              if(res.code==='509'){
+
+              }
             }
           }
         }
