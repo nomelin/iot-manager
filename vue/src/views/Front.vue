@@ -16,7 +16,7 @@
               src="@/assets/imgs/msg_box.svg"
               style="width: 3rem; height: 3rem; opacity: 0.8; "
           />
-          <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
+          <span v-if="unreadCount > 0" class="badge">{{ unreadCountDisplay }}</span>
         </router-link>
         <div class="user-info" @click="goToUserProfile">
           <el-avatar
@@ -72,7 +72,7 @@
           <el-menu-item class="el-menu-item" index="/front/message_center">
             <i class="el-icon-message-solid"></i>
             <span slot="title" class="words">消息中心</span>
-            <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
+            <span v-if="unreadCount > 0" class="badge">{{ unreadCountDisplay }}</span>
           </el-menu-item>
           <el-menu-item class="el-menu-item" index="/front/third_party">
             <i class="el-icon-link"></i>
@@ -123,7 +123,11 @@ export default {
   beforeDestroy() {
     clearInterval(this.unreadInterval); // 清理定时器
   },
-  computed: {},
+  computed: {
+    unreadCountDisplay() {
+      return this.unreadCount > 99 ? '99+' : this.unreadCount;
+    },
+  },
   methods: {
 
     updateUser() {
@@ -159,7 +163,8 @@ export default {
       try {
         const response = await this.$request.get("/message/unread-count");
         if (response.code === "200") {
-          this.unreadCount = response.data > 99 ? "99+" : response.data;
+          console.log("获取未读消息数量成功", response.data);
+          this.unreadCount = response.data;
         }
       } catch (error) {
         console.error("获取未读消息数量失败", error);
@@ -402,10 +407,10 @@ export default {
   background-color: #fa155a;
   color: #f8f9fa;
   border-radius: 50%;
-  width: 1.2rem; /* 控制红点大小 */
-  height: 1.2rem; /* 控制红点大小 */
-  font-size: 0.8rem; /* 字体大小 */
-  line-height: 1.2rem; /* 垂直居中 */
+  width: 1.3rem; /* 控制红点大小 */
+  height: 1.3rem; /* 控制红点大小 */
+  font-size: 0.7rem; /* 字体大小 */
+  line-height: 1.3rem; /* 垂直居中 */
   display: flex; /* 让数字在圆点中居中 */
   justify-content: center;
   align-items: center;
