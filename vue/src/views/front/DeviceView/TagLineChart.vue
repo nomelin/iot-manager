@@ -4,7 +4,7 @@
     <div class="chart-controls">
       <el-switch v-model="isSolidColor" active-text="纯色模式" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="showLegend" active-text="显示图例" class="switch-item" @change="updateCharts"/>
-      <el-switch v-model="isSmooth" active-text="平滑曲线" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isSmooth" active-text="曲/折线" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="isSampling" active-text="降采样" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="isAnimation" active-text="开启动画" class="switch-item" @change="updateCharts"/>
       <div class="smooth-level">
@@ -76,7 +76,7 @@ export default {
       currentChartOption: null,
       currentChartTitle: '',
       isSolidColor: false, // 纯色模式开关
-      isSmooth: true, // 平滑曲线开关
+      isSmooth: true, // 曲/折线开关
       isSampling: true, // 是否开启降采样模式
       isAnimation: false,// 是否开启动画
       showLegend: true, // 控制是否显示图例

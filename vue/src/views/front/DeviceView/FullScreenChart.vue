@@ -24,7 +24,7 @@
 
       <el-switch v-model="isSolidColor" active-text="纯色模式" class="switch-item" @change="updateChart"/>
       <el-switch v-model="showLegend" active-text="显示图例" class="switch-item" @change="updateChart"/>
-      <el-switch v-model="isSmooth" active-text="平滑曲线" class="switch-item" @change="updateChart"/>
+      <el-switch v-model="isSmooth" active-text="曲/折线" class="switch-item" @change="updateChart"/>
     </div>
     <!-- 图表容器 -->
     <div ref="chart" class="chart-class"></div>

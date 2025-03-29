@@ -3,7 +3,7 @@
     <!-- 统一控制所有图表的开关 -->
     <div class="chart-controls">
       <el-switch v-model="showLegend" active-text="显示图例" class="switch-item" @change="updateCharts"/>
-      <el-switch v-model="isSmooth" active-text="平滑曲线" class="switch-item" @change="updateCharts"/>
+      <el-switch v-model="isSmooth" active-text="曲/折线" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="isSampling" active-text="降采样" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="isAnimation" active-text="开启动画" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="isShowSymbol" active-text="显示数据点" class="switch-item" @change="updateCharts"/>
