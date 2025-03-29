@@ -305,12 +305,14 @@ public class DataServiceImpl implements DataService {
             return null;
         }
         //处理字符串类型，例如TAG属性
-        if (values.get(0) instanceof String) {
+        boolean hasString = values.stream().anyMatch(v -> v instanceof String);
+        if (hasString) {
             return performAggregationString(values, mode);
         }
-        // 过滤掉null值, 并转换为double值
+        // 过滤掉null值和非数值类型, 并转换为double值
         List<Double> numericValues = values.stream()
                 .filter(Objects::nonNull)
+                .filter(v -> v instanceof Number)
                 .map(v -> ((Number) v).doubleValue()).toList();
 
         if (numericValues.isEmpty()) {
