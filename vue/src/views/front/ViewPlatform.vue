@@ -8,7 +8,7 @@
           <el-form label-position="left" label-width="auto">
             <el-form-item label="组选择">
               <el-select v-model="selectedGroup" placeholder="选择组" @change="fetchDevices">
-                <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id"/>
+                <el-option v-for="group in allGroups" :key="group.id" :label="group.name" :value="group.id"/>
               </el-select>
             </el-form-item>
           </el-form>
@@ -137,13 +137,15 @@
 
 <script>
 import GroupView from "@/views/front/ViewPlatform/GroupView.vue";
+import aggregateMixin from "@/mixins/aggregation";
+import groupMixin from "@/mixins/group";
 
 export default {
   name: "ViewPlatform",
+  mixins: [aggregateMixin,groupMixin],
   components: {GroupView},
   data() {
     return {
-      groups: [], // 全部组信息
       devices: [], // 当前组设备
       selectedGroup: null, // 当前选择的组ID
       selectedDeviceIds: [], // 当前选择的设备ID
@@ -171,64 +173,9 @@ export default {
         '1y': 365 * 24 * 60 * 60 * 1000,
       },
 
-      // 聚合相关数据
-      aggregationTime: 0,
-      queryAggregateFunc: null,
-      aggregationTimeOptions: [
-        {label: '不聚合', value: 0},
-        {label: '1ms', value: 1},
-        {label: '1s', value: 1000},
-        {label: '5s', value: 5000},
-        {label: '15s', value: 15000},
-        {label: '30s', value: 30000},
-        {label: '1m', value: 60000},
-        {label: '5m', value: 300000},
-        {label: '15m', value: 900000},
-        {label: '30m', value: 1800000},
-        {label: '1h', value: 3600000},
-        {label: '1d', value: 86400000}
-      ],
-      aggregateFuncOptions: [],
-
     };
   },
   methods: {
-    async loadAggregateFunctions() {
-      try {
-        const res = await this.$request.get('/data/aggregateFuncs');
-        if (res.code === '200') {
-          this.aggregateFuncOptions = res.data.map(item => ({
-            code: item.code,
-            name: item.name,
-            desc: item.desc,
-          }));
-        } else {
-          this.$message.error(res.msg);
-        }
-      } catch (error) {
-        this.$message.error('获取聚合函数失败');
-      }
-    },
-    handleAggregationTimeChange(value) {
-      if (value === 0) {
-        this.queryAggregateFunc = null;
-      }
-    },
-    fetchGroups() {
-      this.$request
-          .get("/group/all")
-          .then((res) => {
-            if (res.code === "200") {
-              console.log("加载组信息成功：" + JSON.stringify(res.data));
-              this.groups = res.data;
-            } else {
-              this.$message.error("加载组信息失败：" + res.msg);
-            }
-          })
-          .catch((error) => {
-            this.$message.error("请求组信息失败：" + error.message);
-          });
-    },
     fetchDevices() {
       if (!this.selectedGroup) {
         this.devices = [];
@@ -241,7 +188,7 @@ export default {
             if (res.code === "200") {
               this.devices = res.data;
               //填充组内全部设备
-              this.selectedDeviceIds = this.groups.find(group => group.id === this.selectedGroup).deviceIds;
+              this.selectedDeviceIds = this.allGroups.find(group => group.id === this.selectedGroup).deviceIds;
               //将时间设置为最近15分钟。
               this.selectQuickRange('15m');
             } else {
@@ -278,8 +225,6 @@ export default {
     },
   },
   created() {
-    this.fetchGroups(); // 初始化加载组信息
-    this.loadAggregateFunctions(); // 初始化加载聚合函数
   },
 };
 </script>
@@ -300,15 +245,6 @@ export default {
   /*box-sizing: border-box; !* 包括内边距和边框在内的宽高计算 *!*/
 }
 
-/*.filter-col {*/
-/*  padding-bottom: 0;*/
-/*  margin-bottom: 0;*/
-/*}*/
-
-/*.filter-form {*/
-/*  padding-bottom: 0;*/
-/*  margin-bottom: 0;*/
-/*}*/
 
 .el-select, .el-input {
   width: 100%;

@@ -16,12 +16,12 @@
             <el-form-item label="选择组">
               <el-select
                   v-model="selectedGroup"
-                  placeholder="选择组(不选则为全部设备)"
                   clearable
+                  placeholder="选择组(不选则为全部设备)"
                   @change="handleGroupChange"
               >
                 <el-option
-                    v-for="group in groups"
+                    v-for="group in allGroups"
                     :key="group.id"
                     :label="group.name"
                     :value="group.id"
@@ -45,8 +45,8 @@
               </el-select>
               <!-- 显示设备缩略卡片 -->
               <div v-if="form.deviceId" class="device_preview">
-                <device-card-mini :device="selectedDevice"
-                                  :all-groups="groups"
+                <device-card-mini :all-groups="allGroups"
+                                  :device="selectedDevice"
                                   :show-data-types="true"/>
               </div>
             </el-form-item>
@@ -100,7 +100,9 @@
 
             <!-- 聚合设置 -->
             <el-form-item label="聚合时间">
-              <el-select v-model="form.aggregationTime" placeholder="请选择聚合时间">
+              <el-select v-model="form.aggregationTime" placeholder="请选择聚合时间"
+                         @change="handleAggregationTimeChange"
+              >
                 <el-option
                     v-for="item in aggregationTimeOptions"
                     :key="item.value"
@@ -309,15 +311,18 @@
 
 <script>
 import DeviceCardMini from "@/views/front/module/DeviceCardMini";
+import aggregateMixin from "@/mixins/aggregation";
+import deviceMixin from "@/mixins/device";
+import groupMixin from "@/mixins/group";
 
 export default {
   name: 'BaseQuery',
+  mixins: [aggregateMixin,deviceMixin,groupMixin],
   components: {
     DeviceCardMini
   },
   data() {
     return {
-      allDevices: [],                      // 全部设备信息
       form: {
         deviceId: null,
         startTime: null,  // 初始化为 null
@@ -333,30 +338,14 @@ export default {
       // timeRange: [1719072000000, 1719158400000],
       deviceMeasurements: [],
       thresholds: [],                       // 阈值过滤配置
-      aggregateFuncOptions: [],             // 聚合函数选项
       tableData: [],                        // 完整查询数据
       measurementsColumns: [],              // 传感器列
-      aggregationTimeOptions: [
-        {label: '不聚合', value: 0},
-        {label: '1ms', value: 1},
-        {label: '1s', value: 1000},
-        {label: '5s', value: 5000},
-        {label: '15s', value: 15000},
-        {label: '30s', value: 30000},
-        {label: '1m', value: 60000},
-        {label: '5m', value: 300000},
-        {label: '15m', value: 900000},
-        {label: '30m', value: 1800000},
-        {label: '1h', value: 3600000},
-        {label: '1d', value: 86400000}
-      ],
       settingsVisible: ['1'],               // 设置默认展开状态
 
       // 分页相关数据
       currentPage: 1,                       // 当前页码，默认第1页
       pageSize: 100,                         // 每页显示数据数量，可根据需要调整
 
-      groups: [],
       selectedGroup: null,
       groupDevices: [],
 
@@ -396,23 +385,8 @@ export default {
     }
   },
   created() {
-    this.fetchAllDevices();
-    this.fetchGroups();
-    this.loadAggregateFunctions();
   },
   methods: {
-    async fetchGroups() {
-      try {
-        const res = await this.$request.get('/group/all');
-        if (res.code === '200') {
-          this.groups = res.data;
-        } else {
-          this.$message.error(res.msg);
-        }
-      } catch (error) {
-        this.$message.error('获取组列表失败');
-      }
-    },
 
     async fetchDevicesByGroup(groupId) {
       try {
@@ -492,34 +466,6 @@ export default {
     handleMeasurementsChange(selected) {
       // 保持选择的传感器顺序
       this.form.selectMeasurements = this.deviceMeasurements.filter(m => selected.includes(m));
-    },
-    async fetchAllDevices() {
-      try {
-        const res = await this.$request.get('/device/all');
-        if (res.code === '200') {
-          this.allDevices = res.data;
-        } else {
-          this.$message.error(res.msg);
-        }
-      } catch (error) {
-        this.$message.error('获取设备列表失败');
-      }
-    },
-    async loadAggregateFunctions() {
-      try {
-        const res = await this.$request.get('/data/aggregateFuncs');
-        if (res.code === '200') {
-          this.aggregateFuncOptions = res.data.map(item => ({
-            code: item.code,
-            name: item.name,
-            desc: item.desc,
-          }));
-        } else {
-          this.$message.error(res.msg);
-        }
-      } catch (error) {
-        this.$message.error('获取聚合函数失败');
-      }
     },
     async submitQuery() {
       if (this.form.deviceId == null) {
