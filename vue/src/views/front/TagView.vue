@@ -5,7 +5,14 @@
       element-loading-text="数据加载中..."
   >
     <!-- 上侧控制区域 -->
-    <el-row :gutter="20" align="middle" class="control-panel">
+    <el-row :gutter="10" align="middle" class="control-panel">
+      <el-col :span="1.5">
+        <i
+            :class="['toggle-icon', isSecondPanelCollapsed ? 'el-icon-caret-right' : 'el-icon-caret-bottom']"
+            style="cursor: pointer; font-size: 16px; padding: 8px; color: #666;"
+            @click="isSecondPanelCollapsed = !isSecondPanelCollapsed"
+        >{{ isSecondPanelCollapsed? '展开' : '收起' }}</i>
+      </el-col>
       <el-col :span="4">
         <el-form label-position="left" label-width="auto">
           <el-form-item label="组选择">
@@ -60,29 +67,10 @@
         </el-tooltip>
       </el-col>
 
-      <!-- 操作按钮组 -->
-      <el-col :span="2">
-        <el-col :span="2">
-          <el-button
-              type="primary"
-              @click="exportDialogVisible = true"
-          >
-            数据导出
-          </el-button>
-        </el-col>
 
-        <export-dialog
-            v-model="exportDialogVisible"
-            :devices="devices"
-            :filter-text="filterText"
-            :preprocessed-data="preprocessedData"
-            :selected-device-ids="selectedDeviceIds"
-            :selected-tags="selectedTags"
-        />
-      </el-col>
     </el-row>
 
-    <el-row :gutter="20" align="middle" class="control-panel">
+    <el-row v-show="!isSecondPanelCollapsed" :gutter="20" align="middle" class="control-panel">
       <!-- 聚合时间 -->
       <el-col :span="4">
         <el-form label-position="left" label-width="auto">
@@ -125,14 +113,34 @@
           </el-form-item>
         </el-form>
       </el-col>
-      <el-col :span="6">
+      <el-col :span="2">
+        <el-button
+            :loading="isLoading"
+            icon="el-icon-refresh"
+            type="info"
+            @click="handleRefresh"
+        >刷新
+        </el-button>
+      </el-col>
+
+      <el-col :span="2">
         <el-button
             type="primary"
-            icon="el-icon-refresh"
-            @click="handleRefresh"
-            :loading="isLoading"
-        >刷新</el-button>
+            @click="exportDialogVisible = true"
+        >
+          数据导出
+        </el-button>
+
+        <export-dialog
+            v-model="exportDialogVisible"
+            :devices="devices"
+            :filter-text="filterText"
+            :preprocessed-data="preprocessedData"
+            :selected-device-ids="selectedDeviceIds"
+            :selected-tags="selectedTags"
+        />
       </el-col>
+
     </el-row>
 
     <!-- 主体内容 -->
@@ -291,6 +299,7 @@ export default {
       pendingIndeterminate: {},
 
       exportDialogVisible: false,
+      isSecondPanelCollapsed: true, // 新增控制第二栏展开状态
     }
   },
   computed: {
@@ -455,7 +464,7 @@ export default {
     },
     processDeviceData(data, tags, deviceName) {
       const selected = new Set(tags)
-      const res= Object.entries(data).map(([field, tagsData]) => ({
+      const res = Object.entries(data).map(([field, tagsData]) => ({
         field,
         series: Object.entries(tagsData)
             .filter(([tag]) => selected.has(tag))
@@ -791,6 +800,13 @@ export default {
   padding: 10px 20px;
   text-align: left;
   background: #fff;
+}
+.toggle-icon {
+  transition: transform 0.2s;
+  vertical-align: middle;
+}
+toggle-icon:hover {
+  color: #409EFF;
 }
 
 .el-button--text {

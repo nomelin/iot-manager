@@ -9,6 +9,17 @@
       <el-switch v-model="isShowSymbol" active-text="显示数据点" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="isLarge" active-text="大数据量" class="switch-item" @change="updateCharts"/>
       <el-button type="primary" @click="fetchData">刷新</el-button>
+      <div class="smooth-level">
+        <span>平滑等级：</span>
+        <el-slider
+            v-model="smoothLevel"
+            :max="5"
+            :step="1"
+            class="slider"
+            show-stops
+            @change="updateCharts"
+        />
+      </div>
     </div>
 
     <el-row :gutter="30">
@@ -95,6 +106,8 @@ export default {
       isLarge: false,
 
       isLoading: false,
+      smoothLevel: 0, // 平滑等级
+
     };
   },
   computed: {
@@ -116,6 +129,25 @@ export default {
     }
   },
   methods: {
+    applyDataSmoothing(data, level) {
+      if (level === 0) return data;
+
+      const windowSizeMap = [2, 5, 10, 50, 100, 500]; // 不同等级对应的窗口大小
+      const windowSize = windowSizeMap[level];
+      const halfWindow = Math.floor(windowSize / 2);
+
+      return data.map((item, index) => {
+        const start = Math.max(0, index - halfWindow);
+        const end = Math.min(data.length - 1, index + halfWindow);
+        let sum = 0;
+
+        for (let i = start; i <= end; i++) {
+          sum += data[i][1];
+        }
+
+        return [item[0], sum / (end - start + 1)];
+      });
+    },
     async fetchData() {
       try {
         if (!this.dateRange) return
@@ -331,11 +363,15 @@ export default {
         series: fieldData.map(deviceData => ({
           name: deviceData.deviceName,
           type: 'line',
-          data: deviceData.data,
+          data: this.smoothLevel > 0
+              ? this.applyDataSmoothing(deviceData.data, this.smoothLevel)
+              : deviceData.data,
           smooth: this.isSmooth,
           showSymbol: this.isShowSymbol,
           animation: this.isAnimation,
-          sampling: this.isSampling ? 'lttb' : null,
+          sampling: this.isSampling && this.smoothLevel === 0
+              ? 'lttb'
+              : null,
           large: this.isLarge,//启用大规模路径图的优化
           largeThreshold: 1000,
         })),
@@ -429,7 +465,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 15px;
-  padding: 10px;
+  /*padding: 10px;*/
   background: #fff;
   border-bottom: 1px solid #eee;
   position: sticky;
@@ -440,7 +476,15 @@ export default {
 .switch-item {
   margin-right: 10px;
 }
+.smooth-level {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* 保证文字与滑块间有间距 */
+}
 
+.slider {
+  width: 100px;
+}
 .chart-container {
   margin-bottom: 30px; /* 每个图表下方添加间距 */
 }

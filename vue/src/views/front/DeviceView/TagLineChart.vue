@@ -7,6 +7,17 @@
       <el-switch v-model="isSmooth" active-text="平滑曲线" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="isSampling" active-text="降采样" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="isAnimation" active-text="开启动画" class="switch-item" @change="updateCharts"/>
+      <div class="smooth-level">
+        <span>平滑等级：</span>
+        <el-slider
+            v-model="smoothLevel"
+            :max="5"
+            :step="1"
+            class="slider"
+            show-stops
+            @change="updateCharts"
+        />
+      </div>
     </div>
 
     <el-row :gutter="30">
@@ -71,6 +82,8 @@ export default {
       showLegend: true, // 控制是否显示图例
       deviceColors: new Map(), // 存储设备颜色映射
 
+      smoothLevel: 0, // 平滑等级
+
       // isLoading: false,
     }
   },
@@ -82,6 +95,25 @@ export default {
   },
   computed: {},
   methods: {
+    applyDataSmoothing(data, level) {
+      if (level === 0) return data;
+
+      const windowSizeMap = [2, 5, 10, 50, 100, 500]; // 不同等级对应的窗口大小
+      const windowSize = windowSizeMap[level];
+      const halfWindow = Math.floor(windowSize / 2);
+
+      return data.map((item, index) => {
+        const start = Math.max(0, index - halfWindow);
+        const end = Math.min(data.length - 1, index + halfWindow);
+        let sum = 0;
+
+        for (let i = start; i <= end; i++) {
+          sum += data[i][1];
+        }
+
+        return [item[0], sum / (end - start + 1)];
+      });
+    },
     async renderCharts() {
       if (!this.$refs.chart || this.$refs.chart.length === 0) {
         console.log('渲染图表失败，没有找到图表容器或图表容器为空')
@@ -189,13 +221,17 @@ export default {
           type: 'line',
           smooth: this.isSmooth,
           showSymbol: false,//不显示折线上的节点
-          data: series.data,
           animation: this.isAnimation,//关闭动画
           silent: !this.isAnimation,//图形不响应和触发鼠标事件
           large: true,//启用大规模路径图的优化
           largeThreshold: 1000,
+          data: this.smoothLevel > 0
+              ? this.applyDataSmoothing(series.data, this.smoothLevel)
+              : series.data,
           //降采样，采用 Largest-Triangle-Three-Bucket 算法，可以最大程度保证采样后线条的趋势，形状和极值。
-          sampling: this.isSampling ? 'lttb' : null,
+          sampling: this.isSampling && this.smoothLevel === 0
+              ? 'lttb'
+              : null,
           itemStyle: this.isSolidColor ?
               {color: this.deviceColors.get(this.extractDeviceName(series.name))} :
               series.itemStyle,
@@ -251,12 +287,22 @@ export default {
   display: flex;
   align-items: center;
   gap: 15px;
-  padding: 10px;
+  padding: 0px;
   background: #fff;
   border-bottom: 1px solid #eee;
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+.smooth-level {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* 保证文字与滑块间有间距 */
+}
+
+.slider {
+  width: 100px;
 }
 
 .switch-item {
