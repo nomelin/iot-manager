@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static top.nomelin.iot.model.enums.FileTaskStatus.*;
+
 /**
  * TaskManagerImpl
  *
@@ -101,6 +103,24 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public List<String> getAllTaskIds() {
         return tasks.keySet().stream().toList();
+    }
+
+    @Override
+    public void clearAllStoppedTasks() {
+        log.info("开始手动清理终止任务...");
+        Iterator<Map.Entry<String, TaskMetadata>> iterator = tasks.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, TaskMetadata> entry = iterator.next();
+            String taskId = entry.getKey();
+            TaskMetadata metadata = entry.getValue();
+            FileTask task = metadata.task;
+            if (task.getStatus() == COMPLETED || task.getStatus() == FAILED || task.getStatus() == CANCELLED) {
+                iterator.remove();
+                log.info("清理完成/失败/取消任务: {}", taskId);
+            }
+        }
+        log.info("手动清理终止任务完成，剩余任务数: {}", tasks.size());
+
     }
 
     /**

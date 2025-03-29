@@ -95,6 +95,12 @@ public class DebugController {
         return Result.success(taskService.getTask(taskId));
     }
 
+    @RequestMapping("/task/clearAllStoppedTasks")
+    public Result clearAllStoppedTasks() {
+        taskService.clearAllStoppedTasks();
+        return Result.success();
+    }
+
     @RequestMapping("/file/allTempFiles")
     public Result getTempDir() {
         File folder = new File(tempDir);

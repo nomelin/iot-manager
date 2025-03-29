@@ -26,4 +26,9 @@ public interface TaskService {
     FileTask getTask(String taskId);
 
     List<String> getAllTaskIds();
+
+    /**
+     * 清理所有停止的任务，包括取消，失败，完成的任务
+     */
+    void clearAllStoppedTasks();
 }

@@ -227,10 +227,16 @@
           >
             清除所有任务
           </el-button>
+          <el-input
+              v-model="searchQuery"
+              class="search-input"
+              clearable
+              placeholder="模糊搜索任务内容，用空格分割多个关键字"
+          />
         </div>
         <div class="task-list">
           <div
-              v-for="[taskId, task] in sortedTasks"
+              v-for="[taskId, task] in filteredTasks"
               :key="taskId"
               class="task-item"
           >
@@ -349,6 +355,7 @@ export default {
 
       uploadMode: 1, // 新增上传模式 1: 多文件 2: 单文件夹 3: 多设备
       matchedDevices: [], // 新增匹配设备列表
+      searchQuery: '',
     }
   },
   created() {
@@ -382,7 +389,26 @@ export default {
     },
     enableFolderUpload() {
       return this.uploadMode === 2 || this.uploadMode === 3;
-    }
+    },
+    filteredTasks() {
+      const keywords = this.searchQuery.toLowerCase().trim().split(/\s+/).filter(k => k)
+      if (!keywords.length) return this.sortedTasks
+
+      return this.sortedTasks.filter(([_, task]) => {
+        // 获取各字段的字符串表示（处理空值）
+        const fields = [
+          task.fileName || '',
+          task.tag || '',
+          task.device?.id?.toString() || '',
+          task.device?.name || '',
+          task.errorMessage || ''
+        ].map(f => f.toLowerCase())
+
+        // 所有关键词都要匹配
+        return keywords.every(keyword =>
+            fields.some(field => field.includes(keyword)));
+      })
+    },
   },
   methods: {
     handleFolderSelect(event) {
@@ -749,7 +775,7 @@ export default {
       }
 
       const interval = setInterval(async () => {
-        console.log(`轮询任务${taskId}...`)
+        console.log(`开设轮询任务${taskId}...`)
         try {
           if (this.taskInfos[taskId].status === 'PAUSED') {
             return // 任务已暂停, 不再轮询
@@ -773,7 +799,7 @@ export default {
 
             // 终止轮询条件
             if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(res.data.status)) {
-              console.log(`轮询任务${taskId}已完成`)
+              console.log(`轮询任务${taskId}已终止`)
               clearInterval(interval)
               this.pollingMap.delete(taskId)
             }
@@ -921,20 +947,49 @@ export default {
         // 获取任务详情
         for (const {taskId} of failedTasks) {
           if (!this.taskInfos[taskId]) { // 避免重复显示
-            const res = await this.$request.get(`/task/get/${taskId}`);
-            if (res.code === '200') {
-              this.$set(this.taskInfos, taskId, res.data);
-              this.startPolling(taskId); // 重启轮询
-            } else {
-              console.error(`恢复任务${taskId}详情失败:`, res)
-              if (res.code === '509') {
+            try {
+              const res = await this.$request.get(`/task/get/${taskId}`);
 
+              // 处理任务不存在的情况
+              if (res.code === '509') { // 假设509是任务不存在的状态码
+                console.log(`[任务清理] 清除不存在任务 ${taskId}`);
+                this.removeTaskFromStorage(taskId);
+                continue;
+              }
+
+              if (res.code === '200') {
+                this.$set(this.taskInfos, taskId, res.data);
+                this.startPolling(taskId);
+              }
+            } catch (error) {
+              if (error.response?.data?.code === '509') {
+                console.log(`[任务清理] 清除不存在任务 ${taskId} (请求异常)`);
+                this.removeTaskFromStorage(taskId);
+              } else {
+                console.error(`恢复任务${taskId}详情失败:`, error);
               }
             }
           }
         }
       } catch (error) {
         console.error('恢复失败任务出错:', error);
+      }
+    },
+    removeTaskFromStorage(taskId) {
+      // 从前端缓存移除
+      if (this.taskInfos[taskId]) {
+        this.$delete(this.taskInfos, taskId);
+      }
+
+      // 从本地存储移除
+      const stored = localStorage.getItem('failedTasks') || '[]';
+      const failedTasks = JSON.parse(stored).filter(item => item.taskId !== taskId);
+      localStorage.setItem('failedTasks', JSON.stringify(failedTasks));
+
+      // 停止可能存在的轮询
+      if (this.pollingMap.has(taskId)) {
+        clearInterval(this.pollingMap.get(taskId));
+        this.pollingMap.delete(taskId);
       }
     },
 

@@ -36,7 +36,10 @@
     <el-card class="debug-section">
       <div class="section-header">
         <h3>任务列表</h3>
-        <el-button :loading="taskIdsLoading" type="primary" @click="getTaskIds">刷新任务ID</el-button>
+        <div>
+          <el-button :loading="taskIdsLoading" type="primary" @click="clearAllStoppedTasks">清理已终止任务</el-button>
+          <el-button :loading="taskIdsLoading" type="primary" @click="getTaskIds">刷新任务ID</el-button>
+        </div>
       </div>
       <div class="tags-container">
         <el-tag
@@ -299,6 +302,21 @@ export default {
       }
     },
 
+    async clearAllStoppedTasks() {
+      try {
+        await this.$confirm('确定要清理已终止任务吗？此操作不可恢复！', '警告', {
+          type: 'warning'
+        })
+        const res = await this.$request.get('/debug/task/clearAllStoppedTasks')
+        if (res.code === '200') {
+          this.$message.success('已清理所有已终止任务')
+          await this.getTaskIds()
+        }
+      } catch (error) {
+        // 取消操作不提示
+      }
+    },
+
     async getTaskDetail() {
       if (!this.taskIdInput) return
       this.taskDetailLoading = true
@@ -506,7 +524,7 @@ export default {
         }
       } catch (error) {
         // 取消操作不提示
-      }finally {
+      } finally {
         this.threadPoolLoading = false;
       }
     },
@@ -522,7 +540,7 @@ export default {
       } catch (error) {
         this.$message.error('文件处理线程池启动失败');
         console.log(error);
-      }finally{
+      } finally {
         this.threadPoolLoading = false;
       }
     }
