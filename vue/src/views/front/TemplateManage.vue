@@ -271,7 +271,7 @@ export default {
         config: {
           dataTypes: [{}], // 初始空数据项
           aggregationTime: 1,
-          storageMode: 'COVER',
+          storageMode: 'COMPATIBLE',
           deviceType: 'DATASET',
         }
       },

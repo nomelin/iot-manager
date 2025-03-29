@@ -11,13 +11,12 @@
           </template>
           <div class="collapse-content">
             <el-form ref="formRef" :model="form" :rules="rules" label-position="left" label-width="200px">
-              <el-form-item label="启用文件夹上传">
-                <el-switch
-                    v-model="enableFolderUpload"
-                    active-text="是"
-                    inactive-text="否"
-                    @change="handleUploadModeChange"
-                />
+              <el-form-item label="上传模式">
+                <el-radio-group v-model="uploadMode" @change="handleUploadModeChange">
+                  <el-radio :label="1">多文件→单设备</el-radio>
+                  <el-radio :label="2">文件夹→单设备</el-radio>
+                  <el-radio :label="3">文件夹→多设备</el-radio>
+                </el-radio-group>
               </el-form-item>
               <!-- 多文件上传 -->
               <el-form-item v-if="!enableFolderUpload" label="数据文件" prop="files">
@@ -75,7 +74,9 @@
                 <!--                  <div class="el-upload__text">将文件夹拖到此处，或<em>点击上传</em></div>-->
                 <!--                  <div slot="tip" class="el-upload__tip">支持上传单个文件夹（包含子文件夹）</div>-->
                 <!--                </el-upload>-->
-                <input type="file" webkitdirectory @change="handleFolderSelect"/>
+                <input :disabled="uploadMode===3 && !selectedGroup" type="file" webkitdirectory
+                       @change="handleFolderSelect"
+                />
                 <el-button
                     :disabled="folderFileList.length === 0"
                     type="warning"
@@ -104,7 +105,7 @@
               </el-form-item>
 
               <!-- 设备ID -->
-              <el-form-item label="设备">
+              <el-form-item v-if="uploadMode !== 3" label="设备">
                 <el-select
                     v-model="form.deviceId"
                     placeholder="请选择设备"
@@ -319,7 +320,7 @@ export default {
         skipRows: 1,
         mergeTimeStampNum: -1,
         batchSize: 500,
-        autoHandleErrorTimeStamp: 0,
+        autoHandleErrorTimeStamp: 1,
       },
       rules: {
         deviceId: [
@@ -342,9 +343,12 @@ export default {
       selectedGroup: null,
       groupDevices: [],
 
-      enableFolderUpload: false,
+      // enableFolderUpload: false,
       folderFileList: [],      // 文件夹模式文件列表
       // folderStructure: new Map(), // 用于存储文件夹结构
+
+      uploadMode: 1, // 新增上传模式 1: 多文件 2: 单文件夹 3: 多设备
+      matchedDevices: [], // 新增匹配设备列表
     }
   },
   created() {
@@ -376,21 +380,159 @@ export default {
     filteredDevices() {
       return this.selectedGroup ? this.groupDevices : this.allDevices;
     },
+    enableFolderUpload() {
+      return this.uploadMode === 2 || this.uploadMode === 3;
+    }
   },
   methods: {
     handleFolderSelect(event) {
+      if (this.uploadMode === 3) {
+        this.handleMultiDeviceUpload(event);
+      } else {
+        const files = Array.from(event.target.files);
+        files.forEach(file => {
+          console.log('文件路径:', file.webkitRelativePath, "\n文件名:", file.name, "\n文件大小:", file.size, "\n文件类型:", file.type);
+        });
+        this.folderFileList = files.map(file => ({
+          //将文件夹路径的/替换为-，作为新的文件名
+          name: file.webkitRelativePath.replace(/\//g, '-'),
+          size: file.size,
+          type: file.type,
+          raw: file,
+          tag: file.webkitRelativePath.split('.')[0]
+        }))
+      }
+    },
+    //文件夹->多设备
+    async handleMultiDeviceUpload(event) {
       const files = Array.from(event.target.files);
-      files.forEach(file => {
-        console.log('文件路径:', file.webkitRelativePath, "\n文件名:", file.name, "\n文件大小:", file.size, "\n文件类型:", file.type);
+
+      // 验证组选择
+      if (!this.selectedGroup) {
+        this.$message.error('请先选择组');
+        return;
+      }
+
+      // 获取组设备并检查重名
+      const groupDevices = this.groupDevices;
+      const deviceNames = new Set();
+      const hasDuplicates = groupDevices.some(device => {
+        if (deviceNames.has(device.name)) {
+          return true;
+        }
+        deviceNames.add(device.name);
       });
-      this.folderFileList = files.map(file => ({
-        //将文件夹路径的/替换为-，作为新的文件名
-        name: file.webkitRelativePath.replace(/\//g, '-'),
-        size: file.size,
-        type: file.type,
-        raw: file,
-        tag: file.webkitRelativePath.split('.')[0]
-      }))
+
+      if (hasDuplicates) {
+        console.log("组内有重名设备，本功能无法自动匹配");
+        this.$message.error('组内有重名设备，本功能无法自动匹配');
+        return;
+      }
+
+      // 解析文件夹结构
+      const folderMap = new Map();
+      files.forEach(file => {
+        //取子文件夹名
+        const [deviceFolder] = file.webkitRelativePath.split('/').slice(1, 2)
+        // console.log("【文件夹上传】file.webkitRelativePath:", file.webkitRelativePath)
+        console.log("【文件夹上传】deviceFolder:", deviceFolder)
+        if (!folderMap.has(deviceFolder)) {
+          folderMap.set(deviceFolder, []);
+        }
+        folderMap.get(deviceFolder).push(file);
+        console.log("【文件夹上传】添加文件到folderMap:", file.webkitRelativePath)
+      });
+
+      // 匹配设备
+      this.matchedDevices = groupDevices.filter(device =>
+          folderMap.has(device.name)
+      );
+      console.log("【文件夹上传】matchedDevices:", JSON.stringify(this.matchedDevices))
+      console.log("【文件夹上传】folderMap:", JSON.stringify(folderMap.keys()))
+
+      // 显示确认对话框
+      try {
+        await this.$confirm(
+            `成功匹配以下${this.matchedDevices.length}个设备：\n${
+                this.matchedDevices.map(d => d.name).join(', ')
+            }`,
+            '确认上传',
+            {confirmButtonText: '确认', cancelButtonText: '取消'}
+        );
+      } catch {
+        return; // 用户取消
+      }
+
+      // 执行上传
+      for (const device of this.matchedDevices) {
+        const deviceFiles = folderMap.get(device.name);
+        console.log("【文件夹上传】deviceFiles:", JSON.stringify(deviceFiles))
+        await this.uploadForDevice(device.id, deviceFiles);
+      }
+    },
+
+    async uploadForDevice(deviceId, files) {
+      try {
+        // 1. 验证设备是否存在
+        const targetDevice = this.allDevices.find(d => d.id === deviceId);
+        if (!targetDevice) {
+          this.$message.error(`设备ID ${deviceId} 不存在`);
+          return;
+        }
+
+        // 2. 遍历文件逐个上传
+        for (const file of files) {
+          const formData = new FormData();
+          const tag = this.usingFileNameAsTag
+              ? file.name.split('.')[0].replace(/\|/g, '%')
+              : '';
+
+          // 3. 构建表单数据
+          formData.append('file', file);
+          formData.append('fileName', file.name);
+          formData.append('deviceId', deviceId);
+          formData.append('skipRows', this.form.skipRows);
+          formData.append('mergeTimestampNum', this.form.mergeTimeStampNum);
+          formData.append('batchSize', this.form.batchSize);
+          formData.append('autoHandleErrorTimeStamp', this.form.autoHandleErrorTimeStamp);
+
+          if (tag) {
+            formData.append('tag', tag);
+          }
+
+          try {
+            // 4. 发送上传请求
+            const res = await this.$request.post('/files/upload', formData, {
+              headers: {'Content-Type': 'multipart/form-data'}
+            });
+
+            if (res.code === '200') {
+              const taskId = res.data;
+
+              // 5. 更新任务列表（添加设备信息）
+              this.$set(this.taskInfos, taskId, {
+                fileName: file.name,
+                status: 'PENDING',
+                progressPercentage: 0,
+                startTime: null,
+                endTime: null,
+                device: targetDevice,  // 添加设备详细信息
+                tag: tag
+              });
+
+              // 6. 启动轮询
+              this.startPolling(taskId);
+            } else {
+              this.$message.error(`${file.name} 上传失败: ${res.msg}`);
+            }
+          } catch (error) {
+            this.$message.error(`${file.name} 上传失败: ${error.message}`);
+            console.error(`设备 ${targetDevice.name} 文件 ${file.name} 上传错误:`, error);
+          }
+        }
+      } catch (error) {
+        this.$message.error(`设备 ${targetDevice.name} 上传流程出错: ${error.message}`);
+      }
     },
     // 处理上传模式切换
     handleUploadModeChange() {
@@ -539,14 +681,14 @@ export default {
         let filesToUpload = []
 
         if (this.enableFolderUpload) {
-          // 处理文件夹上传模式
+          // 模式2
           filesToUpload = this.folderFileList.map(file => ({
             fileName: file.name,
             file: file,
             tag: file.tag
           }))
         } else {
-          // 原有文件处理逻辑
+          // 模式1
           filesToUpload = this.fileList.map(file => ({
             fileName: file.name,
             file: file,
@@ -870,7 +1012,7 @@ export default {
 ::v-deep .el-collapse-item__content {
   padding: 0 24px;
   overflow-y: auto; /* 折叠面板内部滚动 */
-  max-height: 50vh; /* 限制最大高度 */
+  max-height: 60vh; /* 限制最大高度 */
   /*border-radius: 1rem;*/
 }
 
