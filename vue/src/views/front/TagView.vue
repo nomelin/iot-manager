@@ -10,7 +10,7 @@
         <el-form label-position="left" label-width="auto">
           <el-form-item label="组选择">
             <el-select v-model="selectedGroup" placeholder="选择组" @change="fetchDevices">
-              <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id"/>
+              <el-option v-for="group in allGroups" :key="group.id" :label="group.name" :value="group.id"/>
             </el-select>
           </el-form-item>
         </el-form>
@@ -73,12 +73,65 @@
 
         <export-dialog
             v-model="exportDialogVisible"
-            :selected-device-ids="selectedDeviceIds"
             :devices="devices"
-            :selected-tags="selectedTags"
-            :preprocessed-data="preprocessedData"
             :filter-text="filterText"
+            :preprocessed-data="preprocessedData"
+            :selected-device-ids="selectedDeviceIds"
+            :selected-tags="selectedTags"
         />
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20" align="middle" class="control-panel">
+      <!-- 聚合时间 -->
+      <el-col :span="4">
+        <el-form label-position="left" label-width="auto">
+          <el-form-item label="聚合时间">
+            <el-select
+                v-model="aggregationTime"
+                placeholder="选择聚合时间"
+                @change="handleAggregationTimeChange"
+            >
+              <el-option
+                  v-for="item in aggregationTimeOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </el-col>
+
+      <!-- 聚合函数 -->
+      <el-col :span="4">
+        <el-form label-position="left" label-width="auto">
+          <el-form-item label="聚合函数">
+            <el-select
+                v-model="queryAggregateFunc"
+                :disabled="aggregationTime === 0"
+                placeholder="选择聚合函数"
+            >
+              <el-option
+                  v-for="func in aggregateFuncOptions"
+                  :key="func.code"
+                  :value="func.code"
+              >
+                <el-tooltip :content="func.desc" effect="dark" placement="top">
+                  <span>{{ func.code }} ({{ func.name }})</span>
+                </el-tooltip>
+              </el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </el-col>
+      <el-col :span="6">
+        <el-button
+            type="primary"
+            icon="el-icon-refresh"
+            @click="handleRefresh"
+            :loading="isLoading"
+        >刷新</el-button>
       </el-col>
     </el-row>
 
@@ -127,10 +180,11 @@
                 >全选
                 </el-checkbox>
                 <el-button
+                    style="margin-left: 10px;"
                     type="text"
                     @click="handleUnselectAll(device.id)"
-                    style="margin-left: 10px;"
-                >全不选</el-button>
+                >全不选
+                </el-button>
                 <el-scrollbar>
                   <el-checkbox-group
                       v-model="selectedTags[device.id]"
@@ -168,10 +222,11 @@
                 >全选
                 </el-checkbox>
                 <el-button
+                    style="margin-left: 10px;"
                     type="text"
                     @click="handlePendingUnselectAll(device.id)"
-                    style="margin-left: 10px;"
-                >全不选</el-button>
+                >全不选
+                </el-button>
                 <el-scrollbar>
                   <el-checkbox-group
                       v-model="pendingSelectedTags[device.id]"
@@ -208,13 +263,15 @@
 <script>
 import TagLineChart from './DeviceView/TagLineChart.vue'
 import ExportDialog from './DeviceView/ExportDialog.vue'
+import groupMixin from "@/mixins/group";
+import aggregateMixin from "@/mixins/aggregation";
 
 export default {
   name: 'DeviceView',
-  components: {TagLineChart,ExportDialog},
+  mixins: [groupMixin, aggregateMixin],
+  components: {TagLineChart, ExportDialog},
   data() {
     return {
-      // allDevices: [],
       selectedDeviceIds: [],
       deviceTags: {}, // {deviceId: [...]}
       selectedTags: {}, // {deviceId: [...]}
@@ -226,7 +283,6 @@ export default {
       isLoadingTag: false,
 
       selectedGroup: null, // 当前选择的组ID
-      groups: [], // 全部组信息
       devices: [], // 当前组设备
 
       immediateApply: true,
@@ -310,7 +366,7 @@ export default {
       if (!val) {
         this.handleDrawerOpen()//因为在不关闭抽屉时也需要更新状态，所以这里需要调用。
       }
-    }
+    },
   },
 
 
@@ -361,21 +417,6 @@ export default {
       this.$set(this.pendingSelectedTags, deviceId, []);
       this.updatePendingSelectionState();
     },
-    fetchGroups() {
-      this.$request
-          .get("/group/all")
-          .then((res) => {
-            if (res.code === "200") {
-              console.log("加载组信息成功：" + JSON.stringify(res.data));
-              this.groups = res.data;
-            } else {
-              this.$message.error("加载组信息失败：" + res.msg);
-            }
-          })
-          .catch((error) => {
-            this.$message.error("请求组信息失败：" + error.message);
-          });
-    },
     fetchDevices() {
       if (!this.selectedGroup) {
         this.devices = [];
@@ -414,7 +455,7 @@ export default {
     },
     processDeviceData(data, tags, deviceName) {
       const selected = new Set(tags)
-      return Object.entries(data).map(([field, tagsData]) => ({
+      const res= Object.entries(data).map(([field, tagsData]) => ({
         field,
         series: Object.entries(tagsData)
             .filter(([tag]) => selected.has(tag))
@@ -424,17 +465,10 @@ export default {
               lineStyle: {type: 'solid'}
             }))
       }))
+      // console.log("全部数据", JSON.stringify(data))
+      // console.log("按标签过滤后数据", JSON.stringify(res))
+      return res
     },
-    // async fetchAllDevices() {
-    //   try {
-    //     const res = await this.$request.get('/device/all')
-    //     if (res.code === '200') {
-    //       this.allDevices = res.data
-    //     }
-    //   } catch (error) {
-    //     this.$message.error('设备加载失败')
-    //   }
-    // },
     sortTags(tags) {
       //NO_TAG放第一个，其次是整数类字符串从小到大排序，最后是其他字符串，按字母顺序排序
       return [...tags].sort((a, b) => {
@@ -515,6 +549,23 @@ export default {
       this.selectedDeviceIds = deviceIds
       console.log("selectedDeviceIds", JSON.stringify(this.selectedDeviceIds))
     },
+    async handleRefresh() {
+      if (this.selectedDeviceIds.length === 0) {
+        return this.$message.warning("请先选择设备");
+      }
+
+      try {
+        this.isLoading = true;
+        // 并行刷新所有选中设备的数据
+        await Promise.all(
+            this.selectedDeviceIds.map(deviceId => this.fetchDeviceData(deviceId)));
+        this.$message.success("数据刷新成功");
+      } catch (error) {
+        this.$message.error("刷新数据失败");
+      } finally {
+        this.isLoading = false;
+      }
+    },
 
     async fetchDeviceData(deviceId) {
       if (!deviceId) return
@@ -522,12 +573,16 @@ export default {
       this.isLoading = true
       try {
         const queryStart = Date.now()
-        const res = await this.$request.post('/data/query', {
+        const data = {
           deviceId,
           startTime: null,
           endTime: null,
-          tagQuery: null
-        })
+          tagQuery: null,
+          aggregationTime: this.aggregationTime,
+          queryAggregateFunc: this.queryAggregateFunc,
+        }
+        console.log("query data", JSON.stringify(data))
+        const res = await this.$request.post('/data/query', data)
         if (res.code === '200') {
           const queryEnd = Date.now()
           const records = res.data.records;
@@ -624,8 +679,7 @@ export default {
 
   },
   created() {
-    // this.fetchAllDevices()
-    this.fetchGroups(); // 初始化加载组信息
+
   },
 }
 </script>
@@ -644,7 +698,11 @@ export default {
 }
 
 .control-panel {
-  /*margin-bottom: 20px;*/
+  /*margin-bottom: 10px;*/
+}
+
+.control-panel + .control-panel {
+  /*margin-top: -10px;*/
 }
 
 .mode-switch {
@@ -739,9 +797,11 @@ export default {
   padding: 0;
   height: auto;
 }
+
 ::v-deep .el-button {
   font-weight: bold !important;
 }
+
 ::v-deep .el-dialog {
   border-radius: 1.5rem !important;
 }

@@ -252,7 +252,7 @@
           <!-- 标签列 -->
           <el-table-column
               fixed="left"
-              label="标识"
+              label="数据行标识"
               prop="tag"
               width="120"
           >
