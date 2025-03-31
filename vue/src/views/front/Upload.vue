@@ -483,7 +483,7 @@ export default {
                 this.matchedDevices.map(d => d.name).join(', ')
             }`,
             '确认上传',
-            {confirmButtonText: '确认', cancelButtonText: '取消'}
+            {confirmButtonText: '开始上传', cancelButtonText: '取消'}
         );
       } catch {
         return; // 用户取消

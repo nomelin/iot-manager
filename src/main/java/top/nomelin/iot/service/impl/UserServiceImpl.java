@@ -10,6 +10,8 @@ import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.dao.UserMapper;
 import top.nomelin.iot.model.User;
+import top.nomelin.iot.model.enums.MessageType;
+import top.nomelin.iot.service.MessageService;
 import top.nomelin.iot.service.UserService;
 import top.nomelin.iot.util.TokenUtil;
 
@@ -25,10 +27,13 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
     private final static Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
     private final UserMapper userMapper;
+
+    private final MessageService messageService;
     private final IoTDBDao iotDBDao;
 
-    public UserServiceImpl(UserMapper userMapper, IoTDBDao iotDBDao) {
+    public UserServiceImpl(UserMapper userMapper, MessageService messageService, IoTDBDao iotDBDao) {
         this.userMapper = userMapper;
+        this.messageService = messageService;
         this.iotDBDao = iotDBDao;
     }
 
@@ -48,6 +53,8 @@ public class UserServiceImpl implements UserService {
 //        log.info("插入数据库成功：{}", user);
 //        iotDBDao.createDatabase(Constants.DATABASE_PREFIX + user.getId());//创建iotDB数据库
 //        log.info("创建iotDB数据库成功：{}", Constants.DATABASE_PREFIX + user.getId());
+        messageService.sendSystemMessage(user.getId(), Constants.REGISTER_MESSAGE_TITLE,
+                Constants.REGISTER_MESSAGE_CONTENT, MessageType.WARNING);//发送注册消息
         log.info("注册用户成功：{}", user);
         return user;
     }
