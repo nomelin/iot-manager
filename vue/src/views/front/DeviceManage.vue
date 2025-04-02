@@ -33,7 +33,7 @@
     <el-row :gutter="20" class="card-row">
       <el-col v-for="device in filteredDevices" :key="device.id" :lg="6" :md="8" :sm="12" :xs="24">
         <el-card class="device-card" shadow="hover" @click.native="showDetail(device)"
-                 :style="{ backgroundColor: device.config.deviceType === 'DATASET' ? '#E6E0F2' : '#f8f9fa' }"
+                 :style="{ backgroundColor: device.config.deviceType === 'DATASET' ? '#f0ecf7' : '#f8f9fa' }"
         >
           <!-- 设备基本信息 -->
           <div class="card-content">

@@ -25,7 +25,7 @@
     <!-- 模板卡片展示 -->
     <el-row :gutter="20" class="card-row">
       <el-col v-for="template in filteredTemplates" :key="template.id" :lg="6" :md="8" :sm="12" :xs="24">
-        <el-card :style="{ backgroundColor: template.config.deviceType === 'DATASET' ? '#E6E0F2' : '#f8f9fa' }" class="template-card" shadow="hover"
+        <el-card :style="{ backgroundColor: template.config.deviceType === 'DATASET' ? '#f0ecf7' : '#f8f9fa' }" class="template-card" shadow="hover"
                  @click.native="showDetail(template)"
         >
           <!-- 模板基本信息 -->
