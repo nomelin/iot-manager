@@ -186,6 +186,77 @@
       </el-table>
     </el-card>
 
+    <el-card class="debug-section">
+      <div class="section-header">
+        <h3>PushPlus微信推送管理</h3>
+      </div>
+
+      <!-- 全局令牌管理 -->
+      <div class="section-header">
+        <h4>全局令牌管理</h4>
+        <div style="display: flex; gap: 10px; align-items: center">
+          <span>当前剩余条数：{{ globalRemaining }}</span>
+          <el-input
+              v-model="addGlobalNum"
+              placeholder="请输入增加数量"
+              style="width: 150px"
+              type="number"
+          />
+          <el-button
+              type="primary"
+              @click="addGlobalRemaining"
+              :disabled="!addGlobalNum"
+          >
+            增加全局条数
+          </el-button>
+          <el-button @click="getGlobalRemaining">刷新状态</el-button>
+        </div>
+      </div>
+
+      <!-- 用户队列管理 -->
+      <div class="section-header" style="margin-top: 20px">
+        <h4>用户队列管理</h4>
+        <div style="display: flex; gap: 10px; align-items: center">
+          <el-input
+              v-model="userIdInput"
+              placeholder="请输入用户ID"
+              style="width: 200px"
+              type="number"
+          />
+          <el-button
+              type="primary"
+              :disabled="!userIdInput"
+              @click="getUserStatus"
+          >
+            查询用户状态
+          </el-button>
+          <el-button
+              type="danger"
+              :disabled="!userIdInput"
+              @click="clearUserQueue"
+          >
+            清空用户队列
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 用户状态展示 -->
+      <div v-if="userStatus" class="user-status-container">
+        <el-descriptions border>
+          <el-descriptions-item label="剩余令牌数">
+            {{ userStatus.tokensLeft }}/{{ userStatus.tokensCapacity }}
+          </el-descriptions-item>
+          <el-descriptions-item label="令牌刷新间隔">
+            {{ userStatus.tokensRefillInterval }}秒
+          </el-descriptions-item>
+          <el-descriptions-item label="待处理队列大小">
+            {{ userStatus.queueSize }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+    </el-card>
+
+
 
   </div>
 </template>
@@ -225,7 +296,13 @@ export default {
 
       // 线程池监测相关
       threadPoolStats: [],
-      threadPoolLoading: false
+      threadPoolLoading: false,
+
+      // 微信推送相关
+      globalRemaining: 0,
+      addGlobalNum: null,
+      userIdInput: '',
+      userStatus: null,
     }
   },
   computed: {
@@ -245,6 +322,7 @@ export default {
     this.checkDbStatus();
     this.getAlertStates();
     this.getThreadPoolStats();
+    this.getGlobalRemaining();
   },
 
   methods: {
@@ -543,7 +621,60 @@ export default {
       } finally {
         this.threadPoolLoading = false;
       }
-    }
+    },
+    async getGlobalRemaining() {
+      try {
+        const res = await this.$request.get('/debug/wechat/getGlobalRemaining');
+        if (res.code === '200') {
+          this.globalRemaining = res.data;
+        }
+      } catch (error) {
+        console.error('获取全局剩余条数失败:', error);
+      }
+    },
+
+    async addGlobalRemaining() {
+      if (!this.addGlobalNum || this.addGlobalNum <= 0) return;
+      try {
+        const res = await this.$request.get(`/debug/wechat/addGlobalRemaining/${this.addGlobalNum}`);
+        if (res.code === '200') {
+          this.$message.success('全局条数已增加');
+          this.addGlobalNum = null;
+          await this.getGlobalRemaining();
+        }
+      } catch (error) {
+        console.error('增加全局条数失败:', error);
+      }
+    },
+
+    async getUserStatus() {
+      if (!this.userIdInput) return;
+      try {
+        const res = await this.$request.get(`/debug/wechat/getUserStatus/${this.userIdInput}`);
+        if (res.code === '200') {
+          this.userStatus = res.data;
+          console.log('用户状态:', JSON.stringify(res.data));
+        }
+      } catch (error) {
+        console.error('获取用户状态失败:', error);
+      }
+    },
+
+    async clearUserQueue() {
+      if (!this.userIdInput) return;
+      try {
+        await this.$confirm('确定要清空该用户的推送队列吗？', '警告', {
+          type: 'warning'
+        });
+        const res = await this.$request.get(`/debug/wechat/clearUserQueue/${this.userIdInput}`);
+        if (res.code === '200') {
+          this.$message.success('用户队列已清空');
+          await this.getUserStatus();
+        }
+      } catch (error) {
+        // 取消操作不提示
+      }
+    },
 
   }
 }

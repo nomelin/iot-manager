@@ -72,3 +72,9 @@ file-thread-pool:
   max-pool-size: 32          # 最大线程数，默认20
   queue-capacity: 8192        # 队列容量，默认500
   thread-name-prefix: "FileProcessor-"
+
+pushplus:
+  daily-global-limit: 100
+  user-token-bucket-size: 5
+  user-token-refresh-interval: 1800
+  token: 真正的pushplus token

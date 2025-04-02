@@ -29,6 +29,10 @@
         <el-form-item label="用户名" prop="name">
           <el-input v-model="user.name" class="input" maxlength="50" placeholder="用户名"></el-input>
         </el-form-item>
+        <el-form-item label="PushPlus好友令牌" prop="pushplusToken">
+          <el-input v-model="user.pushplusToken" class="input" maxlength="50"
+                    placeholder="请联系管理员获取(用于微信推送消息)"></el-input>
+        </el-form-item>
         <div class="btn-group">
           <el-button class="primary-button" type="primary" @click="update">保 存</el-button>
         </div>

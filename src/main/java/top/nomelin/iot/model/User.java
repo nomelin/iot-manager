@@ -5,6 +5,8 @@ public class User {
     private Integer id;
     private String name;
     private String password;
+
+    private String pushplusToken;//pushplus平台的好友令牌.
     private String token;
 
     public Integer getId() {
@@ -31,6 +33,14 @@ public class User {
         this.password = password;
     }
 
+    public String getPushplusToken() {
+        return pushplusToken;
+    }
+
+    public void setPushplusToken(String pushplusToken) {
+        this.pushplusToken = pushplusToken;
+    }
+
     public String getToken() {
         return token;
     }
@@ -45,6 +55,7 @@ public class User {
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", password='" + password + '\'' +
+                ", pushPlusToken='" + pushplusToken + '\'' +
                 ", token='" + token + '\'' +
                 '}';
     }

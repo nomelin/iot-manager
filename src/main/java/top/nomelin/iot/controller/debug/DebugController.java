@@ -16,6 +16,7 @@ import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.service.TaskService;
 import top.nomelin.iot.service.alert.AlertService;
+import top.nomelin.iot.service.alert.push.WechatPushService;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,6 +45,8 @@ public class DebugController {
 
     private final ThreadPoolTaskExecutor executor;
 
+    private final WechatPushService wechatPushService;
+
     @Value("${file.tempDir}")
     private String tempDir;
 
@@ -55,13 +58,14 @@ public class DebugController {
 
     public DebugController(CacheOperations cacheOperations, TaskService taskService, AlertService alertService,
                            IoTDBDao iotDBDao, JdbcTemplate jdbcTemplate,
-                           @Qualifier("fileProcessingExecutor") ThreadPoolTaskExecutor executor) {
+                           @Qualifier("fileProcessingExecutor") ThreadPoolTaskExecutor executor, WechatPushService wechatPushService) {
         this.cacheOperations = cacheOperations;
         this.taskService = taskService;
         this.alertService = alertService;
         this.iotDBDao = iotDBDao;
         this.jdbcTemplate = jdbcTemplate;
         this.executor = executor;
+        this.wechatPushService = wechatPushService;
     }
 
     @RequestMapping("/hello")
@@ -280,5 +284,25 @@ public class DebugController {
         return Result.success("文件处理线程池启动成功.");
     }
 
+    @RequestMapping("/wechat/getGlobalRemaining")
+    public Result getGlobalRemain() {
+        return Result.success(wechatPushService.getGlobalRemaining());
+    }
 
+    @RequestMapping("/wechat/addGlobalRemaining/{num}")
+    public Result addGlobalRemain(@PathVariable int num) {
+        wechatPushService.addGlobalRemaining(num);
+        return Result.success("增加全局剩余条数成功.");
+    }
+
+    @RequestMapping("/wechat/getUserStatus/{userId}")
+    public Result getUserStatus(@PathVariable Integer userId) {
+        return Result.success(wechatPushService.getUserStatus(userId));
+    }
+
+    @RequestMapping("/wechat/clearUserQueue/{userId}")
+    public Result clearUserQueue(@PathVariable Integer userId) {
+        wechatPushService.clearUserQueue(userId);
+        return Result.success("清空用户队列成功.");
+    }
 }

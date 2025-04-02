@@ -4,17 +4,18 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="top.nomelin.iot.dao.UserMapper">
     <select id="selectAll" parameterType="User" resultType="User">
-        select id, name, password
+        select id, name, password, pushplus_token
         from user
         <where>
             <if test="id != null">and id= #{id}</if>
             <if test="password != null">and password= #{password}</if>
             <if test="name!= null">and name like concat('%', #{name}, '%')</if>
+            <if test="pushplusToken != null">and pushplus_token = #{pushplusToken}</if>
         </where>
     </select>
 
     <select id="selectById" resultType="User">
-        select id, name, password
+        select id, name, password, pushplus_token
         from user
         where id = #{id}
     </select>
@@ -36,11 +37,13 @@
             <if test="id != null">id,</if>
             <if test="password != null">password,</if>
             <if test="name != null">name,</if>
+            <if test="pushplusToken != null">pushplus_token,</if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="id != null">#{id},</if>
             <if test="password != null">#{password},</if>
             <if test="name != null">#{name},</if>
+            <if test="pushplusToken != null">#{pushplusToken},</if>
         </trim>
     </insert>
 
@@ -52,6 +55,9 @@
             </if>
             <if test="name != null">
                 name = #{name},
+            </if>
+            <if test="pushplusToken != null">
+                pushplus_token = #{pushplusToken},
             </if>
         </set>
         where id = #{id}
