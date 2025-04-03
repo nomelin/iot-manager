@@ -6,13 +6,14 @@
       <el-button :disabled="selectedDevices.length === 0" icon="el-icon-delete" type="danger"
                  @click="handleBatchDelete">批量删除
       </el-button>
-      <el-select v-model="deviceTypeFilter" placeholder="类型" clearable style="width: 100px; margin-left: 10px;">
+      <el-select v-model="deviceTypeFilter" clearable placeholder="类型" style="width: 100px; margin-left: 10px;">
         <el-option v-for="type in deviceTypes" :key="type.code" :label="type.name" :value="type.code"></el-option>
         <el-option label="其它" value="OTHER"></el-option>
       </el-select>
-      <el-select v-model="selectedGroup" clearable placeholder="选择组" style="margin-left: 10px;">
+      <el-select v-model="selectedGroup" clearable filterable placeholder="选择组"
+                 style="margin-left: 10px;">
         <el-option
-            v-for="group in groups"
+            v-for="group in allGroups"
             :key="group.id"
             :label="group.name"
             :value="group.id">
@@ -32,8 +33,8 @@
     <!-- 设备卡片展示 -->
     <el-row :gutter="20" class="card-row">
       <el-col v-for="device in filteredDevices" :key="device.id" :lg="6" :md="8" :sm="12" :xs="24">
-        <el-card class="device-card" shadow="hover" @click.native="showDetail(device)"
-                 :style="{ backgroundColor: device.config.deviceType === 'DATASET' ? '#f0ecf7' : '#f8f9fa' }"
+        <el-card :style="{ backgroundColor: device.config.deviceType === 'DATASET' ? '#f0ecf7' : '#f8f9fa' }" class="device-card" shadow="hover"
+                 @click.native="showDetail(device)"
         >
           <!-- 设备基本信息 -->
           <div class="card-content">
@@ -51,12 +52,6 @@
                   {{ tag }}
                 </el-tag>
               </div>
-              <!--              <div class="device-groups">-->
-              <!--                <el-tag v-for="(group, index) in device.groupIds" :key="index" class="tag-item" effect="dark"-->
-              <!--                        size="medium" type="info">-->
-              <!--                  {{ group }}-->
-              <!--                </el-tag>-->
-              <!--              </div>-->
             </div>
             <el-button class="clear-btn" icon="el-icon-delete" type="text"
                        @click.stop="handleClear(device.id)">清空设备数据
@@ -135,7 +130,7 @@
         </el-form-item>
 
         <el-form-item label="创建模板" required>
-          <el-select v-model="selectedTemplateId" @change="handleTemplateSelect">
+          <el-select v-model="selectedTemplateId" filterable @change="handleTemplateSelect">
             <el-option
                 v-for="template in templates"
                 :key="template.id"
@@ -214,6 +209,8 @@
 import TemplateCardMini from './module/TemplateCardMini.vue'
 import GroupCardMini from "@/views/front/module/GroupCardMini";
 import deviceCreationMixin from "@/mixins/deviceCreationMixin";
+import deviceMixin from "@/mixins/device";
+import groupMixin from "@/mixins/group";
 
 export default {
   name: 'DeviceManagement',
@@ -221,12 +218,10 @@ export default {
     TemplateCardMini,
     GroupCardMini
   },
-  mixins: [deviceCreationMixin],
+  mixins: [deviceCreationMixin, deviceMixin, groupMixin],
   data() {
     return {
-      devices: [],
       templates: [],//当前用户的模板列表
-      groups: [],//当前用户的组列表
       selectedDevices: [],
       detailVisible: false,
       nameEditVisible: false,
@@ -251,7 +246,7 @@ export default {
     },
     // 设备详情的组列表
     currentGroups() {
-      return this.groups.filter(g => this.currentDevice.groupIds.includes(g.id))
+      return this.allGroups.filter(g => this.currentDevice.groupIds.includes(g.id))
     },
     //设备详情的存储模式
     currentStorageMode() {
@@ -259,7 +254,7 @@ export default {
     },
     // 筛选后的设备列表
     filteredDevices() {
-      let filtered = this.devices
+      let filtered = this.allDevices
 
       // 组筛选
       if (this.selectedGroup) {
@@ -295,7 +290,7 @@ export default {
         if (keywords.length) {
           filtered = filtered.filter(d => {
             // 收集所有搜索字段
-            const groupNames = this.groups
+            const groupNames = this.allGroups
                 .filter(g => d.groupIds.includes(g.id))
                 .map(g => g.name.toLowerCase())
                 .join(' ')
@@ -326,28 +321,9 @@ export default {
     },
   },
   created() {
-    this.fetchDevices()
     this.fetchTemplates()
-    this.fetchGroups()
-    // this.loadStorageModes()
-    // this.loadDeviceTypes()
   },
   methods: {
-    async fetchDevices() {
-      try {
-        const res = await this.$request.get('/device/all')
-        if (res.code === '200') {
-          this.devices = res.data
-          for (const device of this.devices) {
-            device.tags = device.tags || []//防止tags为null
-          }
-        } else {
-          this.$message.error(res.msg)
-        }
-      } catch (error) {
-        this.$message.error('获取设备列表失败')
-      }
-    },
 
     async fetchTemplates() {
       try {
@@ -362,18 +338,6 @@ export default {
       }
     },
 
-    async fetchGroups() {
-      try {
-        const res = await this.$request.get('/group/all')
-        if (res.code === '200') {
-          this.groups = res.data
-        } else {
-          this.$message.error(res.msg)
-        }
-      } catch (error) {
-        this.$message.error('获取分组列表失败')
-      }
-    },
 
     handleTemplateSelect(templateId) {
       //do nothing

@@ -50,7 +50,9 @@
               v-model="selectedDevices"
               multiple
               placeholder="请选择设备"
-              @change="handleDeviceSelect">
+              @change="handleDeviceSelect"
+              filterable
+          >
             <el-option
                 v-for="device in allDevices"
                 :key="device.id"
@@ -139,7 +141,9 @@
           v-model="newDevices"
           multiple
           placeholder="请选择设备"
-          @change="handleNewDeviceSelect">
+          @change="handleNewDeviceSelect"
+          filterable
+      >
         <el-option
             v-for="device in allDevices"
             :key="device.id"

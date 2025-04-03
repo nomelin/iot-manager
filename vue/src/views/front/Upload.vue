@@ -92,6 +92,7 @@
                 <el-select
                     v-model="selectedGroup"
                     clearable
+                    filterable
                     placeholder="选择组(不选则为全部设备)"
                     @change="handleGroupChange"
                 >
@@ -108,6 +109,7 @@
               <el-form-item v-if="uploadMode !== 3" label="设备">
                 <el-select
                     v-model="form.deviceId"
+                    filterable
                     placeholder="请选择设备"
                 >
                   <el-option

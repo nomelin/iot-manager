@@ -17,6 +17,7 @@
               <el-select
                   v-model="selectedGroup"
                   clearable
+                  filterable
                   placeholder="选择组(不选则为全部设备)"
                   @change="handleGroupChange"
               >
@@ -33,6 +34,7 @@
             <el-form-item label="设备">
               <el-select
                   v-model="form.deviceId"
+                  filterable
                   placeholder="请选择设备"
                   @change="handleDeviceChange"
               >
@@ -83,6 +85,7 @@
               <el-select
                   v-model="form.selectMeasurements"
                   clearable
+                  filterable
                   multiple
                   placeholder="请选择传感器"
                   style="width: 70%"
@@ -131,6 +134,7 @@
               <el-select
                   v-model="form.tagQuery"
                   clearable
+                  filterable
                   multiple
                   placeholder="请选择标识"
                   style="width: 70%"
@@ -317,7 +321,7 @@ import groupMixin from "@/mixins/group";
 
 export default {
   name: 'BaseQuery',
-  mixins: [aggregateMixin,deviceMixin,groupMixin],
+  mixins: [aggregateMixin, deviceMixin, groupMixin],
   components: {
     DeviceCardMini
   },

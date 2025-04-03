@@ -11,12 +11,12 @@
             :class="['toggle-icon', isSecondPanelCollapsed ? 'el-icon-caret-right' : 'el-icon-caret-bottom']"
             style="cursor: pointer; font-size: 16px; padding: 8px; color: #666;"
             @click="isSecondPanelCollapsed = !isSecondPanelCollapsed"
-        >{{ isSecondPanelCollapsed? '展开' : '收起' }}</i>
+        >{{ isSecondPanelCollapsed ? '展开' : '收起' }}</i>
       </el-col>
       <el-col :span="4">
         <el-form label-position="left" label-width="auto">
           <el-form-item label="组选择">
-            <el-select v-model="selectedGroup" placeholder="选择组" @change="fetchDevices">
+            <el-select v-model="selectedGroup" filterable placeholder="选择组" @change="fetchDevices">
               <el-option v-for="group in allGroups" :key="group.id" :label="group.name" :value="group.id"/>
             </el-select>
           </el-form-item>
@@ -28,6 +28,7 @@
           <el-form-item label="选择设备">
             <el-select
                 :value="selectedDeviceIds"
+                filterable
                 multiple
                 placeholder="选择设备（可多选）"
                 @change="handleDeviceChange"
@@ -801,10 +802,12 @@ export default {
   text-align: left;
   background: #fff;
 }
+
 .toggle-icon {
   transition: transform 0.2s;
   vertical-align: middle;
 }
+
 toggle-icon:hover {
   color: #409EFF;
 }

@@ -61,7 +61,7 @@ export default {
                 if (res.code === '200') {
                     this.createVisible = false
                     this.$message.success('创建设备成功')
-                    if (typeof this.fetchDevices === 'function') await this.fetchDevices()
+                    if (typeof this.fetchAllDevices === 'function') await this.fetchAllDevices()
                 } else this.$message.error(res.msg)
             } catch (error) {
                 this.$message.error('创建设备失败')

@@ -16,16 +16,17 @@
     </div>
 
     <input
-        type="file"
         ref="folderInput"
-        webkitdirectory
         hidden
+        type="file"
+        webkitdirectory
         @change="handleFolderSelect"
     >
     <!-- 模板卡片展示 -->
     <el-row :gutter="20" class="card-row">
       <el-col v-for="template in filteredTemplates" :key="template.id" :lg="6" :md="8" :sm="12" :xs="24">
-        <el-card :style="{ backgroundColor: template.config.deviceType === 'DATASET' ? '#f0ecf7' : '#f8f9fa' }" class="template-card" shadow="hover"
+        <el-card :style="{ backgroundColor: template.config.deviceType === 'DATASET' ? '#f0ecf7' : '#f8f9fa' }"
+                 class="template-card" shadow="hover"
                  @click.native="showDetail(template)"
         >
           <!-- 模板基本信息 -->
@@ -42,16 +43,17 @@
               </div>
               <div class="template-name">{{ template.name }}</div>
             </div>
-            <el-button @click.stop="triggerFolderSelect(template)"
+            <el-button class="folder-select-btn"
                        icon="el-icon-plus"
                        type="text"
-                       class="folder-select-btn"
-            >自动创建</el-button>
+                       @click.stop="triggerFolderSelect(template)"
+            >自动创建
+            </el-button>
             <el-button
+                class="create-device-btn"
                 icon="el-icon-plus"
                 type="text"
                 @click.stop="handleCreateDevice(template)"
-                class="create-device-btn"
             >创建设备
             </el-button>
             <el-button class="delete-btn" icon="el-icon-delete" type="text"
@@ -185,7 +187,7 @@
         </el-form-item>
 
         <el-form-item label="创建模板" required>
-          <el-select v-model="selectedTemplateId">
+          <el-select v-model="selectedTemplateId" filterable>
             <el-option
                 v-for="template in templates"
                 :key="template.id"
@@ -639,7 +641,7 @@ export default {
       return structure;
     },
 
-    async bulkCreateDevices({ tag, devices }) {
+    async bulkCreateDevices({tag, devices}) {
       const requests = devices.map(device =>
           this.$request.post('/device/add', {
             device: {
@@ -732,18 +734,21 @@ export default {
 .template-name {
   margin-top: 8px;
 }
-.folder-select-btn{
+
+.folder-select-btn {
   position: absolute;
   left: 10px;
   bottom: 30px;
   padding: 8px;
 }
+
 .create-device-btn {
   position: absolute;
   left: 10px;
   bottom: 10px;
   padding: 8px;
 }
+
 .delete-btn {
   position: absolute;
   right: 10px;

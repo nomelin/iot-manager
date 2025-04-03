@@ -7,7 +7,7 @@
         <el-col :span="4">
           <el-form label-position="left" label-width="auto">
             <el-form-item label="组选择">
-              <el-select v-model="selectedGroup" placeholder="选择组" @change="fetchDevices">
+              <el-select v-model="selectedGroup" filterable placeholder="选择组" @change="fetchDevices">
                 <el-option v-for="group in allGroups" :key="group.id" :label="group.name" :value="group.id"/>
               </el-select>
             </el-form-item>
@@ -21,6 +21,7 @@
               <el-select
                   v-model="selectedDeviceIds"
                   :clearable="true"
+                  filterable
                   multiple
                   placeholder="选择设备"
               >
@@ -142,7 +143,7 @@ import groupMixin from "@/mixins/group";
 
 export default {
   name: "ViewPlatform",
-  mixins: [aggregateMixin,groupMixin],
+  mixins: [aggregateMixin, groupMixin],
   components: {GroupView},
   data() {
     return {

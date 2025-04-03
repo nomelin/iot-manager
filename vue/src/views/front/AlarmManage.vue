@@ -93,7 +93,7 @@
           <el-input v-model="currentAlert.description" type="textarea"></el-input>
         </el-form-item>
         <el-form-item label="设备ID">
-          <el-select v-model="currentAlert.deviceId" clearable>
+          <el-select v-model="currentAlert.deviceId" clearable filterable>
             <el-option
                 v-for="device in allDevices"
                 :key="device.id"
@@ -103,7 +103,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="组ID">
-          <el-select v-model="currentAlert.groupId" clearable>
+          <el-select v-model="currentAlert.groupId" clearable filterable>
             <el-option
                 v-for="group in allGroups"
                 :key="group.id"
@@ -128,7 +128,7 @@
           <el-input v-model="currentAlert.conditionConfig.metric"></el-input>
         </el-form-item>
         <el-form-item label="持续时长(S)(0表示立即)">
-<!--          <el-switch v-model="enableDuration" active-text="立即" inactive-text="持续"></el-switch>-->
+          <!--          <el-switch v-model="enableDuration" active-text="立即" inactive-text="持续"></el-switch>-->
           <el-input-number
               v-model="currentAlert.conditionConfig.duration"
               :min="0">
@@ -179,7 +179,7 @@
           ></el-input>
         </el-form-item>
         <el-form-item label="静默时间(S)(0表示不静默)">
-<!--          <el-switch v-model="enableSilent" active-text="不静默" inactive-text="静默"></el-switch>-->
+          <!--          <el-switch v-model="enableSilent" active-text="不静默" inactive-text="静默"></el-switch>-->
           <el-input-number
               v-model="currentAlert.actionConfig.silentDuration"
               :min="0">
@@ -227,7 +227,7 @@ export default {
       // 定义映射表，key 是值，value 是显示文本
       alertChannelMap: {
         'IN_MSG': '站内信',
-        'WECHAT_PP': '微信公众号'
+        'WECHAT_PP': '微信公众号(限制次数)'
       },
       messageTypes: ['NOTICE', 'WARNING', 'ERROR'],
       // enableDuration: true,  // 控制持续时间开关
