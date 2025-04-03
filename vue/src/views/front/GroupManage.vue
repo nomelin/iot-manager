@@ -28,6 +28,9 @@
               <div class="group-desc">{{ group.description || '暂无描述' }}</div>
               <div class="device-count">设备数量: {{ group.deviceIds?.length || 0 }}</div>
             </div>
+            <el-button class="clear-btn" icon="el-icon-delete" type="text"
+                       @click.stop="handleClear(group.id)">清空组内设备
+            </el-button>
             <el-button class="delete-btn" icon="el-icon-delete" type="text"
                        @click.stop="handleDelete(group.id)">删除设备组
             </el-button>
@@ -48,10 +51,10 @@
         <el-form-item label="添加设备">
           <el-select
               v-model="selectedDevices"
+              filterable
               multiple
               placeholder="请选择设备"
               @change="handleDeviceSelect"
-              filterable
           >
             <el-option
                 v-for="device in allDevices"
@@ -139,10 +142,10 @@
     <el-dialog :visible.sync="addDeviceVisible" title="添加设备到组" width="50%">
       <el-select
           v-model="newDevices"
+          filterable
           multiple
           placeholder="请选择设备"
           @change="handleNewDeviceSelect"
-          filterable
       >
         <el-option
             v-for="device in allDevices"
@@ -220,7 +223,8 @@ export default {
       return filtered
     }
   },
-  created() {},
+  created() {
+  },
   methods: {
     handleDeviceSelect() {
       this.newGroup.deviceIds = this.selectedDevices
@@ -347,6 +351,35 @@ export default {
       })
     },
 
+    handleClear(groupId) {
+      this.$confirm('确定清空该设备组内的所有设备吗？(不影响设备)', '警告', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        const group = this.groups.find(g => g.id === groupId);
+        if (!group || !group.deviceIds.length) {
+          this.$message.warning('该组内没有设备，无需清空');
+          return;
+        }
+
+        // 调用已有的移除设备接口，一次性移除所有设备
+        const res = await this.$request.post(
+            `/group/removeDevices/${groupId}`,
+            group.deviceIds
+        );
+
+        if (res.code === '200') {
+          group.deviceIds = []; // 清空前端数据
+          this.$message.success('清空成功');
+        } else {
+          this.$message.error(res.message || '清空失败');
+        }
+      }).catch(() => {
+        this.$message.info('取消清空')
+      })
+    },
+
     getDeviceById(deviceId) {
       return this.allDevices.find(d => d.id === deviceId)
     },
@@ -415,10 +448,10 @@ export default {
   transform: translateY(-3px);
 }
 
-.card-content {
-  display: flex;
-  justify-content: space-between;
-}
+/*.card-content {*/
+/*  display: flex;*/
+/*  justify-content: space-between;*/
+/*}*/
 
 .meta-info {
   flex: 1;
@@ -440,11 +473,15 @@ export default {
   font-size: 12px;
 }
 
+.clear-btn {
+  color: #f1b70a;
+}
+
 .delete-btn {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  padding: 8px;
+  /*position: absolute;*/
+  /*right: 10px;*/
+  /*bottom: 10px;*/
+  /*padding: 8px;*/
   color: #f56c6c;
 }
 

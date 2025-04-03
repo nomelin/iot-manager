@@ -6,12 +6,13 @@
       <el-button :disabled="selectedDevices.length === 0" icon="el-icon-delete" type="danger"
                  @click="handleBatchDelete">批量删除
       </el-button>
+      <el-button icon="el-icon-check" type="primary" @click="handleSelectAll">全选本页</el-button>
       <el-select v-model="deviceTypeFilter" clearable placeholder="类型" style="width: 100px; margin-left: 10px;">
         <el-option v-for="type in deviceTypes" :key="type.code" :label="type.name" :value="type.code"></el-option>
         <el-option label="其它" value="OTHER"></el-option>
       </el-select>
       <el-select v-model="selectedGroup" clearable filterable placeholder="选择组"
-                 style="margin-left: 10px;">
+                 style="margin-left: 10px;width: 150px;">
         <el-option
             v-for="group in allGroups"
             :key="group.id"
@@ -19,21 +20,23 @@
             :value="group.id">
         </el-option>
       </el-select>
+      <el-button type="primary" @click="handleAddToGroup">添加到组</el-button>
 
       <el-input v-model="nameSearch" clearable placeholder="搜索名称(空格分割多关键字)"
-                style="width: 300px; margin-left: 10px;"
+                style="width: 200px; margin-left: 10px;"
       ></el-input>
       <el-tooltip content="搜索范围包括设备id，名称，标签；组id，名称；模板名称；传感器名称" placement="bottom">
         <el-input v-model="fullSearch" clearable
-                  placeholder="全文搜索(空格分割多关键字)" style="width: 400px; margin-left: 10px;"></el-input>
+                  placeholder="全文搜索(空格分割多关键字)" style="width: 300px; margin-left: 10px;"></el-input>
       </el-tooltip>
       <el-button icon="el-icon-search" type="primary" @click="handleClearSearch">清空</el-button>
     </div>
 
     <!-- 设备卡片展示 -->
-    <el-row :gutter="20" class="card-row">
-      <el-col v-for="device in filteredDevices" :key="device.id" :lg="6" :md="8" :sm="12" :xs="24">
-        <el-card :style="{ backgroundColor: device.config.deviceType === 'DATASET' ? '#f0ecf7' : '#f8f9fa' }" class="device-card" shadow="hover"
+    <el-row :gutter="0" class="card-row">
+      <el-col v-for="device in filteredDevices" :key="device.id" :lg="4" :md="6" :sm="8" :xs="12">
+        <el-card :style="{ backgroundColor: device.config.deviceType === 'DATASET' ? '#f0ecf7' : '#f8f9fa' }"
+                 class="device-card" shadow="hover"
                  @click.native="showDetail(device)"
         >
           <!-- 设备基本信息 -->
@@ -202,7 +205,26 @@
         <el-button type="primary" @click="updateDeviceName">确 定</el-button>
       </span>
     </el-dialog>
+
+    <!-- 添加到组对话框 -->
+    <el-dialog :visible.sync="addToGroupDialogVisible" title="添加到组" width="40%">
+      <el-select v-model="selectedTargetGroup" clearable placeholder="选择目标组">
+        <el-option
+            v-for="group in allGroups"
+            :key="group.id"
+            :label="group.name"
+            :value="group.id">
+        </el-option>
+      </el-select>
+      <group-card-mini v-if="selectedTargetGroup" :group="selectedGroupObject" style="margin-top: 15px;"/>
+      <span slot="footer">
+    <el-button @click="addToGroupDialogVisible = false">取消</el-button>
+    <el-button type="primary" @click="confirmAddToGroup">确 定</el-button>
+  </span>
+    </el-dialog>
+
   </div>
+
 </template>
 
 <script>
@@ -233,6 +255,8 @@ export default {
       nameSearch: '',
       fullSearch: '',
       deviceTypeFilter: '',
+      addToGroupDialogVisible: false,
+      selectedTargetGroup: null,
     }
   },
   computed: {
@@ -318,6 +342,9 @@ export default {
       }
 
       return filtered
+    },
+    selectedGroupObject() {
+      return this.allGroups.find(g => g.id === this.selectedTargetGroup) || null;
     },
   },
   created() {
@@ -423,7 +450,7 @@ export default {
               } else {
                 this.$message.error(res.msg)
               }
-              this.fetchDevices()
+              this.fetchAllDevices()
             })
             .catch(() => {
               this.$message.error('删除失败')
@@ -447,7 +474,6 @@ export default {
               } else {
                 this.$message.error(res.msg)
               }
-              // this.fetchDevices()
             }).catch(() => {
           this.$message.error('清空设备数据失败')
         })
@@ -471,8 +497,9 @@ export default {
           await Promise.all(requests)
           this.$message.success('批量删除成功')
           this.selectedDevices = []
-          await this.fetchDevices()
+          await this.fetchAllDevices()
         } catch (error) {
+          console.log("部分删除失败", error)
           this.$message.error('部分删除失败')
         }
       }).catch(() => {
@@ -483,6 +510,56 @@ export default {
       this.fullSearch = ''
       this.selectedGroup = null
     },
+    // 添加到组相关方法
+    handleAddToGroup() {
+      if (this.selectedDevices.length === 0) {
+        this.$message.warning('请先选择要添加的设备');
+        return;
+      }
+      this.addToGroupDialogVisible = true;
+    },
+
+    async confirmAddToGroup() {
+      if (!this.selectedTargetGroup) {
+        this.$message.warning('请选择目标组');
+        return;
+      }
+      try {
+        const res = await this.$request.post(
+            `/group/addDevices/${this.selectedTargetGroup}`,
+            this.selectedDevices
+        );
+        if (res.code === '200') {
+          this.$message.success('添加成功');
+          this.addToGroupDialogVisible = false;
+          await this.fetchAllDevices(); // 刷新设备列表
+        } else {
+          this.$message.error(res.msg);
+        }
+      } catch (error) {
+        console.log("添加到组失败", error)
+        this.$message.error('添加到组失败');
+      }
+    },
+
+    // 全选方法
+    handleSelectAll() {
+      this.selectedDevices = this.filteredDevices.map(d => d.id);
+    },
+  },
+  watch: {
+    selectedGroup() {
+      this.selectedDevices = [];
+    },
+    deviceTypeFilter() {
+      this.selectedDevices = [];
+    },
+    nameSearch() {
+      this.selectedDevices = [];
+    },
+    fullSearch() {
+      this.selectedDevices = [];
+    }
   }
 }
 </script>
@@ -511,7 +588,7 @@ export default {
 
 .device-card {
   position: relative;
-  margin: 20px;
+  margin: 10px;
   cursor: pointer;
   transition: transform 0.2s;
   background: #f8f9fa;
