@@ -76,6 +76,22 @@ public class DataController {
         return Result.success(result);
     }
 
+    @PostMapping("/query/count")
+    public Result queryDataCount(@RequestBody DataQueryRequest request) {
+        if (request.getDeviceId() == null) {
+            throw new BusinessException(CodeMessage.PARAM_LOST_ERROR, "参数缺失,request:" + request);
+        }
+        if (request.getStartTime() != null && request.getEndTime() != null && request.getStartTime() > request.getEndTime()) {
+            throw new BusinessException(CodeMessage.PARAM_ERROR, "开始时间不能大于结束时间");
+        }
+        long count = dataService.queryRecordCount(
+                request.getDeviceId(),
+                request.getStartTime(),
+                request.getEndTime()
+        );
+        return Result.success(count);
+    }
+
     /**
      * 获取所有存储模式
      */

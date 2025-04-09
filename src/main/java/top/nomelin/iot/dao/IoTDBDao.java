@@ -128,6 +128,15 @@ public interface IoTDBDao {
      */
     DeviceTable queryRecords(String devicePath, Long startTime, Long endTime, List<String> selectFields);
 
+    /**
+     * 查询指定设备指定时间范围内的记录数。时间范围为左闭右开区间。
+     * @param devicePath 设备路径
+     * @param startTime 起始时间戳（可为 null）
+     * @param endTime   结束时间戳（可为 null）
+     * @return 传感器记录数量之和。一个数据行可能包含多个传感器，因此返回的是总数。
+     */
+    long queryRecordsCount(String devicePath, Long startTime, Long endTime);
+
 
     /**
      * 删除数据库

@@ -9,6 +9,7 @@
       <el-switch v-model="isShowSymbol" active-text="显示数据点" class="switch-item" @change="updateCharts"/>
       <el-switch v-model="isLarge" active-text="大数据量" class="switch-item" @change="updateCharts"/>
       <el-button type="primary" @click="fetchData">刷新</el-button>
+      <el-button type="primary" @click="pauseQuery =!pauseQuery">{{ pauseQuery ? '开启查询' : '暂停查询' }}</el-button>
       <div class="smooth-level">
         <span>平滑等级：</span>
         <el-slider
@@ -108,6 +109,8 @@ export default {
       isLoading: false,
       smoothLevel: 0, // 平滑等级
 
+      pauseQuery: false, // 控制查询暂停/继续
+
     };
   },
   computed: {
@@ -150,6 +153,7 @@ export default {
     },
     async fetchData() {
       try {
+        if (this.pauseQuery) return
         if (!this.dateRange) return
         // console.log("allDeviceIds", JSON.stringify(this.allDeviceIds))
         if (this.allDeviceIds.length === 0) return
@@ -476,6 +480,7 @@ export default {
 .switch-item {
   margin-right: 10px;
 }
+
 .smooth-level {
   display: flex;
   align-items: center;
@@ -485,6 +490,7 @@ export default {
 .slider {
   width: 100px;
 }
+
 .chart-container {
   margin-bottom: 30px; /* 每个图表下方添加间距 */
 }

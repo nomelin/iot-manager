@@ -37,10 +37,10 @@ class IoTDBDaoTest {
 
         // 3. 挂载并激活元数据模板到设备
         String devicePath = "root.test1.testdevice1";
-        dao.setAndActivateSchema(schemaName,devicePath );
+        dao.setAndActivateSchema(schemaName, devicePath);
         System.out.println("Schema 'testSchema' activated on device 'root.test.testdevice'.");
 
-         //4. 插入一行数据
+        //4. 插入一行数据
         long timestamp = System.currentTimeMillis();
         List<String> measurements = Arrays.asList("temperature1", "humidity2");
         List<TSDataType> types = Arrays.asList(TSDataType.FLOAT, TSDataType.INT32);
@@ -100,8 +100,8 @@ class IoTDBDaoTest {
     }
 
     @Test
-    void testDelete(){
-        String device="root.data.user_1.device_43";
+    void testDelete() {
+        String device = "root.data.user_1.device_43";
         dao.deleteData(device, 1719093773000L, 1719093776000L);
         List<Long> timestamps = new ArrayList<>();
         timestamps.add(1719093778000L);
@@ -111,6 +111,17 @@ class IoTDBDaoTest {
         timestamps.add(1719093784000L);
         timestamps.add(1719093785000L);
         dao.deleteData(device, timestamps);
+    }
+
+    @Test
+    void testQueryCount() {
+        String device = "root.data.user_1.device_61";
+        long startTime = 1719093771000L;
+        long endTime = 1742041610000L;
+        long count = dao.queryRecordsCount(device, startTime, endTime);
+        System.out.println("Count: " + count);
+        long count2 = dao.queryRecordsCount(device, null, null);
+        System.out.println("Count: " + count2);
     }
 
     // 格式化查询结果为 JSON 字符串

@@ -7,6 +7,8 @@ import org.apache.iotdb.rpc.StatementExecutionException;
 import org.apache.iotdb.session.Session;
 import org.apache.iotdb.session.template.MeasurementNode;
 import org.apache.tsfile.enums.TSDataType;
+import org.apache.tsfile.read.common.Field;
+import org.apache.tsfile.read.common.RowRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -234,6 +236,38 @@ public class IoTDBDaoImpl implements IoTDBDao {
                 .map(measurement -> devicePath + "." + measurement)
                 .collect(Collectors.toList());
         return queryRecordsByPaths(devicePath, startTime, endTime, paths, selectFields);
+    }
+
+    @LogExecutionTime(logReturn = true)
+    @Override
+    public long queryRecordsCount(String devicePath, Long startTime, Long endTime) {
+        String sql = String.format("SELECT COUNT(*) FROM %s", devicePath);
+        if (startTime != null && endTime != null) {
+            sql += String.format(" WHERE time >= %d AND time < %d", startTime, endTime);
+        } else if (startTime != null) {
+            sql += String.format(" WHERE time >= %d", startTime);
+        } else if (endTime != null) {
+            sql += String.format(" WHERE time < %d", endTime);
+        }
+        long count = 0;
+        try (SessionDataSet sessionDataSet = executeQueryStatement(sql)) {
+            while (sessionDataSet.hasNext()) {
+                RowRecord rowRecord = sessionDataSet.next();
+                List<Field> fields = rowRecord.getFields();
+                for (Field field : fields) {
+                    Object fieldValue = field.getObjectValue(field.getDataType());
+                    if (fieldValue != null) {
+                        if (fieldValue instanceof Number) {
+                            count += ((Number) fieldValue).longValue();
+                        }
+                    }
+                }
+            }
+        } catch (IoTDBConnectionException | StatementExecutionException e) {
+            throw new SystemException(CodeMessage.IOT_DB_ERROR, "查询数据点数量失败，sql：" + sql, e);
+        }
+
+        return count;
     }
 
     @Override

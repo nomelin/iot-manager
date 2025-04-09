@@ -53,7 +53,7 @@ public interface DataService {
                            List<String> measurements, List<List<Object>> values, int mergeTimestampNum);
 
     /**
-     * 查询记录。查询时的配置信息需要传入。（不从view表中获取配置信息，因为要支持外部非视图查询）
+     * 查询记录。查询时的配置信息会从device表中获取, 每次插入都要查询一次mysql。
      * 查询时会先应用阈值过滤，然后再聚合数据。
      *
      * @param deviceId           设备ID
@@ -118,4 +118,13 @@ public interface DataService {
     DeviceTable queryRecord(Device device, Long startTime, Long endTime, List<String> selectMeasurements, String tagQuery,
                             Integer aggregationTime, QueryAggregateFunc queryAggregateFunc, List<List<Double>> thresholds);
 
+    /**
+     * 查询数据点数量。配置信息会从device表中获取, 每次插入都要查询一次mysql。
+     *
+     * @param deviceId  设备ID
+     * @param startTime 开始时间戳，可以为null，表示不限制
+     * @param endTime   结束时间戳，可以为null，表示不限制
+     * @return 数据点数量（时间范围内所有传感器的记录数之和。tag也算作一个传感器）
+     */
+    long queryRecordCount(int deviceId, Long startTime, Long endTime);
 }

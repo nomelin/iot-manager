@@ -12,6 +12,7 @@ import top.nomelin.iot.common.enums.CacheOpType;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.common.exception.SystemException;
+import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.model.Config;
 import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.dto.DeviceTable;
@@ -33,11 +34,13 @@ import static top.nomelin.iot.util.TimeUtil.isValidQueryAggregationTime;
 public class DataServiceImpl implements DataService {
     private static final Logger log = LoggerFactory.getLogger(DataServiceImpl.class);
     private final DeviceService deviceService;
+    private final IoTDBDao iotDBDao;
 
     private final StorageStrategyManager storageStrategyManager;
 
-    public DataServiceImpl(DeviceService deviceService, StorageStrategyManager storageStrategyManager) {
+    public DataServiceImpl(DeviceService deviceService, IoTDBDao iotDBDao, StorageStrategyManager storageStrategyManager) {
         this.deviceService = deviceService;
+        this.iotDBDao = iotDBDao;
         this.storageStrategyManager = storageStrategyManager;
     }
 
@@ -138,6 +141,12 @@ public class DataServiceImpl implements DataService {
         String devicePath = util.getDevicePath(device.getUserId(), device.getId());
         return query(device, startTime, endTime, selectMeasurements, aggregationTime,
                 queryAggregateFunc, thresholds, strategy, devicePath, tagQuery);
+    }
+
+    @Override
+    public long queryRecordCount(int deviceId, Long startTime, Long endTime) {
+        Device device = deviceService.getDeviceById(deviceId);
+        return iotDBDao.queryRecordsCount(util.getDevicePath(device.getUserId(), deviceId), startTime, endTime);
     }
 
     private DeviceTable query(Device device, Long startTime, Long endTime,

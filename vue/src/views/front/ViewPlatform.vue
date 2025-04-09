@@ -77,6 +77,9 @@
             </el-form-item>
           </el-form>
         </el-col>
+        <el-col :span="4">
+          <el-button type="primary" @click="showAnalysisDialog">查询分析</el-button>
+        </el-col>
       </el-row>
 
       <el-row :gutter="20" class="filter-row">
@@ -133,6 +136,37 @@
           :selected-device-ids="selectedDeviceIds "
       />
     </div>
+    <!-- 查询分析对话框 -->
+    <el-dialog
+        :visible.sync="analysisDialogVisible"
+        title="查询分析"
+        width="600px"
+    >
+      <div v-if="isLoadingDataCount" class="loading-container">
+        <i class="el-icon-loading" style="font-size: 24px;"></i>
+        <p>正在加载数据...</p>
+      </div>
+      <div v-else>
+        <div class="count-info">
+          <span>数据点数量(实际)：</span>
+          <strong>{{ dataPointCount.toLocaleString() }}</strong>
+          <el-tag :type="countLevelType" class="count-tag">{{ countLevelLabel }}</el-tag>
+        </div>
+        <div class="analysis-content">
+          <p>数据点数量=所有传感器数据点数量之和，这直接决定了耗时。</p>
+          <p>大数据查询时，耗时主要为数据库查询耗时，网络传输耗时，前端渲染耗时。</p>
+          <p>
+            本系统已采用GZIP优化网络传输，不过由于服务器带宽较低，约为500KB~1MB/S，如果数据量较大，依然需要较久的网络传输时间。网络传输时间和服务器响应时间可从F12控制台网络页面查看。</p>
+          <p class="warning-text">一般认为，当数据点数量达到10,000,000量级时，可能无法在10秒内得到结果。</p>
+
+          <h4 class="optimize-title">参考优化方法：</h4>
+          <p>1. 减少选择时间范围：这可以减少查询的数据点数量，从而减少数据库查询耗时，网络传输耗时，前端渲染耗时。</p>
+          <p>2.
+            增大查询聚合时间粒度：这可以减少返回的数据点数量，从而减少网络传输时间和前端渲染耗时，但是不能减少数据库查询耗时。</p>
+        </div>
+      </div>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -174,7 +208,27 @@ export default {
         '1y': 365 * 24 * 60 * 60 * 1000,
       },
 
+      analysisDialogVisible: false,
+      isLoadingDataCount: false,
+      dataPointCount: 0,
+
     };
+  },
+  computed: {
+    countLevelLabel() {
+      const count = this.dataPointCount;
+      if (count < 100000) return '低';
+      if (count < 3000000) return '中';
+      if (count < 20000000) return '高';
+      return '极高';
+    },
+    countLevelType() {
+      const count = this.dataPointCount;
+      if (count < 100000) return 'success';
+      if (count < 3000000) return 'warning';
+      if (count < 20000000) return 'danger';
+      return 'danger';
+    },
   },
   methods: {
     fetchDevices() {
@@ -223,6 +277,46 @@ export default {
         this.dateRange[0] + shift,
         this.dateRange[1] + shift
       ]
+    },
+
+    async showAnalysisDialog() {
+      if (this.selectedDeviceIds.length === 0) {
+        this.$message.warning('请先选择设备');
+        return;
+      }
+      if (!this.dateRange || this.dateRange.length !== 2) {
+        this.$message.warning('请选择有效时间范围');
+        return;
+      }
+
+      const [startTime, endTime] = this.dateRange;
+      if (startTime > endTime) {
+        this.$message.warning('开始时间不能大于结束时间');
+        return;
+      }
+
+      this.analysisDialogVisible = true;
+      this.isLoadingDataCount = true;
+      this.dataPointCount = 0;
+
+      try {
+        const counts = await Promise.all(
+            this.selectedDeviceIds.map(deviceId =>
+                this.$request.post('/data/query/count', {
+                  deviceId,
+                  startTime,
+                  endTime
+                }).then(res => res.code === '200' ? res.data : 0)
+            )
+        );
+
+        this.dataPointCount = counts.reduce((sum, count) => sum + (Number(count) || 0), 0);
+      } catch (error) {
+        this.$message.error('数据加载失败');
+        console.error('查询数据点数量失败:', error);
+      } finally {
+        this.isLoadingDataCount = false;
+      }
     },
   },
   created() {
