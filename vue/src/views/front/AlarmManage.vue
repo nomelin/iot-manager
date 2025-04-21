@@ -23,7 +23,6 @@
         :data="filteredAlerts"
         class="alert-table"
         height="calc(100vh - 160px)"
-        style="width: 100%"
         @row-click="showDetail"
         @selection-change="handleSelectionChange"
     >
@@ -82,116 +81,119 @@
     <el-dialog
         :title="dialogType === 'create' ? '新建告警规则' : '编辑告警规则'"
         :visible.sync="dialogVisible"
+        class="alert-dialog"
         width="50%"
     >
-      <el-form ref="alertForm" :model="currentAlert" label-width="150px">
-        <el-divider content-position="left">基本信息</el-divider>
-        <el-form-item label="名称" prop="name" required>
-          <el-input v-model="currentAlert.name"></el-input>
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="currentAlert.description" type="textarea"></el-input>
-        </el-form-item>
-        <el-form-item label="设备ID">
-          <el-select v-model="currentAlert.deviceId" clearable filterable>
-            <el-option
-                v-for="device in allDevices"
-                :key="device.id"
-                :label="device.name"
-                :value="device.id"
-            ></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="组ID">
-          <el-select v-model="currentAlert.groupId" clearable filterable>
-            <el-option
-                v-for="group in allGroups"
-                :key="group.id"
-                :label="group.name"
-                :value="group.id"
-            ></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="通知用户">
-          <el-select v-model="currentAlert.actionConfig.notifyUsers" disabled multiple>
-            <el-option
-                v-for="u in [user]"
-                :key="u.id"
-                :label="u.name"
-                :value="u.id"
-            ></el-option>
-          </el-select>
-        </el-form-item>
+      <div class="dialog-body-scroll-wrapper">
+        <el-form ref="alertForm" :model="currentAlert" label-width="150px">
+          <el-divider content-position="center" class="styled-divider">基本信息</el-divider>
+          <el-form-item label="名称" prop="name" required>
+            <el-input v-model="currentAlert.name"></el-input>
+          </el-form-item>
+          <el-form-item label="描述">
+            <el-input v-model="currentAlert.description" type="textarea"></el-input>
+          </el-form-item>
+          <el-form-item label="设备ID">
+            <el-select v-model="currentAlert.deviceId" clearable filterable>
+              <el-option
+                  v-for="device in allDevices"
+                  :key="device.id"
+                  :label="device.name"
+                  :value="device.id"
+              ></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="组ID">
+            <el-select v-model="currentAlert.groupId" clearable filterable>
+              <el-option
+                  v-for="group in allGroups"
+                  :key="group.id"
+                  :label="group.name"
+                  :value="group.id"
+              ></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="通知用户">
+            <el-select v-model="currentAlert.actionConfig.notifyUsers" disabled multiple>
+              <el-option
+                  v-for="u in [user]"
+                  :key="u.id"
+                  :label="u.name"
+                  :value="u.id"
+              ></el-option>
+            </el-select>
+          </el-form-item>
 
-        <el-divider content-position="left">触发条件配置</el-divider>
-        <el-form-item label="监测指标" prop="conditionConfig.metric" required>
-          <el-input v-model="currentAlert.conditionConfig.metric"></el-input>
-        </el-form-item>
-        <el-form-item label="持续时长(S)(0表示立即)">
-          <!--          <el-switch v-model="enableDuration" active-text="立即" inactive-text="持续"></el-switch>-->
-          <el-input-number
-              v-model="currentAlert.conditionConfig.duration"
-              :min="0">
-          </el-input-number>
-        </el-form-item>
-        <el-form-item label="阈值范围">
-          <div class="threshold-inputs">
+          <el-divider content-position="center" class="styled-divider">触发条件配置</el-divider>
+          <el-form-item label="监测指标" prop="conditionConfig.metric" required>
+            <el-input v-model="currentAlert.conditionConfig.metric"></el-input>
+          </el-form-item>
+          <el-form-item label="持续时长(S)(0表示立即)">
+            <!--          <el-switch v-model="enableDuration" active-text="立即" inactive-text="持续"></el-switch>-->
             <el-input-number
-                v-model="currentAlert.conditionConfig.minValue"
-                :precision="2"
-                placeholder="最小值"
-            ></el-input-number>
-            <span class="threshold-separator">-</span>
-            <el-input-number
-                v-model="currentAlert.conditionConfig.maxValue"
-                :precision="2"
-                placeholder="最大值"
-            ></el-input-number>
-          </div>
-        </el-form-item>
+                v-model="currentAlert.conditionConfig.duration"
+                :min="0">
+            </el-input-number>
+          </el-form-item>
+          <el-form-item label="阈值范围">
+            <div class="threshold-inputs">
+              <el-input-number
+                  v-model="currentAlert.conditionConfig.minValue"
+                  :precision="2"
+                  placeholder="最小值"
+              ></el-input-number>
+              <span class="threshold-separator">-</span>
+              <el-input-number
+                  v-model="currentAlert.conditionConfig.maxValue"
+                  :precision="2"
+                  placeholder="最大值"
+              ></el-input-number>
+            </div>
+          </el-form-item>
 
-        <el-divider content-position="left">触发动作配置</el-divider>
-        <el-form-item label="通知渠道" required>
-          <el-checkbox-group v-model="currentAlert.actionConfig.channels">
-            <el-checkbox
-                v-for="(label, value) in alertChannelMap"
-                :key="value"
-                :label="value"
-            >
-              {{ label }}
-            </el-checkbox>
-          </el-checkbox-group>
-        </el-form-item>
-        <el-form-item label="消息类型" required>
-          <el-select v-model="currentAlert.actionConfig.messageType">
-            <el-option
-                v-for="type in messageTypes"
-                :key="type"
-                :label="type"
-                :value="type"
-            ></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="额外信息">
-          <el-input
-              v-model="currentAlert.actionConfig.extraMessage"
-              type="textarea"
-          ></el-input>
-        </el-form-item>
-        <el-form-item label="静默时间(S)(0表示不静默)">
-          <!--          <el-switch v-model="enableSilent" active-text="不静默" inactive-text="静默"></el-switch>-->
-          <el-input-number
-              v-model="currentAlert.actionConfig.silentDuration"
-              :min="0">
-          </el-input-number>
-        </el-form-item>
-        <el-form-item v-if="this.dialogType === 'edit'" label="创建时间">
-          {{ currentAlert.createdTime | formatTime }}
-        </el-form-item>
-        <el-form-item v-if="this.dialogType === 'edit'" label="最后修改">
-          {{ currentAlert.updatedTime | formatTime }}
-        </el-form-item>
-      </el-form>
+          <el-divider content-position="center" class="styled-divider">触发动作配置</el-divider>
+          <el-form-item label="通知渠道" required>
+            <el-checkbox-group v-model="currentAlert.actionConfig.channels">
+              <el-checkbox
+                  v-for="(label, value) in alertChannelMap"
+                  :key="value"
+                  :label="value"
+              >
+                {{ label }}
+              </el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+          <el-form-item label="消息类型" required>
+            <el-select v-model="currentAlert.actionConfig.messageType">
+              <el-option
+                  v-for="type in messageTypes"
+                  :key="type"
+                  :label="type"
+                  :value="type"
+              ></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="额外信息">
+            <el-input
+                v-model="currentAlert.actionConfig.extraMessage"
+                type="textarea"
+            ></el-input>
+          </el-form-item>
+          <el-form-item label="静默时间(S)(0表示不静默)">
+            <!--          <el-switch v-model="enableSilent" active-text="不静默" inactive-text="静默"></el-switch>-->
+            <el-input-number
+                v-model="currentAlert.actionConfig.silentDuration"
+                :min="0">
+            </el-input-number>
+          </el-form-item>
+          <el-form-item v-if="this.dialogType === 'edit'" label="创建时间">
+            {{ currentAlert.createdTime | formatTime }}
+          </el-form-item>
+          <el-form-item v-if="this.dialogType === 'edit'" label="最后修改">
+            {{ currentAlert.updatedTime | formatTime }}
+          </el-form-item>
+        </el-form>
+      </div>
       <span slot="footer">
         <el-button @click="cancelAlert">取消</el-button>
         <el-button type="primary" @click="submitAlert">确定</el-button>
@@ -385,6 +387,15 @@ export default {
 
 .alert-table {
   margin-bottom: 10px;
+  width: 100%;
+}
+
+.alert-dialog {
+}
+.dialog-body-scroll-wrapper {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 10px;
 }
 
 .threshold-inputs {
@@ -426,5 +437,15 @@ export default {
 
 ::v-deep .el-button {
   font-weight: bold !important;
+}
+
+::v-deep .styled-divider .el-divider__text {
+  padding: 2px 8px;
+  border: 1px solid #dcdfe6;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 14px;
+  background-color: #fff;
+  line-height: 1;
 }
 </style>
