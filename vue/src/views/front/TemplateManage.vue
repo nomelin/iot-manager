@@ -135,7 +135,7 @@
         </el-form-item>
 
         <!-- 聚合时间 -->
-        <el-form-item :rules="[{ required: true, message: '请选择聚合时间', trigger: 'change' }]" label="聚合时间"
+        <el-form-item :rules="[{ required: true, message: '请选择聚合时间', trigger: 'change' }]" label="存储聚合时间"
                       prop="config.aggregationTime">
           <el-select v-model="newTemplate.config.aggregationTime" placeholder="请选择">
             <el-option
