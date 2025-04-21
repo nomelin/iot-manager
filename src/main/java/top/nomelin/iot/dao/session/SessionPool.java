@@ -35,7 +35,7 @@ public class SessionPool {
     @Value("${iotdb.session.pool.min-idle:10}")
     private int minIdle;
 
-    @Value("${iotdb.session.pool.max-wait-seconds:30}")
+    @Value("${iotdb.session.pool.max-wait-seconds:10}")
     private int maxWaitSeconds;
 
     public SessionPool(

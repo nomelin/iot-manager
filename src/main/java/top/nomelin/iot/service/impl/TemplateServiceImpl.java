@@ -13,9 +13,11 @@ import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.dao.TemplateMapper;
 import top.nomelin.iot.model.Template;
+import top.nomelin.iot.service.MessageService;
 import top.nomelin.iot.service.TemplateService;
 import top.nomelin.iot.service.storage.StorageStrategy;
 import top.nomelin.iot.service.storage.StorageStrategyManager;
+import top.nomelin.iot.util.SagaExecutor;
 
 import java.util.List;
 import java.util.Objects;
@@ -33,15 +35,18 @@ public class TemplateServiceImpl implements TemplateService {
     private final TemplateMapper templateMapper;
     private final IoTDBDao iotDBDao;
 
+    private final MessageService messageService;
+
     // 新增策略管理器
     private final StorageStrategyManager strategyManager;
 
 
     private final CurrentUserCache currentUserCache;
 
-    public TemplateServiceImpl(TemplateMapper templateMapper, IoTDBDao iotDBDao, StorageStrategyManager strategyManager, CurrentUserCache currentUserCache) {
+    public TemplateServiceImpl(TemplateMapper templateMapper, IoTDBDao iotDBDao, MessageService messageService, StorageStrategyManager strategyManager, CurrentUserCache currentUserCache) {
         this.templateMapper = templateMapper;
         this.iotDBDao = iotDBDao;
+        this.messageService = messageService;
         this.strategyManager = strategyManager;
         this.currentUserCache = currentUserCache;
     }
@@ -68,8 +73,23 @@ public class TemplateServiceImpl implements TemplateService {
         checkTemplate(template);
         //插入mysql。因为后面要使用id，所以必须先插入mysql。
         template.setUserId(currentUserCache.getCurrentUser().getId());
-        templateMapper.insert(template);
-        log.info("mysql中插入模板成功，template: {}", template);
+        Integer userId = template.getUserId();
+
+        SagaExecutor saga = new SagaExecutor(messageService, userId, "创建模板");
+
+        saga.addStep(
+                ctx -> "mysql中插入模板，name：" + template.getName(),
+                ctx -> {
+                    templateMapper.insert(template);
+                    ctx.put("templateId", template.getId());
+                    log.info("[SAGA正向]mysql中插入模板成功，template: {}", template);
+                },
+                ctx -> {
+                    templateMapper.delete(template.getId());
+                    log.info("[SAGA补偿]mysql中删除模板成功，templateId: {}", ctx.get("templateId"));
+                }
+        );
+
         //template.config.storageMode只是创建设备时的默认值，每个设备的实际存储模式由设备自身的配置决定。
 
         // 预先对所有策略创建对应的iotdb模板
@@ -80,14 +100,28 @@ public class TemplateServiceImpl implements TemplateService {
             List<MeasurementNode> processedNodes = strategy.preprocessTemplateNodes(originalNodes);
             addTagNode(processedNodes);//增加tag属性，一定要在策略处理之后再添加。
             // 创建IoTDB模板
-            iotDBDao.createSchema(
-                    Constants.TEMPLATE_PREFIX + template.getId() + strategy.getTemplateSuffix(),
-                    processedNodes // 使用处理后的节点
+            saga.addStep(
+                    ctx -> {
+                        Integer tid = (Integer) ctx.get("templateId");
+                        return "创建IoTDB模板：" + Constants.TEMPLATE_PREFIX + tid + strategy.getTemplateSuffix();
+                    },
+                    ctx -> {
+                        Integer tid = (Integer) ctx.get("templateId");
+                        String templateName = Constants.TEMPLATE_PREFIX + tid + strategy.getTemplateSuffix();
+                        iotDBDao.createSchema(templateName, processedNodes);
+                        log.info("[SAGA正向]创建iotdb模板成功，templateName: {}, measurementNodes: {}, strategy: {}",
+                                templateName,
+                                processedNodes.stream().map(MeasurementNode::getName).toList(), strategy.getClass().getSimpleName());
+                    },
+                    ctx -> {
+                        Integer tid = (Integer) ctx.get("templateId");
+                        String templateName = Constants.TEMPLATE_PREFIX + tid + strategy.getTemplateSuffix();
+                        iotDBDao.deleteSchema(templateName);
+                        log.info("[SAGA补偿]删除iotdb模板成功，templateName: {}", templateName);
+                    }
             );
-            log.info("创建iotdb模板成功，templateName: {}, measurementNodes: {}, strategy: {}",
-                    Constants.TEMPLATE_PREFIX + template.getId() + strategy.getTemplateSuffix(),
-                    processedNodes.stream().map(MeasurementNode::getName).toList(), strategy.getClass().getSimpleName());
         }
+        saga.execute();
         log.info("全部策略创建iotdb模板成功，template: {}", template);
         return template;
     }

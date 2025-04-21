@@ -60,7 +60,7 @@ iotdb:
     pool:
       max: 50
       min-idle: 5
-      max-wait-seconds: 30 # 最大等待时间（获取连接时阻塞的时间）
+      max-wait-seconds: 10 # 最大等待时间（获取连接时阻塞的时间）
 
 file:
   tempDir: D:\lib\毕业设计\project\iot\temp\upload\
