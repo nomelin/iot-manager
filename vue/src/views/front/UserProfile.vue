@@ -56,6 +56,26 @@
         <el-button type="primary" @click="save">确 定</el-button>
       </div>
     </el-dialog>
+
+    <el-dialog
+        title="全局配置"
+        :visible.sync="configDialogVisible"
+        width="30%"
+        destroy-on-close>
+      <el-form label-width="auto">
+        <el-form-item label="IoTDB重试次数">
+          <el-input-number v-model="retryCount" :min="0" :step="1" />
+        </el-form-item>
+      </el-form>
+      <div style="color: gray; font-size: 12px; margin-top: 10px;">
+        注意：本页面的配置在后端重启后会重置为配置文件初始值。
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="configDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="saveRetryConfig">保 存</el-button>
+      </div>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -80,6 +100,9 @@ export default {
       user: getItemWithExpiry("user"),
       dialogVisible: false,
       defaultAvatar: defaultAvatar,
+
+      configDialogVisible: false,
+      retryCount: 0,
 
       rules: {
         oldPassword: [
@@ -154,7 +177,24 @@ export default {
       })
     },
     goToConfig() {
-      this.$message.info("全局配置待开发");
+      this.$request.get("/global/getIoTDBRetry").then(res => {
+        if (res.code === '200') {
+          this.retryCount = res.data
+          this.configDialogVisible = true
+        } else {
+          this.$message.error("获取配置失败：" + res.msg)
+        }
+      })
+    },
+    saveRetryConfig() {
+      this.$request.get(`/global/setIoTDBRetry/${this.retryCount}`).then(res => {
+        if (res.code === '200') {
+          this.$message.success("配置保存成功")
+          this.configDialogVisible = false
+        } else {
+          this.$message.error("保存失败：" + res.msg)
+        }
+      })
     },
     goToDebug() {
       // this.$router.push("/debug");
@@ -268,6 +308,10 @@ export default {
   font-size: 2rem;
   margin-right: 1.5rem;
   cursor: pointer;
+}
+
+::v-deep .el-dialog {
+  border-radius: 1.5rem !important;
 }
 
 </style>

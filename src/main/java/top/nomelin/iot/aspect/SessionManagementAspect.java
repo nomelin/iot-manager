@@ -1,93 +1,102 @@
 package top.nomelin.iot.aspect;
 
-import org.apache.iotdb.isession.util.Version;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.session.Session;
-import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.SystemException;
-import top.nomelin.iot.util.SessionContext;
+import top.nomelin.iot.dao.session.SessionContext;
+import top.nomelin.iot.dao.session.SessionPool;
 
 /**
- * 每个线程都会有一个Session，因此需要在每个DAO方法调用前创建Session，并在方法调用后关闭Session。
- * 统一异常处理，并在方法调用后清理Session。
+ * 新版Session管理切面，集成连接池与重试机制
  */
 @Aspect
 @Component
+@Order(1) // 确保在事务切面之前执行
 public class SessionManagementAspect {
     private static final Logger log = LoggerFactory.getLogger(SessionManagementAspect.class);
+    private final SessionPool sessionPool;
+    @Value("${iotdb.retry.max}")
+    private int maxRetries;//不重试则为0，只会执行一次
+    @Value("${iotdb.retry.initial-interval}")
+    private int initialInterval;
+    @Value("${iotdb.retry.multiplier}")
+    private int multiplier;
 
-    @Value("${iotdb.ip}")
-    private String ip;
-
-    @Value("${iotdb.port}")
-    private int port;
-
-    @Value("${iotdb.username}")
-    private String username;
-
-    @Value("${iotdb.password}")
-    private String password;
-
-    @Before("execution(* top.nomelin.iot.dao.impl.IoTDBDaoImpl.*(..))")
-    public void beforeMethod(JoinPoint joinPoint) {
-        //如果当前线程没有Session，则创建Session
-        if (SessionContext.getCurrentSession() == null) {
-            createSession();
-        }
-        Session session = SessionContext.getCurrentSession();
-        openSession(session);//打开Session
+    @Autowired
+    public SessionManagementAspect(SessionPool sessionPool) {
+        this.sessionPool = sessionPool;
     }
 
-    @After("execution(* top.nomelin.iot.dao.impl.IoTDBDaoImpl.*(..))")
-    public void afterMethod(JoinPoint joinPoint) {
-        Session session = SessionContext.getCurrentSession();
-        closeSession(session);//关闭Session
+    public int getMaxRetries() {
+        return maxRetries;
     }
 
-    private void createSession() {
-        Session session = new Session.Builder()
-                .host(ip)
-                .port(port)
-                .username(username)
-                .password(password)
-                .version(Version.V_1_0)
-                .build();
-        try {
-            session.open(false);
-        } catch (IoTDBConnectionException e) {
-            log.error("创建Session失败: {}, error: {}", e.getMessage(), e);
-            throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
-        }
-        SessionContext.setCurrentSession(session);
+    public void setMaxRetries(int maxRetries) {
+        int oldMaxRetries = this.maxRetries;
+        this.maxRetries = maxRetries;
+        log.info("IoTDB 最大重试次数设置从 {} 调整为 {}", oldMaxRetries, maxRetries);
     }
 
-    private void openSession(Session session) {
-        if (session != null) {
+    @Around("execution(* top.nomelin.iot.dao.impl.IoTDBDaoImpl.*(..))")
+    public Object manageSession(ProceedingJoinPoint joinPoint) throws Throwable {
+        Session session = null;
+        int retryCount = 0;
+        Throwable lastException = null;
+
+        //错误重试机制
+        while (retryCount <= maxRetries) {
             try {
-                session.open(false);
-            } catch (IoTDBConnectionException e) {
-                log.error("打开Session失败: {}, error: {}", e.getMessage(), e);
-                throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
+                // 从连接池获取Session
+                session = sessionPool.borrowSession();
+                SessionContext.bind(session);
+
+                log.debug("Session acquired [{}], retry {}/{}", session, retryCount, maxRetries);
+                return joinPoint.proceed();
+
+            } catch (IoTDBConnectionException | SystemException e) {
+                // 记录异常并标记需要重试
+                lastException = e;
+                retryCount++;
+                if (retryCount > maxRetries) {
+                    log.warn("IoTDB操作失败，重试次数达到上限 ({}次), last exception: {}", maxRetries, e);
+                    throw new SystemException(CodeMessage.IOT_DB_ERROR, "数据库重试全部失败", lastException);
+                }
+                log.warn("IoTDB操作失败，准备重试 (第{}/{}次)", retryCount, maxRetries, e);
+
+                // 立即归还异常连接
+                if (session != null) {
+                    sessionPool.returnSession(session);
+                    session = null;
+                }
+
+                // 等待间隔（指数退避）
+                Thread.sleep(calculateBackoffInterval(retryCount));
+
+            } finally {
+                // 清理线程绑定
+                SessionContext.unbind();
+
+                // 正常归还连接
+                if (session != null) {
+                    sessionPool.returnSession(session);
+                }
             }
         }
+
+        throw new SystemException(CodeMessage.IOT_DB_ERROR, "数据库重试全部失败", lastException);//链式抛出最后一次的异常
     }
 
-    private void closeSession(Session session) {
-        try {
-            if (session != null) {
-                session.close();
-            }
-        } catch (IoTDBConnectionException e) {
-            log.error("关闭Session失败: {}, error: {}", e.getMessage(), e);
-            throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
-        }
+    private long calculateBackoffInterval(int retryCount) {
+        return (long) (Math.pow(multiplier, retryCount - 1) * initialInterval); // 指数退避：100ms, 200ms, 400ms...
     }
 }

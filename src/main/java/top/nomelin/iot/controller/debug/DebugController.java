@@ -14,6 +14,7 @@ import top.nomelin.iot.common.Result;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
+import top.nomelin.iot.dao.session.SessionPool;
 import top.nomelin.iot.service.TaskService;
 import top.nomelin.iot.service.alert.AlertService;
 import top.nomelin.iot.service.alert.push.WechatPushService;
@@ -47,6 +48,8 @@ public class DebugController {
 
     private final WechatPushService wechatPushService;
 
+    private final SessionPool sessionPool;
+
     @Value("${file.tempDir}")
     private String tempDir;
 
@@ -58,7 +61,7 @@ public class DebugController {
 
     public DebugController(CacheOperations cacheOperations, TaskService taskService, AlertService alertService,
                            IoTDBDao iotDBDao, JdbcTemplate jdbcTemplate,
-                           @Qualifier("fileProcessingExecutor") ThreadPoolTaskExecutor executor, WechatPushService wechatPushService) {
+                           @Qualifier("fileProcessingExecutor") ThreadPoolTaskExecutor executor, WechatPushService wechatPushService, SessionPool sessionPool) {
         this.cacheOperations = cacheOperations;
         this.taskService = taskService;
         this.alertService = alertService;
@@ -66,6 +69,7 @@ public class DebugController {
         this.jdbcTemplate = jdbcTemplate;
         this.executor = executor;
         this.wechatPushService = wechatPushService;
+        this.sessionPool = sessionPool;
     }
 
     @RequestMapping("/hello")
@@ -304,5 +308,10 @@ public class DebugController {
     public Result clearUserQueue(@PathVariable Integer userId) {
         wechatPushService.clearUserQueue(userId);
         return Result.success("清空用户队列成功.");
+    }
+
+    @RequestMapping("/iotdb/session-pool/states")
+    public Result getSessionPoolStates() {
+        return Result.success(sessionPool.getStats());
     }
 }

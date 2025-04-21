@@ -17,9 +17,9 @@ import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.SystemException;
 import top.nomelin.iot.dao.IoTDBDao;
+import top.nomelin.iot.dao.session.SessionContext;
 import top.nomelin.iot.model.dto.DeviceTable;
 import top.nomelin.iot.model.dto.Record;
-import top.nomelin.iot.util.SessionContext;
 import top.nomelin.iot.util.TimeUtil;
 
 import java.io.IOException;

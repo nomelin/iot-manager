@@ -180,6 +180,7 @@ public class CompatibleStorageStrategy implements StorageStrategy {
     }
 
     // 合并已有数据(需查多次)
+    @Deprecated(forRemoval = true)
     private void singleMerge(String devicePath, Map<Long, Map<String, List<Object>>> windowData,
                              List<Long> windowTsToMerge) {
         windowTsToMerge.forEach(windowTs -> {

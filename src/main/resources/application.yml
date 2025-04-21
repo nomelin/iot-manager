@@ -52,6 +52,16 @@ iotdb:
   stopPath: D:\lib\毕业设计\iotdb\apache-iotdb-1.3.3-all-bin\sbin\stop-standalone.bat
   query:
     timeout: 3000
+  retry:
+    max: 3 # 最大重试次数
+    initial-interval: 100 # 单位毫秒，首次重试间隔
+    multiplier: 2 # 指数退避系数
+  session:
+    pool:
+      max: 50
+      min-idle: 5
+      max-wait-seconds: 30 # 最大等待时间（获取连接时阻塞的时间）
+
 file:
   tempDir: D:\lib\毕业设计\project\iot\temp\upload\
 

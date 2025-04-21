@@ -135,6 +135,27 @@
       </div>
     </el-card>
 
+    <el-card class="debug-section">
+      <div class="section-header">
+        <h3>IoTDB Session连接池状态</h3>
+        <div>
+          <el-button :loading="sessionPoolLoading" type="primary" @click="getSessionPoolStats">刷新连接池状态
+          </el-button>
+        </div>
+      </div>
+      <el-table :data="[sessionPoolStats]" border style="width: 100%">
+        <el-table-column label="最大连接数" prop="maxTotal"/>
+        <el-table-column label="活动连接数" prop="numActive"/>
+        <el-table-column label="空闲连接数" prop="numIdle"/>
+        <el-table-column label="最小空闲连接数" prop="minIdle"/>
+        <el-table-column label="等待线程数" prop="numWaiters"/>
+        <el-table-column label="创建总数" prop="createdCount"/>
+        <el-table-column label="借出总数" prop="borrowedCount"/>
+        <el-table-column label="归还总数" prop="returnedCount"/>
+        <el-table-column label="销毁总数" prop="destroyedCount"/>
+      </el-table>
+    </el-card>
+
     <!-- 告警触发状态缓存 -->
     <el-card class="debug-section">
       <div class="section-header">
@@ -203,9 +224,9 @@
               type="number"
           />
           <el-button
+              :disabled="!addGlobalNum"
               type="primary"
               @click="addGlobalRemaining"
-              :disabled="!addGlobalNum"
           >
             增加全局条数
           </el-button>
@@ -224,15 +245,15 @@
               type="number"
           />
           <el-button
-              type="primary"
               :disabled="!userIdInput"
+              type="primary"
               @click="getUserStatus"
           >
             查询用户状态
           </el-button>
           <el-button
-              type="danger"
               :disabled="!userIdInput"
+              type="danger"
               @click="clearUserQueue"
           >
             清空用户队列
@@ -255,7 +276,6 @@
         </el-descriptions>
       </div>
     </el-card>
-
 
 
   </div>
@@ -303,6 +323,10 @@ export default {
       addGlobalNum: null,
       userIdInput: '',
       userStatus: null,
+
+      // 连接池监测相关
+      sessionPoolStats: {},
+      sessionPoolLoading: false,
     }
   },
   computed: {
@@ -323,6 +347,7 @@ export default {
     this.getAlertStates();
     this.getThreadPoolStats();
     this.getGlobalRemaining();
+    this.getSessionPoolStats();
   },
 
   methods: {
@@ -673,6 +698,17 @@ export default {
         }
       } catch (error) {
         // 取消操作不提示
+      }
+    },
+    async getSessionPoolStats() {
+      this.sessionPoolLoading = true;
+      try {
+        const res = await this.$request.get('/debug/iotdb/session-pool/states');
+        if (res.code === '200') {
+          this.sessionPoolStats = res.data || {};
+        }
+      } finally {
+        this.sessionPoolLoading = false;
       }
     },
 
