@@ -71,6 +71,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
                 isSchemaSetOn = true;
             }
             if (!isSchemaSetOn) {
+                log.info("元数据模板 {} 未挂载到路径 {}，准备挂载", schemaName, devicePath);
                 getSession().setSchemaTemplate(schemaName, devicePath);
                 log.info("挂载 元数据模板 {} 到路径 {} 成功", schemaName, devicePath);
             }
@@ -81,6 +82,7 @@ public class IoTDBDaoImpl implements IoTDBDao {
                 isSchemaUsingOn = true;
             }
             if (!isSchemaUsingOn) {
+                log.info("元数据模板 {} 未在设备 {} 上激活，准备激活", schemaName, devicePath);
                 executeNonQueryStatement("CREATE TIMESERIES OF SCHEMA TEMPLATE on " + devicePath);
                 log.info("激活 元数据模板 {} 到设备 {} 成功, 并创建时间序列", schemaName, devicePath);
             }
