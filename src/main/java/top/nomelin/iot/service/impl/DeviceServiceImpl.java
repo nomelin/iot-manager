@@ -94,7 +94,7 @@ public class DeviceServiceImpl implements DeviceService {
 
         // 插入MySQL设备记录
         saga.addStep(
-                ctx -> "插入设备到MySQL：" + device.getName(),
+                ctx -> "插入设备到MySQL，name: " + device.getName(),
                 ctx -> {
                     deviceMapper.insert(device);
                     ctx.put("deviceId", device.getId());
@@ -111,7 +111,7 @@ public class DeviceServiceImpl implements DeviceService {
         saga.addStep(
                 ctx -> {
                     Integer did = (Integer) ctx.get("deviceId");
-                    return "创建IoTDB设备：" + util.getDevicePath(userId, did);
+                    return "创建IoTDB设备，path: " + util.getDevicePath(userId, did);
                 },
                 ctx -> {
                     Integer did = (Integer) ctx.get("deviceId");
