@@ -66,6 +66,9 @@ public class SagaExecutor {
         steps.add(new SagaStep(nameFn, action, compensation));
     }
 
+    /**
+     * 执行事务。
+     */
     public void execute() {
         int successCount = 0;
         try {
@@ -90,14 +93,14 @@ public class SagaExecutor {
             for (int i = successCount + 1; i < steps.size(); i++) {
                 content.append("⏩ 跳过未执行：").append(steps.get(i).getName(context)).append("<br>");
             }
-            content.append("------------------------------------------<br>");
+            content.append("---------------------------------------------------------------<br>");
 
             // 补偿执行
             for (int i = successCount - 1; i >= 0; i--) {
                 try {
                     steps.get(i).getCompensation().execute(context);
                     log.warn("已补偿步骤：{}", steps.get(i).getName(context));
-                    content.append("🔁 已补偿：").append(steps.get(i).getName(context)).append("<br>");
+                    content.append("🔁 已成功补偿：").append(steps.get(i).getName(context)).append("<br>");
                 } catch (Exception ce) {
                     log.error("补偿步骤失败：{}，异常：{}", steps.get(i).getName(context), ce.getMessage(), ce);
                     content.append("❌ 补偿失败：").append(steps.get(i).getName(context))

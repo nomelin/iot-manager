@@ -18,9 +18,11 @@ import top.nomelin.iot.model.Group;
 import top.nomelin.iot.model.Template;
 import top.nomelin.iot.service.DeviceService;
 import top.nomelin.iot.service.GroupService;
+import top.nomelin.iot.service.MessageService;
 import top.nomelin.iot.service.TemplateService;
 import top.nomelin.iot.service.storage.StorageStrategy;
 import top.nomelin.iot.service.storage.StorageStrategyManager;
+import top.nomelin.iot.util.SagaExecutor;
 import top.nomelin.iot.util.util;
 
 import java.util.ArrayList;
@@ -44,15 +46,18 @@ public class DeviceServiceImpl implements DeviceService {
     private final StorageStrategyManager storageStrategyManager;
     private final GroupService groupService;//懒加载，避免循环依赖
 
+    private final MessageService messageService;
+
     private final IoTDBDao iotDBDao;
 
     public DeviceServiceImpl(DeviceMapper deviceMapper, TemplateService templateService, CurrentUserCache currentUserCache,
-                             StorageStrategyManager storageStrategyManager, @Lazy GroupService groupService, IoTDBDao iotDBDao) {
+                             StorageStrategyManager storageStrategyManager, @Lazy GroupService groupService, MessageService messageService, IoTDBDao iotDBDao) {
         this.deviceMapper = deviceMapper;
         this.templateService = templateService;
         this.currentUserCache = currentUserCache;
         this.storageStrategyManager = storageStrategyManager;
         this.groupService = groupService;
+        this.messageService = messageService;
         this.iotDBDao = iotDBDao;
     }
 
@@ -77,23 +82,56 @@ public class DeviceServiceImpl implements DeviceService {
     public Device addDevice(Device device, int templateId) {
         device.setUserId(currentUserCache.getCurrentUser().getId());
         device.setTemplateId(templateId);
+        Integer userId = device.getUserId();
         //使用模板的配置作为设备的基本配置
         Template template = templateService.getTemplateById(templateId);
         Config config = mergeConfig(template, device);//合并模板和设备的配置
         device.setConfig(config);
         StorageStrategy storageStrategy = storageStrategyManager.getStrategy(config.getStorageMode());
         device.setAllTags(new HashSet<>());
-        //插入mysql。因为后面要使用id，所以必须先插入mysql。
-        deviceMapper.insert(device);
-        log.info("添加设备到mysql成功, device: {}", device);
-        //创建iotdb设备。实际上databasePath不是数据库。
-        //使用存储策略对应的模板
-        iotDBDao.setAndActivateSchema(
-                Constants.TEMPLATE_PREFIX + templateId + storageStrategy.getTemplateSuffix(),
-                util.getDevicePath(device.getUserId(), device.getId()));
-        log.info("创建iotdb设备成功, templateName: {}, database: {}",
-                Constants.TEMPLATE_PREFIX + templateId + storageStrategy.getTemplateSuffix(),
-                Constants.DATABASE_PREFIX + device.getUserId());
+
+        SagaExecutor saga = new SagaExecutor(messageService, userId, "创建设备");
+
+        // 插入MySQL设备记录
+        saga.addStep(
+                ctx -> "插入设备到MySQL：" + device.getName(),
+                ctx -> {
+                    deviceMapper.insert(device);
+                    ctx.put("deviceId", device.getId());
+                    log.info("[添加设备|SAGA正向]插入MySQL成功，deviceId: {}", device.getId());
+                },
+                ctx -> {
+                    Integer did = (Integer) ctx.get("deviceId");
+                    deviceMapper.delete(did);
+                    log.info("[添加设备|SAGA补偿]删除MySQL设备成功，deviceId: {}", did);
+                }
+        );
+
+        //创建IoTDB设备
+        saga.addStep(
+                ctx -> {
+                    Integer did = (Integer) ctx.get("deviceId");
+                    return "创建IoTDB设备：" + util.getDevicePath(userId, did);
+                },
+                ctx -> {
+                    Integer did = (Integer) ctx.get("deviceId");
+                    String templateName = Constants.TEMPLATE_PREFIX + templateId + storageStrategy.getTemplateSuffix();
+                    String devicePath = util.getDevicePath(userId, did);
+                    iotDBDao.setAndActivateSchema(templateName, devicePath);
+                    log.info("[添加设备|SAGA正向]IoTDB设备创建成功，template: {}, path: {}", templateName, devicePath);
+                },
+                ctx -> {
+                    Integer did = (Integer) ctx.get("deviceId");
+                    String devicePath = util.getDevicePath(userId, did);
+                    iotDBDao.deActiveAndUnsetSchema(
+                            Constants.TEMPLATE_PREFIX + templateId + storageStrategy.getTemplateSuffix(),
+                            devicePath
+                    );
+                    log.info("[添加设备|SAGA补偿]IoTDB设备删除成功，path: {}", devicePath);
+                }
+        );
+
+        saga.execute();
         return device;
     }
 
@@ -123,18 +161,46 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     public void deleteDevice(int deviceId) {
         Device device = checkPermission(deviceId);
-        //删除iotdb设备
-        //解除iotdb设备与存储策略对应的模板的关系
-        StorageStrategy storageStrategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
-        iotDBDao.deActiveAndUnsetSchema(
-                Constants.TEMPLATE_PREFIX + device.getTemplateId() + storageStrategy.getTemplateSuffix(),
-                util.getDevicePath(device.getUserId(), device.getId())
+        Integer userId = currentUserCache.getCurrentUser().getId();
+        int templateId = device.getTemplateId();
+        StorageStrategy strategy = storageStrategyManager.getStrategy(device.getConfig().getStorageMode());
+
+        SagaExecutor saga = new SagaExecutor(messageService, userId, "删除设备");
+        saga.put("device", device);
+
+        //删除MySQL记录
+        saga.addStep(
+                ctx -> "删除MySQL设备记录, deviceId: " + deviceId,
+                ctx -> {
+                    deviceMapper.delete(deviceId);
+                    log.info("[删除设备|SAGA正向]MySQL记录删除成功，deviceId: {}", deviceId);
+                },
+                ctx -> {
+                    Device origin = (Device) ctx.get("device");
+                    deviceMapper.insertWithId(origin);
+                    log.info("[删除设备|SAGA补偿]MySQL记录恢复成功，deviceId: {}", origin.getId());
+                }
         );
-        log.info("删除iotdb设备成功, deviceId: {}", deviceId);
-        //删除mysql设备
-        deviceMapper.delete(deviceId);
-        log.info("删除设备从mysql成功, deviceId: {}", deviceId);
-        log.info("删除设备成功, deviceId: {}", deviceId);
+
+        // 删除IoTDB设备
+        saga.addStep(
+                ctx -> "删除IoTDB设备：" + util.getDevicePath(userId, deviceId),
+                ctx -> {
+                    iotDBDao.deActiveAndUnsetSchema(
+                            Constants.TEMPLATE_PREFIX + templateId + strategy.getTemplateSuffix(),
+                            util.getDevicePath(userId, deviceId)
+                    );
+                    log.info("[删除设备|SAGA正向]IoTDB设备解除成功，deviceId: {}", deviceId);
+                },
+                ctx -> {
+                    String templateName = Constants.TEMPLATE_PREFIX + templateId + strategy.getTemplateSuffix();
+                    String devicePath = util.getDevicePath(userId, deviceId);
+                    iotDBDao.setAndActivateSchema(templateName, devicePath);
+                    log.info("[删除设备|SAGA补偿]IoTDB设备恢复成功，deviceId: {}", deviceId);
+                }
+        );
+
+        saga.execute();
     }
 
     @Override

@@ -224,6 +224,8 @@ public class TemplateServiceImpl implements TemplateService {
             );
         }
 
+        //正向操作时先删除设备表，再删除模板表，符合外键约束。
+        //恢复时是反向的，先插入模板表，再插入设备表，符合外键约束。
         saga.execute();
         log.info("Saga事务删除模板成功，templateId: {}", templateId);
     }
