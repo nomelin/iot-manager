@@ -74,10 +74,10 @@
             <span slot="title" class="words">消息中心</span>
             <span v-if="unreadCount > 0" class="badge">{{ unreadCountDisplay }}</span>
           </el-menu-item>
-          <el-menu-item class="el-menu-item" index="/front/third_party">
-            <i class="el-icon-link"></i>
-            <span slot="title" class="words">第三方</span>
-          </el-menu-item>
+<!--          <el-menu-item class="el-menu-item" index="/front/third_party">-->
+<!--            <i class="el-icon-link"></i>-->
+<!--            <span slot="title" class="words">第三方</span>-->
+<!--          </el-menu-item>-->
           <el-menu-item class="el-menu-item" index="/front/user_profile">
             <i class="el-icon-user"></i>
             <span slot="title" class="words">我的</span>

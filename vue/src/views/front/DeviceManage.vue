@@ -30,11 +30,22 @@
                   placeholder="全文搜索(空格分割多关键字)" style="width: 300px; margin-left: 10px;"></el-input>
       </el-tooltip>
       <el-button icon="el-icon-search" type="primary" @click="handleClearSearch">清空</el-button>
+      <el-button
+          type="primary"
+          @click="toggleLayout"
+          style="margin-left: 10px;"
+      >
+        {{ layoutButtonText }}
+      </el-button>
     </div>
 
     <!-- 设备卡片展示 -->
     <el-row :gutter="0" class="card-row">
-      <el-col v-for="device in filteredDevices" :key="device.id" :lg="4" :md="6" :sm="8" :xs="12">
+      <el-col v-for="device in filteredDevices" :key="device.id"
+              :lg="currentLayout.lg"
+              :md="currentLayout.md"
+              :sm="currentLayout.sm"
+              :xs="currentLayout.xs">
         <el-card :style="{ backgroundColor: device.config.deviceType === 'DATASET' ? '#f0ecf7' : '#f8f9fa' }"
                  class="device-card" shadow="hover"
                  @click.native="showDetail(device)"
@@ -257,6 +268,7 @@ export default {
       deviceTypeFilter: '',
       addToGroupDialogVisible: false,
       selectedTargetGroup: null,
+      isCompactLayout: true,
     }
   },
   computed: {
@@ -345,6 +357,14 @@ export default {
     },
     selectedGroupObject() {
       return this.allGroups.find(g => g.id === this.selectedTargetGroup) || null;
+    },
+    layoutButtonText() {
+      return this.isCompactLayout ? '大' : '小';
+    },
+    currentLayout() {
+      return this.isCompactLayout ?
+          { lg: 4, md: 6, sm: 8, xs: 12 } :  // 大布局
+          { lg: 6, md: 8, sm: 12, xs: 24 }; // 紧凑布局
     },
   },
   created() {
@@ -546,6 +566,9 @@ export default {
     handleSelectAll() {
       this.selectedDevices = this.filteredDevices.map(d => d.id);
     },
+    toggleLayout() {
+      this.isCompactLayout = !this.isCompactLayout;
+    },
   },
   watch: {
     selectedGroup() {
@@ -593,7 +616,7 @@ export default {
   transition: transform 0.2s;
   background: #f8f9fa;
   border-radius: 1.5rem;
-  height: 18vh;
+  height: 20vh;
   overflow: auto;
 }
 
