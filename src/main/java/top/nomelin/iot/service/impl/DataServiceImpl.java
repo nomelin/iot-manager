@@ -146,7 +146,7 @@ public class DataServiceImpl implements DataService {
     @Override
     public long queryRecordCount(int deviceId, Long startTime, Long endTime) {
         Device device = deviceService.getDeviceById(deviceId);
-        return iotDBDao.queryRecordsCount(util.getDevicePath(device.getUserId(), deviceId), startTime, endTime);
+        return iotDBDao.querySensorsCount(util.getDevicePath(device.getUserId(), deviceId), startTime, endTime);
     }
 
     private DeviceTable query(Device device, Long startTime, Long endTime,

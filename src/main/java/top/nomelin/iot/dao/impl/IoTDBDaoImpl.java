@@ -240,35 +240,47 @@ public class IoTDBDaoImpl implements IoTDBDao {
 
     @LogExecutionTime(logReturn = true)
     @Override
+    public long querySensorsCount(String devicePath, Long startTime, Long endTime) {
+        return queryCountInternal(devicePath, startTime, endTime, false);
+    }
+
+    @Override
     public long queryRecordsCount(String devicePath, Long startTime, Long endTime) {
-        String sql = String.format("SELECT COUNT(*) FROM %s", devicePath);
+        return queryCountInternal(devicePath, startTime, endTime, true);
+    }
+
+    private long queryCountInternal(String devicePath, Long startTime, Long endTime, boolean onlyFirstSensor) {
+        StringBuilder sql = new StringBuilder(String.format("SELECT COUNT(*) FROM %s", devicePath));
         if (startTime != null && endTime != null) {
-            sql += String.format(" WHERE time >= %d AND time < %d", startTime, endTime);
+            sql.append(String.format(" WHERE time >= %d AND time < %d", startTime, endTime));
         } else if (startTime != null) {
-            sql += String.format(" WHERE time >= %d", startTime);
+            sql.append(String.format(" WHERE time >= %d", startTime));
         } else if (endTime != null) {
-            sql += String.format(" WHERE time < %d", endTime);
+            sql.append(String.format(" WHERE time < %d", endTime));
         }
+
         long count = 0;
-        try (SessionDataSet sessionDataSet = executeQueryStatement(sql)) {
+        try (SessionDataSet sessionDataSet = executeQueryStatement(sql.toString())) {
             while (sessionDataSet.hasNext()) {
                 RowRecord rowRecord = sessionDataSet.next();
                 List<Field> fields = rowRecord.getFields();
                 for (Field field : fields) {
                     Object fieldValue = field.getObjectValue(field.getDataType());
-                    if (fieldValue != null) {
-                        if (fieldValue instanceof Number) {
-                            count += ((Number) fieldValue).longValue();
+                    if (fieldValue instanceof Number) {
+                        count += ((Number) fieldValue).longValue();
+                        if (onlyFirstSensor) {
+                            return count; // 只要第一个非空传感器的记录数
                         }
                     }
                 }
             }
         } catch (IoTDBConnectionException | StatementExecutionException e) {
-            throw new SystemException(CodeMessage.IOT_DB_ERROR, "查询数据点数量失败，sql：" + sql, e);
+            throw new SystemException(CodeMessage.IOT_DB_ERROR, "查询数据数量失败，sql：" + sql, e);
         }
 
         return count;
     }
+
 
     @Override
     public void deleteDatabase(String databasePath) {

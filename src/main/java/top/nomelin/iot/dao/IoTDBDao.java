@@ -135,6 +135,15 @@ public interface IoTDBDao {
      * @param endTime   结束时间戳（可为 null）
      * @return 传感器记录数量之和。一个数据行可能包含多个传感器，因此返回的是总数。
      */
+    long querySensorsCount(String devicePath, Long startTime, Long endTime);
+
+    /**
+     * 查询指定设备指定时间范围内的记录数。时间范围为左闭右开区间。
+     * @param devicePath 设备路径
+     * @param startTime 起始时间戳（可为 null）
+     * @param endTime   结束时间戳（可为 null）
+     * @return 数据行数量。一个数据行可能包含多个传感器，返回的是数据行数量，和传感器数量无关。
+     */
     long queryRecordsCount(String devicePath, Long startTime, Long endTime);
 
 

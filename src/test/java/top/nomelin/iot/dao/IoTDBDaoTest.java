@@ -118,9 +118,11 @@ class IoTDBDaoTest {
         String device = "root.data.user_1.device_61";
         long startTime = 1719093771000L;
         long endTime = 1742041610000L;
-        long count = dao.queryRecordsCount(device, startTime, endTime);
+        long count = dao.querySensorsCount(device, startTime, endTime);
         System.out.println("Count: " + count);
-        long count2 = dao.queryRecordsCount(device, null, null);
+        long count3 = dao.queryRecordsCount(device, startTime, endTime);
+        System.out.println("Records Count: " + count3);
+        long count2 = dao.querySensorsCount(device, null, null);
         System.out.println("Count: " + count2);
     }
 
