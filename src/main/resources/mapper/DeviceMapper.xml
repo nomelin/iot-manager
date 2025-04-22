@@ -28,6 +28,22 @@
                 #{config, typeHandler=top.nomelin.iot.common.handler.ConfigTypeHandler})
     </insert>
 
+    <insert id="insertWithId" parameterType="top.nomelin.iot.model.Device"
+            useGeneratedKeys="false">
+        INSERT INTO device (id, name, user_id, template_id, tags, all_tags, config)
+        VALUES (
+                   #{id},
+                   #{name},
+                   #{userId},
+                   #{templateId},
+                   #{tags, typeHandler=top.nomelin.iot.common.handler.ListStringTypeHandler},
+                   #{allTags, typeHandler=top.nomelin.iot.common.handler.SetStringTypeHandler},
+                   #{config, typeHandler=top.nomelin.iot.common.handler.ConfigTypeHandler}
+               )
+    </insert>
+
+
+
     <!-- 更新设备 -->
     <update id="update" parameterType="top.nomelin.iot.model.Device">
         UPDATE device

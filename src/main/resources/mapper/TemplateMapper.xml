@@ -18,13 +18,21 @@
         VALUES (#{name}, #{userId}, #{config, typeHandler=top.nomelin.iot.common.handler.ConfigTypeHandler})
     </insert>
 
+    <insert id="insertWithId" parameterType="top.nomelin.iot.model.Template"
+            useGeneratedKeys="false">
+        INSERT INTO template (id, name, user_id, config)
+        VALUES (#{id}, #{name}, #{userId}, #{config, typeHandler=top.nomelin.iot.common.handler.ConfigTypeHandler})
+    </insert>
+
     <!-- 更新模板 -->
     <update id="update" parameterType="top.nomelin.iot.model.Template">
         UPDATE template
         <set>
             <if test="name != null">name = #{name},</if>
             <if test="userId != null">user_id = #{userId},</if>
-            <if test="config != null">config = #{config, typeHandler=top.nomelin.iot.common.handler.ConfigTypeHandler},</if>
+            <if test="config != null">config =
+                #{config, typeHandler=top.nomelin.iot.common.handler.ConfigTypeHandler},
+            </if>
         </set>
         WHERE id = #{id}
     </update>

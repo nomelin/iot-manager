@@ -10,9 +10,12 @@ import top.nomelin.iot.cache.CurrentUserCache;
 import top.nomelin.iot.common.Constants;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
+import top.nomelin.iot.dao.DeviceMapper;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.dao.TemplateMapper;
+import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.Template;
+import top.nomelin.iot.service.DeviceService;
 import top.nomelin.iot.service.MessageService;
 import top.nomelin.iot.service.TemplateService;
 import top.nomelin.iot.service.storage.StorageStrategy;
@@ -37,16 +40,20 @@ public class TemplateServiceImpl implements TemplateService {
 
     private final MessageService messageService;
 
+    private final DeviceMapper deviceMapper;
+
+
     // 新增策略管理器
     private final StorageStrategyManager strategyManager;
 
 
     private final CurrentUserCache currentUserCache;
 
-    public TemplateServiceImpl(TemplateMapper templateMapper, IoTDBDao iotDBDao, MessageService messageService, StorageStrategyManager strategyManager, CurrentUserCache currentUserCache) {
+    public TemplateServiceImpl(TemplateMapper templateMapper, IoTDBDao iotDBDao, MessageService messageService, DeviceMapper deviceMapper, StorageStrategyManager strategyManager, CurrentUserCache currentUserCache) {
         this.templateMapper = templateMapper;
         this.iotDBDao = iotDBDao;
         this.messageService = messageService;
+        this.deviceMapper = deviceMapper;
         this.strategyManager = strategyManager;
         this.currentUserCache = currentUserCache;
     }
@@ -81,12 +88,12 @@ public class TemplateServiceImpl implements TemplateService {
                 ctx -> "mysql中插入模板，name：" + template.getName(),
                 ctx -> {
                     templateMapper.insert(template);
-                    ctx.put("templateId", template.getId());
-                    log.info("[SAGA正向]mysql中插入模板成功，template: {}", template);
+                    ctx.put("templateId", template.getId());//将templateId放入上下文，供后续步骤使用。
+                    log.info("[添加模板|SAGA正向]mysql中插入模板成功，template: {}", template);
                 },
                 ctx -> {
                     templateMapper.delete(template.getId());
-                    log.info("[SAGA补偿]mysql中删除模板成功，templateId: {}", ctx.get("templateId"));
+                    log.info("[添加模板|SAGA补偿]mysql中删除模板成功，templateId: {}", ctx.get("templateId"));
                 }
         );
 
@@ -109,7 +116,7 @@ public class TemplateServiceImpl implements TemplateService {
                         Integer tid = (Integer) ctx.get("templateId");
                         String templateName = Constants.TEMPLATE_PREFIX + tid + strategy.getTemplateSuffix();
                         iotDBDao.createSchema(templateName, processedNodes);
-                        log.info("[SAGA正向]创建iotdb模板成功，templateName: {}, measurementNodes: {}, strategy: {}",
+                        log.info("[添加模板|SAGA正向]创建iotdb模板成功，templateName: {}, measurementNodes: {}, strategy: {}",
                                 templateName,
                                 processedNodes.stream().map(MeasurementNode::getName).toList(), strategy.getClass().getSimpleName());
                     },
@@ -117,7 +124,7 @@ public class TemplateServiceImpl implements TemplateService {
                         Integer tid = (Integer) ctx.get("templateId");
                         String templateName = Constants.TEMPLATE_PREFIX + tid + strategy.getTemplateSuffix();
                         iotDBDao.deleteSchema(templateName);
-                        log.info("[SAGA补偿]删除iotdb模板成功，templateName: {}", templateName);
+                        log.info("[添加模板|SAGA补偿]删除iotdb模板成功，templateName: {}", templateName);
                     }
             );
         }
@@ -151,21 +158,76 @@ public class TemplateServiceImpl implements TemplateService {
 
     @Override
     public void deleteTemplate(int templateId) {
-        checkPermission(templateId);
-        // 删除mysql的模板行
-        templateMapper.delete(templateId);//级联删除mysql的设备
-        log.info("删除mysql模板成功,同时级联删除了mysql设备行，templateId: {}", templateId);
+        Template template = checkPermission(templateId);
+        Integer userId = currentUserCache.getCurrentUser().getId();
 
-        // 删除iotdb的模板, 所有策略
+        SagaExecutor saga = new SagaExecutor(messageService, userId, "删除模板");
+
+        saga.put("template", template);
         List<StorageStrategy> strategies = strategyManager.getAllStrategies();
-        for (StorageStrategy strategy : strategies) {
-            iotDBDao.deleteSchema(
-                    Constants.TEMPLATE_PREFIX + templateId + strategy.getTemplateSuffix());
-            log.info("删除iotdb模板成功，templateName: {}",
-                    Constants.TEMPLATE_PREFIX + templateId + strategy.getTemplateSuffix());
+
+        // 获取关联设备
+        List<Device> relatedDevices = deviceMapper.selectByTemplateId(templateId);
+        saga.put("relatedDevices", relatedDevices);
+
+        // 删除每个设备，并添加补偿
+        // 只能直接操作mysql设备表，不能使用service封装的方法，因为里面有其它逻辑。
+        for (Device device : relatedDevices) {
+            int deviceId = device.getId();
+            saga.addStep(
+                    ctx -> "删除设备：" + device.getName() + ", id: " + deviceId,
+                    ctx -> {
+                        deviceMapper.delete(deviceId);
+                        log.info("[删除模板|SAGA正向] 删除设备行成功，deviceId: {}", deviceId);
+                    },
+                    ctx -> {
+                        deviceMapper.insertWithId(device);//不能使用insert，需要指定主键以恢复原记录
+                        log.info("[删除模板|SAGA补偿] 恢复设备成功，deviceId: {}", device.getId());
+                    }
+            );
         }
-        log.info("删除模板成功，templateId: {}", templateId);
+
+
+        // 删除 MySQL 中的模板记录
+        // 不能改变顺序，否则由于外键约束，会导致删除失败。
+        saga.addStep(
+                ctx -> "删除MySQL模板行，id: " + templateId,
+                ctx -> {
+                    templateMapper.delete(templateId);
+                    log.info("[删除模板|SAGA正向]删除MySQL模板成功，templateId: {}", templateId);
+                },
+                ctx -> {
+                    Template origin = (Template) ctx.get("template");
+                    templateMapper.insertWithId(origin);//不能使用insert，需要指定主键以恢复原记录
+                    log.info("[删除模板|SAGA补偿]恢复MySQL模板成功，templateId: {}", origin.getId());
+                }
+        );
+
+        // 删除 IoTDB 模板（多个策略）
+        for (StorageStrategy strategy : strategies) {
+            String templateName = Constants.TEMPLATE_PREFIX + templateId + strategy.getTemplateSuffix();
+            saga.addStep(
+                    ctx -> "删除IoTDB模板：" + templateName,
+                    ctx -> {
+                        iotDBDao.deleteSchema(templateName);
+                        log.info("[删除模板|SAGA正向]删除IoTDB模板成功，templateName: {}", templateName);
+                    },
+                    ctx -> {
+                        // 补偿逻辑：重建 IoTDB 模板
+                        Template origin = (Template) ctx.get("template");
+                        List<MeasurementNode> originNodes = origin.getConfig().convertToMeasurementNodes();
+                        List<MeasurementNode> processedNodes = strategy.preprocessTemplateNodes(originNodes);
+                        addTagNode(processedNodes); // 保证 tag 节点存在
+                        iotDBDao.createSchema(templateName, processedNodes);
+                        log.info("[删除模板|SAGA补偿]重建IoTDB模板成功，templateName: {}", templateName);
+                    }
+            );
+        }
+
+        saga.execute();
+        log.info("Saga事务删除模板成功，templateId: {}", templateId);
     }
+
 
     @Override
     public Template getTemplateById(int templateId) {

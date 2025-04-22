@@ -75,7 +75,7 @@ public class SagaExecutor {
             }
         } catch (Exception e) {
             log.error("[SAGA事务失败] 第{}步执行失败: {}，异常信息: {}", successCount + 1,
-                    steps.get(successCount).getName(context), e.getMessage(), e);
+                    steps.get(successCount).getName(context), e, e);
 
             // 拼接站内信通知内容。html格式。
             StringBuilder content = new StringBuilder();
@@ -85,7 +85,7 @@ public class SagaExecutor {
                 content.append("✅ 成功：").append(steps.get(i).getName(context)).append("<br>");
             }
             content.append("❌ 失败：").append(steps.get(successCount).getName(context))
-                    .append("，异常：").append(e.getMessage()).append("<br>");
+                    .append("，异常：").append(e).append("<br>");
 
             for (int i = successCount + 1; i < steps.size(); i++) {
                 content.append("⏩ 跳过未执行：").append(steps.get(i).getName(context)).append("<br>");
@@ -100,7 +100,7 @@ public class SagaExecutor {
                     content.append("🔁 已补偿：").append(steps.get(i).getName(context)).append("<br>");
                 } catch (Exception ce) {
                     log.error("补偿步骤失败：{}，异常：{}", steps.get(i).getName(context), ce.getMessage(), ce);
-                    content.append("补偿失败：").append(steps.get(i).getName(context))
+                    content.append("❌ 补偿失败：").append(steps.get(i).getName(context))
                             .append("，异常：").append(ce.getMessage()).append("<br>");
                 }
             }

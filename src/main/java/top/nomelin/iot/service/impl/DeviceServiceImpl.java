@@ -295,6 +295,11 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    public List<Device> getDevicesByTemplateId(int templateId) {
+        return deviceMapper.selectByTemplateId(templateId);
+    }
+
+    @Override
     public List<Device> getAllDevice() {
         return deviceMapper.selectByUserId(currentUserCache.getCurrentUser().getId());
     }

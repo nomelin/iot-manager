@@ -15,6 +15,8 @@ import java.util.List;
 public interface TemplateMapper {
     int insert(Template template);
 
+    void insertWithId(Template template);
+
 
     int update(Template template);
 

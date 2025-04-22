@@ -55,6 +55,8 @@ public interface DeviceService {
 
     List<Group> getGroupsByDeviceId(int deviceId);
 
+    List<Device> getDevicesByTemplateId(int templateId);
+
     /**
      * @return 当前登录用户的所有设备
      */

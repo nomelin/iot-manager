@@ -10,6 +10,12 @@ public interface DeviceMapper {
 
     int insert(Device device);
 
+    /**
+     * 不使用自增主键，使用手动插入主键id。仅用于事务恢复等特殊场景。
+     * @param device 包含id的device
+     */
+    void insertWithId(Device device);
+
 
     int update(Device device);
 
