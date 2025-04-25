@@ -5,15 +5,15 @@ import top.nomelin.iot.model.enums.QueryAggregateFunc;
 import java.util.List;
 
 public class DataQueryRequest {
-    private Integer deviceId;
-    private Long startTime;
-    private Long endTime;
-    private List<String> selectMeasurements;
-    private Integer aggregationTime;
-    private QueryAggregateFunc queryAggregateFunc;
-    private List<List<Double>> thresholds;
+    private Integer deviceId;//必须
+    private Long startTime;//可选，为null代表不限制
+    private Long endTime;//可选，为null代表不限制
+    private List<String> selectMeasurements;//可选，为null代表查询全部
+    private Integer aggregationTime;//可选，为null代表不聚合
+    private QueryAggregateFunc queryAggregateFunc;//可选，为null代表不聚合
+    private List<List<Double>> thresholds;//可选，为null代表不阈值过滤
 
-    private String tagQuery;
+    private String tagQuery;//可选，为null代表不标签过滤
 
     // Getters and Setters
     public Integer getDeviceId() {

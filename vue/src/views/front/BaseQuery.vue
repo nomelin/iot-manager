@@ -56,27 +56,33 @@
             <!-- 时间范围 -->
             <el-form-item label="时间范围">
               <div class="time-range-container">
-                <el-date-picker
-                    v-model="form.startTime"
-                    :default-time="['00:00:00']"
-                    clearable
-                    format="yyyy-MM-dd HH:mm:ss"
-                    placeholder="开始时间（不限制）"
-                    style="width: 220px;"
-                    type="datetime"
-                    value-format="yyyy-MM-dd HH:mm:ss"
-                />
+                <div class="time-range-item">
+                  <el-checkbox v-model="startTimeUnlimited" @change="handleStartUnlimited">不限制开始时间</el-checkbox>
+                  <el-date-picker
+                      v-model="form.startTime"
+                      :default-time="['00:00:00']"
+                      :disabled="startTimeUnlimited"
+                      clearable
+                      placeholder="开始时间"
+                      style="width: 220px;"
+                      type="datetime"
+                      value-format="timestamp"
+                  />
+                </div>
                 <span class="time-separator">至</span>
-                <el-date-picker
-                    v-model="form.endTime"
-                    :default-time="['23:59:59']"
-                    clearable
-                    format="yyyy-MM-dd HH:mm:ss"
-                    placeholder="结束时间（不限制）"
-                    style="width: 220px;"
-                    type="datetime"
-                    value-format="yyyy-MM-dd HH:mm:ss"
-                />
+                <div class="time-range-item">
+                  <el-date-picker
+                      v-model="form.endTime"
+                      :default-time="['23:59:59']"
+                      :disabled="endTimeUnlimited"
+                      clearable
+                      placeholder="结束时间"
+                      style="width: 220px;"
+                      type="datetime"
+                      value-format="timestamp"
+                  />
+                  <el-checkbox v-model="endTimeUnlimited" @change="handleEndUnlimited">不限制结束时间</el-checkbox>
+                </div>
               </div>
             </el-form-item>
 
@@ -353,6 +359,9 @@ export default {
       selectedGroup: null,
       groupDevices: [],
 
+      startTimeUnlimited: true,
+      endTimeUnlimited: true,
+
     };
   },
   computed: {
@@ -389,8 +398,15 @@ export default {
     }
   },
   created() {
+    this.resetForm();
   },
   methods: {
+    handleStartUnlimited(val) {
+      //do nothing
+    },
+    handleEndUnlimited(val) {
+      //do nothing
+    },
 
     async fetchDevicesByGroup(groupId) {
       try {
@@ -492,8 +508,8 @@ export default {
       // 构建请求参数
       const params = {
         ...this.form,
-        startTime: this.form.startTime ? new Date(this.form.startTime).getTime() : null,
-        endTime: this.form.endTime ? new Date(this.form.endTime).getTime() : null,
+        startTime: (!this.startTimeUnlimited && this.form.startTime) ? new Date(this.form.startTime).getTime() : null,
+        endTime: (!this.endTimeUnlimited && this.form.endTime) ? new Date(this.form.endTime).getTime() : null,
         tagQuery: this.form.tagQuery.join('||'), // 拼接数组为字符串
         thresholds: this.thresholdFilterEnabled
             ? this.thresholds.map(t => [
@@ -556,8 +572,9 @@ export default {
     resetForm() {
       this.form = {
         deviceId: null,
-        startTime: null,
-        endTime: null,
+        //时间设置为最近的一小时的ms时间戳。
+        startTime: new Date(new Date().getTime() - 3600000).getTime(),
+        endTime: new Date().getTime(),
         selectMeasurements: [],
         aggregationTime: 0,
         queryAggregateFunc: null,
@@ -602,10 +619,10 @@ export default {
     generateCSV() {
       // 第一行：元信息
       const device = this.selectedDevice ? this.selectedDevice.name : '未知设备';
-      const start = this.form.startTime
+      const start = (!this.startTimeUnlimited && this.form.startTime)
           ? new Date(this.form.startTime).toLocaleString()
           : '无限制';
-      const end = this.form.endTime
+      const end = (!this.endTimeUnlimited && this.form.endTime)
           ? new Date(this.form.endTime).toLocaleString()
           : '无限制';
       const selectMeasurements = this.form.selectMeasurements.join('/');

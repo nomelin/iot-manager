@@ -3,14 +3,14 @@ package top.nomelin.iot.controller.request;
 import java.util.List;
 
 public class DataInsertRequest {
-    private Integer deviceId;
-    private List<Long> timestamps;
-    private List<String> measurements;
-    private List<List<Object>> values;
+    private Integer deviceId;//必须
+    private List<Long> timestamps;//必须
+    private List<String> measurements;//必须
+    private List<List<Object>> values;//必须
 
-    private Integer mergeTimestampNum;
+    private Integer mergeTimestampNum;//可选，为null时默认全量合并
 
-    private String tag;
+    private String tag;//可选，为null时默认无标签
 
     // Getters and Setters
     public Integer getDeviceId() {
