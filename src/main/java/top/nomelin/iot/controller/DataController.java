@@ -50,7 +50,7 @@ public class DataController {
         if (request.getMergeTimestampNum() == null) {
             request.setMergeTimestampNum(-1);//设置默认为全量合并
         }
-        dataService.insertBatchRecord(request.getDeviceId(), request.getTimestamps(), request.getTag(),
+        dataService.insertBatchRecordAutoFormat(request.getDeviceId(), request.getTimestamps(), request.getTag(),
                 request.getMeasurements(), request.getValues(), request.getMergeTimestampNum());
         return Result.success();
     }

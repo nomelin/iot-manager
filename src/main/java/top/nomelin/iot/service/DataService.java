@@ -18,6 +18,12 @@ public interface DataService {
 //                      List<String> measurements, List<IotDataType> types, List<Object> values);
 
     /**
+     * 自动处理物理量的数据类型。其它和{@link #insertBatchRecord(int, List, String, List, List, int)}一样。
+     */
+    void insertBatchRecordAutoFormat(int deviceId, List<Long> timestamps, String tag,
+                                     List<String> measurements, List<List<Object>> values, int mergeTimestampNum);
+
+    /**
      * 批量插入记录。插入时的配置信息会从device表中获取, 每次插入都要查询一次mysql。
      *
      * @param deviceId          设备ID

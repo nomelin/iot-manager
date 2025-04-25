@@ -44,6 +44,60 @@ public class DataServiceImpl implements DataService {
         this.storageStrategyManager = storageStrategyManager;
     }
 
+    @Override
+    public void insertBatchRecordAutoFormat(int deviceId, List<Long> timestamps, String tag,
+                                            List<String> measurements, List<List<Object>> values, int mergeTimestampNum) {
+        tag = validateTagForInsert(tag);
+        List<String> measurementsCopy = addTagInMeasurementsAndValues(tag, measurements, values);
+        Device device = deviceService.addDataTagsWithoutCheck(deviceId, Collections.singleton(tag));
+        Config config = device.getConfig();
+        StorageStrategy strategy = storageStrategyManager.getStrategy(config.getStorageMode());// 获取存储策略
+        String devicePath = util.getDevicePath(device.getUserId(), deviceId);
+
+        // 获取每个测量项的数据类型配置
+        List<IotDataType> dataTypes = new ArrayList<>();
+        for (String measurement : measurements) {
+            IotDataType dataType = device.getConfig().getDataTypes().get(measurement);
+            if (dataType == null) {
+                throw new SystemException(CodeMessage.PARAM_LOST_ERROR,
+                        "未找到测量项 '" + measurement + "' 的数据类型配置");
+            }
+            dataTypes.add(dataType);
+        }
+
+        for (int i = 0; i < timestamps.size(); i++) {
+            List<Object> valueList = values.get(i);
+            //-1是因为最后一列是前面添加的TAG，不需要处理类型
+            for (int j = 0; j < valueList.size() - 1; j++) {
+                Object value = valueList.get(j);
+                valueList.set(j, this.parseValue(value.toString(), dataTypes.get(j)));
+
+            }
+        }
+
+        batchInsert(timestamps, measurementsCopy, values, config, strategy, devicePath, mergeTimestampNum);
+
+    }
+
+    private Object parseValue(String rawValue, IotDataType dataType) {
+        try {
+            return switch (dataType) {
+                case INT -> Integer.parseInt(rawValue);
+                case LONG -> Long.parseLong(rawValue);
+                case FLOAT -> Float.parseFloat(rawValue);
+                case DOUBLE -> Double.parseDouble(rawValue);
+                case STRING -> rawValue;
+                default -> throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
+                        "不支持的Iot数据类型: " + dataType);
+            };
+        } catch (NumberFormatException e) {
+//            throw new SystemException(CodeMessage.DATA_FORMAT_ERROR,
+//                    String.format("无法将值 '%s' 解析为类型 %s", rawValue, dataType), e);
+            log.warn("无法将值 '{}' 解析为类型 {}", rawValue, dataType);
+            return null;
+        }
+    }
+
     @LogExecutionTime
     @Override
     public void insertBatchRecord(int deviceId, List<Long> timestamps, String tag,
