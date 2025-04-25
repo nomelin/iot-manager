@@ -58,13 +58,16 @@
     </el-dialog>
 
     <el-dialog
-        title="全局配置"
         :visible.sync="configDialogVisible"
-        width="30%"
-        destroy-on-close>
+        destroy-on-close
+        title="全局配置"
+        width="30%">
       <el-form label-width="auto">
         <el-form-item label="IoTDB重试次数">
-          <el-input-number v-model="retryCount" :min="0" :step="1" />
+          <el-input-number v-model="retryCount" :min="0" :step="1"/>
+        </el-form-item>
+        <el-form-item label="是否启用缓存">
+          <el-switch v-model="cacheEnabled" active-text="启用" inactive-text="禁用"/>
         </el-form-item>
       </el-form>
       <div style="color: gray; font-size: 12px; margin-top: 10px;">
@@ -103,6 +106,7 @@ export default {
 
       configDialogVisible: false,
       retryCount: 0,
+      cacheEnabled: false,
 
       rules: {
         oldPassword: [
@@ -182,19 +186,30 @@ export default {
           this.retryCount = res.data
           this.configDialogVisible = true
         } else {
-          this.$message.error("获取配置失败：" + res.msg)
+          this.$message.error("获取IoTDB重试次数配置失败：" + res.msg)
+        }
+      })
+      this.$request.get("/global/getCacheEnabled").then(res => {
+        if (res.code === '200') {
+          this.cacheEnabled = res.data;
+          this.configDialogVisible = true;
+        } else {
+          this.$message.error("获取缓存配置失败：" + res.msg);
         }
       })
     },
     saveRetryConfig() {
-      this.$request.get(`/global/setIoTDBRetry/${this.retryCount}`).then(res => {
-        if (res.code === '200') {
-          this.$message.success("配置保存成功")
-          this.configDialogVisible = false
+      const setRetry = this.$request.get(`/global/setIoTDBRetry/${this.retryCount}`);
+      const setCache = this.$request.get(`/global/setCacheEnabled/${this.cacheEnabled}`);
+
+      Promise.all([setRetry, setCache]).then(([retryRes, cacheRes]) => {
+        if (retryRes.code === '200' && cacheRes.code === '200') {
+          this.$message.success("配置保存成功");
+          this.configDialogVisible = false;
         } else {
-          this.$message.error("保存失败：" + res.msg)
+          this.$message.error("保存失败：" + (retryRes.msg || cacheRes.msg));
         }
-      })
+      });
     },
     goToDebug() {
       // this.$router.push("/debug");

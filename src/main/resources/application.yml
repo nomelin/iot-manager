@@ -88,3 +88,6 @@ pushplus:
   user-token-bucket-size: 5
   user-token-refresh-interval: 1800
   token: 真正的pushplus token
+
+cache:
+  enabled: true

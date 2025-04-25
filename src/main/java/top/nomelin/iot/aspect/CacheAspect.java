@@ -2,10 +2,12 @@ package top.nomelin.iot.aspect;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.expression.EvaluationContext;
@@ -35,12 +37,24 @@ public class CacheAspect {
     private final ParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Value("${cache.enabled:true}")
+    private boolean cacheEnabled;
+
     public CacheAspect(CacheOperations<String, Object> cacheOperations) {
         this.cacheOperations = cacheOperations;
     }
 
+    @PostConstruct
+    public void init() {
+        log.info("CacheAspect 已创建, cacheEnabled: {}", cacheEnabled);
+    }
+
     @Around("@annotation(cacheOp)")
     public Object around(ProceedingJoinPoint joinPoint, CacheOp cacheOp) throws Throwable {
+        if (!cacheEnabled) {
+            // 缓存禁用，直接执行方法
+            return joinPoint.proceed();
+        }
 //        log.info("执行缓存操作，注解信息：{}", cacheOp);
         // 解析SpEL表达式生成缓存键
         String key = evaluateKeyExpression(joinPoint, cacheOp.key());
@@ -110,5 +124,14 @@ public class CacheAspect {
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize key to JSON", e);
         }
+    }
+
+    public boolean isCacheEnabled() {
+        return cacheEnabled;
+    }
+
+    public void setCacheEnabled(boolean cacheEnabled) {
+        this.cacheEnabled = cacheEnabled;
+        log.info("CacheAspect cacheEnabled 设置为: {}", cacheEnabled);
     }
 }
