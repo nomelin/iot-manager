@@ -31,16 +31,22 @@
       </el-tooltip>
       <el-button icon="el-icon-search" type="primary" @click="handleClearSearch">清空</el-button>
       <el-button
+          style="margin-left: 10px;"
           type="primary"
           @click="toggleLayout"
-          style="margin-left: 10px;"
       >
         {{ layoutButtonText }}
       </el-button>
+      <el-button
+          :icon="layoutButtonIcon"
+          style="margin-left: 5px;"
+          type="primary"
+          @click="toggleLayout2"
+      ></el-button>
     </div>
 
     <!-- 设备卡片展示 -->
-    <el-row :gutter="0" class="card-row">
+    <el-row v-if="!isTableLayout" :gutter="0" class="card-row">
       <el-col v-for="device in filteredDevices" :key="device.id"
               :lg="currentLayout.lg"
               :md="currentLayout.md"
@@ -77,6 +83,84 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 设备表格展示 -->
+    <el-table
+        v-if="isTableLayout"
+        :data="filteredDevices"
+        :row-class-name="tableRowClassName"
+        border
+        class="card-row"
+        style="width: 100%; margin-top: 20px;"
+        height="tableHeight"
+        @row-click="handleRowClick"
+    >
+      <el-table-column label="设备ID" prop="id" width="150"/>
+      <el-table-column label="名称" prop="name" width="180"/>
+      <el-table-column label="标签">
+        <template v-slot="scope">
+          <el-tag
+              v-for="(tag, index) in scope.row.tags"
+              :key="index"
+              size="mini"
+              style="margin-right: 5px;"
+          >
+            {{ tag }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="所属模板">
+        <template v-slot="scope">
+          {{ scope.row.config.templateName || '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column label="所在组">
+        <template v-slot="scope">
+          {{
+            (scope.row.groupIds || []).map(id => {
+              const group = allGroups.find(g => g.id === id);
+              return group ? group.name : '';
+            }).join(', ')
+          }}
+        </template>
+      </el-table-column>
+      <el-table-column label="存储聚合粒度(ms)" prop="config.aggregationTime" width="150"/>
+      <el-table-column label="存储模式" width="120">
+        <template v-slot="scope">
+          {{ scope.row.config.storageMode || '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column label="设备类型" width="120">
+        <template v-slot="scope">
+          {{ scope.row.config.deviceType || '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="200">
+        <template v-slot="scope">
+          <div style="display: flex; gap: 10px;">
+            <el-button
+                class="clear-btn"
+                icon="el-icon-delete"
+                size="mini"
+                type="text"
+                @click.stop="handleClear(scope.row.id)"
+            >
+              清空
+            </el-button>
+            <el-button
+                class="delete-btn"
+                icon="el-icon-delete"
+                size="mini"
+                type="text"
+                @click.stop="handleDelete(scope.row.id)"
+            >
+              删除
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
+
 
     <!-- 详情对话框 -->
     <el-dialog :visible.sync="detailVisible" title="设备详情" width="50%">
@@ -269,6 +353,7 @@ export default {
       addToGroupDialogVisible: false,
       selectedTargetGroup: null,
       isCompactLayout: true,
+      isTableLayout: false, // 是否表格模式
     }
   },
   computed: {
@@ -363,8 +448,17 @@ export default {
     },
     currentLayout() {
       return this.isCompactLayout ?
-          { lg: 4, md: 6, sm: 8, xs: 12 } :  // 大布局
-          { lg: 6, md: 8, sm: 12, xs: 24 }; // 紧凑布局
+          {lg: 4, md: 6, sm: 8, xs: 12} :  // 大布局
+          {lg: 6, md: 8, sm: 12, xs: 24}; // 紧凑布局
+    },
+    layoutButtonText2() {
+      return this.isTableLayout ? '卡片模式' : '表格模式';
+    },
+    layoutButtonIcon() {
+      return this.isTableLayout ? 'el-icon-menu' : 'el-icon-s-operation';
+    },
+    tableHeight() {
+      return 'calc(100%)';//为了固定表头，同时保证表格高度自适应
     },
   },
   created() {
@@ -569,6 +663,20 @@ export default {
     toggleLayout() {
       this.isCompactLayout = !this.isCompactLayout;
     },
+    toggleLayout2() {
+      this.isTableLayout = !this.isTableLayout;
+    },
+
+    handleRowClick(row) {
+      this.showDetail(row);
+    },
+    tableRowClassName({row}) {
+      if (row.config.deviceType === 'DATASET') {
+        return 'dataset-row';
+      } else {
+        return 'normal-row';
+      }
+    },
   },
   watch: {
     selectedGroup() {
@@ -685,6 +793,14 @@ export default {
 
 .data-type-tag {
   margin: 2px 4px;
+}
+
+::v-deep .dataset-row {
+  background-color: #f0ecf7;
+}
+
+::v-deep .normal-row {
+  background-color: #f8f9fa;
 }
 
 ::v-deep .el-descriptions-item__label {
