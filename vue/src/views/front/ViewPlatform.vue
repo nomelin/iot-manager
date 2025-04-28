@@ -230,6 +230,37 @@ export default {
       return 'danger';
     },
   },
+  watch: {
+    allGroups: {
+      immediate: true,
+      handler(groups) {
+        if (groups && groups.length > 0) {
+          const savedGroupId = localStorage.getItem('lastSelectedGroup');
+          if (savedGroupId) {
+            // console.log('groups:',JSON.stringify(groups))
+            const groupExists = groups.some(g => g.id === Number(savedGroupId));
+            if (groupExists) {
+              this.selectedGroup = Number(savedGroupId);
+              console.log('lastSelectedGroup found:', savedGroupId);
+              this.fetchDevices();
+            } else {
+              console.log('lastSelectedGroup not found and removed:', savedGroupId);
+              localStorage.removeItem('lastSelectedGroup');
+            }
+          }
+        }
+      }
+    },
+    selectedGroup(newVal) {
+      if (newVal) {
+        // console.log('selectedGroup changed to', newVal);
+        localStorage.setItem('lastSelectedGroup', newVal);
+      } else {
+        console.log('selectedGroup cleared');
+        localStorage.removeItem('lastSelectedGroup');
+      }
+    }
+  },
   methods: {
     fetchDevices() {
       if (!this.selectedGroup) {
