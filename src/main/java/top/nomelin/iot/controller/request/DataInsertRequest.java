@@ -12,6 +12,10 @@ public class DataInsertRequest {
 
     private String tag;//可选，为null时默认无标签
 
+    //可选，为null时不划分批次，直接插入，或者说批次为无限。
+    // 兼容模式和性能模式下如果一次插入的数据过多，可能会失败，建议设置，例如1000。COVER模式一般不必要。
+    private Integer batchSize;
+
     // Getters and Setters
     public Integer getDeviceId() {
         return deviceId;
@@ -62,6 +66,15 @@ public class DataInsertRequest {
         this.tag = tag;
     }
 
+    public Integer getBatchSize() {
+        return batchSize;
+    }
+
+    public void setBatchSize(Integer batchSize) {
+        this.batchSize = batchSize;
+    }
+
+
     @Override
     public String toString() {
         return "DataInsertRequest{" +
@@ -71,6 +84,7 @@ public class DataInsertRequest {
                 ", values=" + values +
                 ", mergeTimestampNum=" + mergeTimestampNum +
                 ", tag='" + tag + '\'' +
+                ", batchSize=" + batchSize +
                 '}';
     }
 }

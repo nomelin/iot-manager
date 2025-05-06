@@ -50,8 +50,32 @@ public class DataController {
         if (request.getMergeTimestampNum() == null) {
             request.setMergeTimestampNum(-1);//设置默认为全量合并
         }
-        dataService.insertBatchRecordAutoFormat(request.getDeviceId(), request.getTimestamps(), request.getTag(),
-                request.getMeasurements(), request.getValues(), request.getMergeTimestampNum());
+        Integer batchSize = request.getBatchSize();
+        if (batchSize == null || batchSize <= 0) {
+            dataService.insertBatchRecordAutoFormat(request.getDeviceId(), request.getTimestamps(), request.getTag(),
+                    request.getMeasurements(), request.getValues(), request.getMergeTimestampNum());
+            return Result.success();
+        }
+        // 分批处理逻辑
+        List<Long> timestamps = request.getTimestamps();
+        List<List<Object>> values = request.getValues();
+        int totalSize = timestamps.size();
+        for (int i = 0; i < totalSize; i += batchSize) {
+            int end = Math.min(i + batchSize, totalSize);
+
+            List<Long> subTimestamps = timestamps.subList(i, end);
+            List<List<Object>> subValues = values.subList(i, end);
+
+            dataService.insertBatchRecordAutoFormat(
+                    request.getDeviceId(),
+                    subTimestamps,
+                    request.getTag(),
+                    request.getMeasurements(),
+                    subValues,
+                    request.getMergeTimestampNum()
+            );
+        }
+
         return Result.success();
     }
 
