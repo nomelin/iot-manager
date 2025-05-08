@@ -5,7 +5,7 @@ import {getItemWithExpiry} from "@/App"
 // 创建可一个新的axios对象
 const request = axios.create({
     baseURL: process.env.VUE_APP_BASEURL,   // 后端的接口地址  ip:port
-    timeout: 30000                          // 30s请求超时
+    timeout: 60000                          // 60s请求超时
 })
 
 // request 拦截器

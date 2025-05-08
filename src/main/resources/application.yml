@@ -51,11 +51,11 @@ iotdb:
   startPath: D:\lib\毕业设计\iotdb\apache-iotdb-1.3.3-all-bin\sbin\start-standalone.bat
   stopPath: D:\lib\毕业设计\iotdb\apache-iotdb-1.3.3-all-bin\sbin\stop-standalone.bat
   query:
-    timeout: 3000
+    timeout: 60000 # iotdb查询超时时间，单位毫秒
   retry:
     max: 3 # 最大重试次数
     initial-interval: 100 # 单位毫秒，首次重试间隔
-    multiplier: 2 # 指数退避系数
+    multiplier: 3 # 指数退避系数 100，100*3，100*3*3...
   session:
     pool:
       max: 50
