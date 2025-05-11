@@ -5,10 +5,13 @@ import org.apache.tsfile.utils.Binary;
 import org.springframework.stereotype.Component;
 import top.nomelin.iot.cache.CacheOperations;
 import top.nomelin.iot.cache.CacheResult;
+import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
 import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.model.dto.DeviceTable;
+import top.nomelin.iot.model.enums.QueryAggregateFunc;
+import top.nomelin.iot.service.storage.ExtendFastAggregateQuery;
 import top.nomelin.iot.service.storage.StorageStrategy;
 import top.nomelin.iot.util.util;
 
@@ -17,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class PerformanceStorageStrategy implements StorageStrategy {
+public class PerformanceStorageStrategy implements StorageStrategy, ExtendFastAggregateQuery {
     private final IoTDBDao iotDBDao;
     private final CacheOperations<String, Integer> windowCounterCache;
 
@@ -59,11 +62,14 @@ public class PerformanceStorageStrategy implements StorageStrategy {
                 devicePath, adjustedTimestamps, measurementsList, typesList, valuesList);
     }
 
+    @LogExecutionTime
     @Override
     public DeviceTable retrieveData(String devicePath, Long startTime, Long endTime,
                                     List<String> selectedMeasurements, int aggregationTime) {
         // 直接查询原始存储结构（每个调整后的时间戳对应一个记录）
-        DeviceTable table = iotDBDao.queryRecords(devicePath, startTime, endTime, selectedMeasurements);
+        DeviceTable table = selectedMeasurements == null ?
+                iotDBDao.queryRecords(devicePath, startTime, endTime) :
+                iotDBDao.queryRecords(devicePath, startTime, endTime, selectedMeasurements);
         // 后处理二进制字段
         if (table != null) {
             table.getRecords().forEach((timestamp, records) ->
@@ -76,6 +82,19 @@ public class PerformanceStorageStrategy implements StorageStrategy {
                     )
             );
         }
+        return table;
+    }
+
+    @LogExecutionTime
+    @Override
+    public DeviceTable fastAggregateQuery(String devicePath, Long startTime, Long endTime, List<String> selectedMeasurements,
+                                          int aggregationTime, QueryAggregateFunc queryAggregateFunc) {
+        if (selectedMeasurements == null) {
+            throw new BusinessException(CodeMessage.DATA_AGGREGATION_ERROR, "快速聚合查询时，必须指定聚合的字段");
+        }
+        DeviceTable table = iotDBDao.queryAggregatedRecords(devicePath, startTime, endTime,
+                selectedMeasurements, aggregationTime, queryAggregateFunc);
+        //二进制字段不能聚合。
         return table;
     }
 
@@ -113,4 +132,6 @@ public class PerformanceStorageStrategy implements StorageStrategy {
     private String buildCacheKey(String devicePath, long windowTs) {
         return String.format("%s@%d", devicePath, windowTs);
     }
+
+
 }

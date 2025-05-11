@@ -232,7 +232,8 @@ public class DataServiceImpl implements DataService {
         DeviceTable rawTable;
         //如果此存储策略支持快速聚合查询，则直接查询聚合数据，否则先查询再在此层进行聚合。
         boolean alreadyAggregated = false;
-        if (strategy instanceof ExtendFastAggregateQuery && globalConfig.isTryFastAggregate()) {
+        if (strategy instanceof ExtendFastAggregateQuery && globalConfig.isTryFastAggregate()
+                && aggregationTime > 0 && queryAggregateFunc != null) {
             log.info("queryRecord 使用存储策略的快速聚合查询");
             try {
                 rawTable = ((ExtendFastAggregateQuery) strategy).fastAggregateQuery(
@@ -244,7 +245,10 @@ public class DataServiceImpl implements DataService {
             } catch (Exception e) {
                 log.error("queryRecord 使用存储策略的快速聚合查询失败", e);
                 log.warn("queryRecord 尝试降级为普通查询");
-                messageService.sendSystemMessage(device.getUserId(), "数据快速聚合查询失败", "使用存储策略的快速聚合查询失败，错误：" + e, MessageType.WARNING);
+                if (globalConfig.isFastAggregateErrorMessage()) {
+                    messageService.sendSystemMessage(device.getUserId(), "数据快速聚合查询失败",
+                            "使用存储策略的快速聚合查询失败，错误：" + e, MessageType.WARNING);
+                }
                 selectMeasurementsCopy.add(Constants.TAG);//添加TAG列
                 rawTable = strategy.retrieveData(
                         devicePath, alignedTimeRange[0], alignedTimeRange[1], selectMeasurementsCopy, aggregationTime
