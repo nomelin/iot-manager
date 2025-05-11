@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import top.nomelin.iot.common.Constants;
+import top.nomelin.iot.common.GlobalConfig;
 import top.nomelin.iot.common.annotation.CacheOp;
 import top.nomelin.iot.common.annotation.LogExecutionTime;
 import top.nomelin.iot.common.enums.CacheOpType;
@@ -18,9 +19,12 @@ import top.nomelin.iot.model.Device;
 import top.nomelin.iot.model.dto.DeviceTable;
 import top.nomelin.iot.model.dto.Record;
 import top.nomelin.iot.model.enums.IotDataType;
+import top.nomelin.iot.model.enums.MessageType;
 import top.nomelin.iot.model.enums.QueryAggregateFunc;
 import top.nomelin.iot.service.DataService;
 import top.nomelin.iot.service.DeviceService;
+import top.nomelin.iot.service.MessageService;
+import top.nomelin.iot.service.storage.ExtendFastAggregateQuery;
 import top.nomelin.iot.service.storage.StorageStrategy;
 import top.nomelin.iot.service.storage.StorageStrategyManager;
 import top.nomelin.iot.util.util;
@@ -38,10 +42,16 @@ public class DataServiceImpl implements DataService {
 
     private final StorageStrategyManager storageStrategyManager;
 
-    public DataServiceImpl(DeviceService deviceService, IoTDBDao iotDBDao, StorageStrategyManager storageStrategyManager) {
+    private final MessageService messageService;
+
+    private GlobalConfig globalConfig;
+
+    public DataServiceImpl(DeviceService deviceService, IoTDBDao iotDBDao, StorageStrategyManager storageStrategyManager, MessageService messageService, GlobalConfig globalConfig) {
         this.deviceService = deviceService;
         this.iotDBDao = iotDBDao;
         this.storageStrategyManager = storageStrategyManager;
+        this.messageService = messageService;
+        this.globalConfig = globalConfig;
     }
 
     @Override
@@ -213,15 +223,39 @@ public class DataServiceImpl implements DataService {
             log.info("queryRecord, selectMeasurements为空，使用设备的配置的所有物理量: {}", selectMeasurements);
         }
         List<String> selectMeasurementsCopy = new ArrayList<>(selectMeasurements);
-        selectMeasurementsCopy.add(Constants.TAG);//添加TAG列
         // 对齐时间窗口
         Long[] alignedTimeRange = alignTimeRange(startTime, endTime, aggregationTime);
         log.info("queryRecord 原始时间范围:{}-{}, 对齐后:{}-{}", startTime, endTime, alignedTimeRange[0], alignedTimeRange[1]);
 
+
         // 获取原始数据
-        DeviceTable rawTable = strategy.retrieveData(
-                devicePath, alignedTimeRange[0], alignedTimeRange[1], selectMeasurementsCopy, aggregationTime
-        );
+        DeviceTable rawTable;
+        //如果此存储策略支持快速聚合查询，则直接查询聚合数据，否则先查询再在此层进行聚合。
+        boolean alreadyAggregated = false;
+        if (strategy instanceof ExtendFastAggregateQuery && globalConfig.isTryFastAggregate()) {
+            log.info("queryRecord 使用存储策略的快速聚合查询");
+            try {
+                rawTable = ((ExtendFastAggregateQuery) strategy).fastAggregateQuery(
+                        devicePath, alignedTimeRange[0], alignedTimeRange[1], selectMeasurementsCopy,
+                        aggregationTime, queryAggregateFunc);
+                alreadyAggregated = true;
+                log.info("queryRecord 使用存储策略的快速聚合查询完成, " +
+                        "共查询到{}条时间戳（包含null的数据行）", rawTable.getRecords().size());
+            } catch (Exception e) {
+                log.error("queryRecord 使用存储策略的快速聚合查询失败", e);
+                log.warn("queryRecord 尝试降级为普通查询");
+                messageService.sendSystemMessage(device.getUserId(), "数据快速聚合查询失败", "使用存储策略的快速聚合查询失败，错误：" + e, MessageType.WARNING);
+                selectMeasurementsCopy.add(Constants.TAG);//添加TAG列
+                rawTable = strategy.retrieveData(
+                        devicePath, alignedTimeRange[0], alignedTimeRange[1], selectMeasurementsCopy, aggregationTime
+                );
+            }
+        } else {
+            selectMeasurementsCopy.add(Constants.TAG);//添加TAG列
+            rawTable = strategy.retrieveData(
+                    devicePath, alignedTimeRange[0], alignedTimeRange[1], selectMeasurementsCopy, aggregationTime
+            );
+        }
 
         // 应用标签过滤
         applyTagFilter(rawTable, tags);
@@ -236,7 +270,10 @@ public class DataServiceImpl implements DataService {
         DeviceTable aggregatedTable;
 
         // 查询聚合处理
-        if (aggregationTime == 0 || ObjectUtil.isNull(queryAggregateFunc)) {
+        if (alreadyAggregated) {
+            log.debug("queryRecord 已经聚合过，不再聚合");
+            aggregatedTable = rawTable;
+        } else if (aggregationTime == 0 || ObjectUtil.isNull(queryAggregateFunc)) {
             log.debug("queryRecord 不聚合, selectMeasurements={}, aggregationTime={}, QueryAggregateFunc={}",
                     selectMeasurements, aggregationTime, queryAggregateFunc);
             aggregatedTable = rawTable;//不聚合直接返回原始数据
@@ -316,6 +353,7 @@ public class DataServiceImpl implements DataService {
         return false;
     }
 
+    @LogExecutionTime
     //按窗口聚合原始数据
     private DeviceTable aggregateRawData(DeviceTable rawTable, int aggregationTime, QueryAggregateFunc mode) {
         Map<Long, List<Record>> windowRecords = new TreeMap<>();

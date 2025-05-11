@@ -15,6 +15,8 @@ import java.time.format.DateTimeFormatter;
  **/
 public class TimeUtil {
     private static final DateTimeFormatter DATE_TIME_FORMATTER_S = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+
 
     /**
      * 将毫秒时间戳转换为日期字符串
@@ -32,6 +34,20 @@ public class TimeUtil {
 
         // 格式化并返回日期字符串
         return dateTime.format(formatter);
+    }
+
+    /**
+     * 将毫秒时间戳转为 IoTDB 所需的 datetime 字符串格式。
+     *
+     * @param timestamp 毫秒时间戳
+     * @return ISO-8601 格式时间字符串（如 2025-05-10T12:34:56）
+     */
+    public static String timestampToDateTime(Long timestamp) {
+        if (timestamp == null) {
+            throw new IllegalArgumentException("时间戳不能为空");
+        }
+        LocalDateTime dateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.of("Asia/Shanghai"));
+        return dateTime.format(DATETIME_FORMATTER);
     }
 
     public static String timestampToDateStringS(long timestamp) {
@@ -64,7 +80,7 @@ public class TimeUtil {
 
     /**
      * 是否为合法的查询聚合时间。
-     * 合法时间：1ms，1s，1m，1h，1d
+     * 合法时间：1ms，1s，1m，1h，1d... ...
      */
     public static boolean isValidQueryAggregationTime(int time) {
         boolean isValid = false;

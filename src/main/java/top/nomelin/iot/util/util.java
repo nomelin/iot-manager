@@ -7,6 +7,7 @@ import top.nomelin.iot.common.Constants;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoField;
 import java.util.List;
 
 /**
@@ -46,7 +47,7 @@ public class util {
 
         switch (granularity) {
             case 1000 -> // 1s
-                    zdt = zdt.withNano(0);//毫秒是纳秒（0-999,999,999）的前三位
+                    zdt = zdt.withNano(0);
             case 5_000 -> // 5s
                     zdt = zdt.withNano(0).withSecond(zdt.getSecond() / 5 * 5);
             case 15_000 -> // 15s
@@ -63,8 +64,30 @@ public class util {
                     zdt = zdt.withSecond(0).withNano(0).withMinute(zdt.getMinute() / 30 * 30);
             case 3_600_000 -> // 1h
                     zdt = zdt.withMinute(0).withSecond(0).withNano(0);
-            case 86_400_000 -> // 1day
+            case 7_200_000 -> // 2h
+                    zdt = zdt.withMinute(0).withSecond(0).withNano(0).withHour(zdt.getHour() / 2 * 2);
+            case 21_600_000 -> // 6h
+                    zdt = zdt.withMinute(0).withSecond(0).withNano(0).withHour(zdt.getHour() / 6 * 6);
+            case 43_200_000 -> // 12h
+                    zdt = zdt.withMinute(0).withSecond(0).withNano(0).withHour(zdt.getHour() < 12 ? 0 : 12);
+            case 86_400_000 -> // 1d
                     zdt = zdt.withHour(0).withMinute(0).withSecond(0).withNano(0);
+            case 259_200_000 -> // 3d
+                    zdt = zdt.withHour(0).withMinute(0).withSecond(0).withNano(0)
+                            .withDayOfMonth(zdt.getDayOfMonth() - ((zdt.getDayOfMonth() - 1) % 3));
+            case 604_800_000 -> // 1w
+                    zdt = zdt.with(ChronoField.DAY_OF_WEEK, 1)
+                            .withHour(0).withMinute(0).withSecond(0).withNano(0);
+            case 1_209_600_000 -> {// 2w
+                // 对齐到最近一个「本地时间周一 + 0点」，然后向前调整到偶数周开始
+                ZonedDateTime weekStart = zdt.with(ChronoField.DAY_OF_WEEK, 1)
+                        .withHour(0).withMinute(0).withSecond(0).withNano(0);
+                long epochWeek = weekStart.toEpochSecond() / 604800; // 秒为单位的一周
+                if (epochWeek % 2 != 0) {
+                    weekStart = weekStart.minusWeeks(1);
+                }
+                zdt = weekStart;
+            }
             default -> {
                 log.error("不支持的查询粒度: {}", granularity);
                 throw new IllegalArgumentException("不支持的查询粒度: " + granularity);

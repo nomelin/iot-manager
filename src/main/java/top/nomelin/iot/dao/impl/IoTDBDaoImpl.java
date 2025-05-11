@@ -20,6 +20,7 @@ import top.nomelin.iot.dao.IoTDBDao;
 import top.nomelin.iot.dao.session.SessionContext;
 import top.nomelin.iot.model.dto.DeviceTable;
 import top.nomelin.iot.model.dto.Record;
+import top.nomelin.iot.model.enums.QueryAggregateFunc;
 import top.nomelin.iot.util.TimeUtil;
 
 import java.io.IOException;
@@ -238,6 +239,59 @@ public class IoTDBDaoImpl implements IoTDBDao {
                 .map(measurement -> devicePath + "." + measurement)
                 .collect(Collectors.toList());
         return queryRecordsByPaths(devicePath, startTime, endTime, paths, selectFields);
+    }
+
+    @LogExecutionTime
+    @Override
+    public DeviceTable queryAggregatedRecords(String devicePath, Long startTime, Long endTime,
+                                              List<String> selectFields,
+                                              Integer aggregationTime,
+                                              QueryAggregateFunc queryAggregateFunc) {
+        if (aggregationTime == null || aggregationTime <= 0 || queryAggregateFunc == null) {
+            throw new IllegalArgumentException("聚合窗口时间和聚合函数不能为空");
+        }
+
+        // 将枚举名称转换为 IoTDB 支持的聚合函数名称
+        String aggFunc = getIotdbAggFuncName(queryAggregateFunc); // 转换为 IoTDB 聚合函数名
+
+        String fields = selectFields.stream()
+                .map(f -> String.format("%s(%s)", aggFunc, f))
+                .collect(Collectors.joining(", "));
+
+        // 构建时间字符串
+        String timeRange = "[" +
+                (startTime != null ? startTime : "1970-01-01T00:00:00") +
+                ", " +
+                (endTime != null ? endTime : "2037-01-01T00:00:00") +
+                ")";
+
+        // 组装 SQL
+        String sql = String.format("SELECT %s FROM %s GROUP BY (%s, %sms)",
+                fields,
+                devicePath,
+                timeRange,
+                aggregationTime);
+
+        try {
+            SessionDataSet sessionDataSet = executeQueryStatement(sql);
+            return DeviceTable.convertAggregatedDataToDeviceTable(sessionDataSet, devicePath);
+        } catch (StatementExecutionException | IoTDBConnectionException e) {
+            throw new SystemException(CodeMessage.IOT_DB_ERROR, e);
+        }
+    }
+
+    //转换为IoTDB支持的聚合函数名
+    private String getIotdbAggFuncName(QueryAggregateFunc queryAggregateFunc) {
+        return switch (queryAggregateFunc) {
+            case AVG -> "AVG";
+            case MAX -> "MAX_VALUE";
+            case MIN -> "MIN_VALUE";
+            case SUM -> "SUM";
+            case COUNT -> "COUNT";
+            case FIRST -> "FIRST_VALUE";
+            case LAST -> "LAST_VALUE";
+            default -> throw new IllegalArgumentException("Unsupported aggregation function: " + queryAggregateFunc);
+        };
     }
 
     @LogExecutionTime(logReturn = true)

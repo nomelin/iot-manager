@@ -27,9 +27,13 @@ public class Constants {
     //查询聚合时间粒度。0表示不聚合
     public static final List<Integer> VALID_QUERY_AGGREGATION_TIME = List.of(
             0,
-            1, 1000, 5000, 15000, 30000,//1ms,1s,5s,15s,30s
-            60_000, 300_000, 900_000, 1_800_000,//1min,5min,15min,30min
-            3600_000, 86400000);//1h,1d
+            1, 1000, 5000, 15000, 30000,             // 1ms, 1s, 5s, 15s, 30s
+            60_000, 300_000, 900_000, 1_800_000,     // 1m, 5m, 15m, 30m
+            3_600_000,                               // 1h
+            7_200_000, 21_600_000, 43_200_000,       // 2h, 6h, 12h
+            86_400_000, 259_200_000,                 // 1d, 3d
+            604_800_000, 1_209_600_000             // 1w, 2w
+    );
     public static final int DEFAULT_FILE_BATCH_SIZE = 500;
     public static final String DEFAULT_FILE_BATCH_SIZE_STR = "500";
     public static final int DEFAULT_MERGE_TIMESTAMP_NUM = -1;//默认全量合并

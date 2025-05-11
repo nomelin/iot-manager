@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import top.nomelin.iot.aspect.CacheAspect;
 import top.nomelin.iot.aspect.SessionManagementAspect;
+import top.nomelin.iot.common.GlobalConfig;
 import top.nomelin.iot.common.Result;
 import top.nomelin.iot.common.enums.CodeMessage;
 import top.nomelin.iot.common.exception.BusinessException;
@@ -18,13 +19,20 @@ import top.nomelin.iot.common.exception.BusinessException;
 @RestController
 @RequestMapping("/global")
 public class GlobalController {
+
+    //TODO 统一配置管理中心。将分散到各处的系统配置、降级配置整合到一起，提供统一的管理、查询入口。
+
     private final SessionManagementAspect sessionManagementAspect;
 
     private final CacheAspect cacheAspect;
 
-    public GlobalController(SessionManagementAspect sessionManagementAspect, CacheAspect cacheAspect) {
+    private final GlobalConfig globalConfig;
+
+
+    public GlobalController(SessionManagementAspect sessionManagementAspect, CacheAspect cacheAspect, GlobalConfig globalConfig) {
         this.sessionManagementAspect = sessionManagementAspect;
         this.cacheAspect = cacheAspect;
+        this.globalConfig = globalConfig;
     }
 
     @RequestMapping("/getIoTDBRetry")
@@ -49,6 +57,17 @@ public class GlobalController {
     @RequestMapping("/setCacheEnabled/{enabled}")
     public Result setCacheEnabled(@PathVariable("enabled") boolean enabled) {
         cacheAspect.setCacheEnabled(enabled);
+        return Result.success();
+    }
+
+    @RequestMapping("/getFastAggregateEnabled")
+    public Result getFastAggregateEnabled() {
+        return Result.success(globalConfig.isTryFastAggregate());
+    }
+
+    @RequestMapping("/setFastAggregateEnabled/{enabled}")
+    public Result setFastAggregateEnabled(@PathVariable("enabled") boolean enabled) {
+        globalConfig.setTryFastAggregate(enabled);
         return Result.success();
     }
 

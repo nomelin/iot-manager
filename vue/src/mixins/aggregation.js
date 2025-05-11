@@ -16,7 +16,13 @@ export default {
                 {label: '15m', value: 900000},
                 {label: '30m', value: 1800000},
                 {label: '1h', value: 3600000},
-                {label: '1d', value: 86400000}
+                {label: '2h', value: 7200000},
+                {label: '6h', value: 21600000},
+                {label: '12h', value: 43200000},
+                {label: '1d', value: 86400000},
+                {label: '3d', value: 259200000},
+                {label: '1w', value: 604800000},
+                {label: '2w', value: 1209600000},
             ],
             aggregateFuncOptions: [],
         }

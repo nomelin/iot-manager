@@ -69,6 +69,9 @@
         <el-form-item label="是否启用缓存">
           <el-switch v-model="cacheEnabled" active-text="启用" inactive-text="禁用"/>
         </el-form-item>
+        <el-form-item label="查询时尝试使用快速聚合">
+          <el-switch v-model="fastAggregateEnabled" active-text="启用" inactive-text="禁用"/>
+        </el-form-item>
       </el-form>
       <div style="color: gray; font-size: 12px; margin-top: 10px;">
         注意：本页面的配置在后端重启后会重置为配置文件初始值。
@@ -107,6 +110,7 @@ export default {
       configDialogVisible: false,
       retryCount: 0,
       cacheEnabled: false,
+      fastAggregateEnabled: false,
 
       rules: {
         oldPassword: [
@@ -197,17 +201,26 @@ export default {
           this.$message.error("获取缓存配置失败：" + res.msg);
         }
       })
+      this.$request.get("/global/getFastAggregateEnabled").then(res => {
+        if (res.code === '200') {
+          this.fastAggregateEnabled = res.data;
+          this.configDialogVisible = true;
+        } else {
+          this.$message.error("获取快速聚合配置失败：" + res.msg);
+        }
+      });
     },
     saveRetryConfig() {
       const setRetry = this.$request.get(`/global/setIoTDBRetry/${this.retryCount}`);
       const setCache = this.$request.get(`/global/setCacheEnabled/${this.cacheEnabled}`);
+      const setFastAgg = this.$request.get(`/global/setFastAggregateEnabled/${this.fastAggregateEnabled}`);
 
-      Promise.all([setRetry, setCache]).then(([retryRes, cacheRes]) => {
-        if (retryRes.code === '200' && cacheRes.code === '200') {
+      Promise.all([setRetry, setCache, setFastAgg]).then(([retryRes, cacheRes, fastAggRes]) => {
+        if (retryRes.code === '200' && cacheRes.code === '200' && fastAggRes.code === '200') {
           this.$message.success("配置保存成功");
           this.configDialogVisible = false;
         } else {
-          this.$message.error("保存失败：" + (retryRes.msg || cacheRes.msg));
+          this.$message.error("保存失败：" + (retryRes.msg || cacheRes.msg || fastAggRes.msg));
         }
       });
     },

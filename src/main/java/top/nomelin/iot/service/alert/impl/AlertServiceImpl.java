@@ -34,7 +34,7 @@ public class AlertServiceImpl implements AlertService {
     private final AlertPusherManager pusherManager;
 
 
-    // 记录告警状态：设备ID + 告警ID -> 告警状态。每个设备对应每个告警配置都单独计时。//TODO 清理机制
+    // 记录告警状态：设备ID + 告警ID -> 告警状态。每个设备对应每个告警配置都单独计时。//TODO 自动清理机制
     private final Map<String, AlertState> alertStates = new ConcurrentHashMap<>();
 
     private final AlertService selfProxy;

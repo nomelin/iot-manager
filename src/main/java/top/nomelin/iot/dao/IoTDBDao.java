@@ -3,6 +3,7 @@ package top.nomelin.iot.dao;
 import org.apache.iotdb.session.template.MeasurementNode;
 import org.apache.tsfile.enums.TSDataType;
 import top.nomelin.iot.model.dto.DeviceTable;
+import top.nomelin.iot.model.enums.QueryAggregateFunc;
 
 import java.util.List;
 import java.util.Map;
@@ -127,6 +128,25 @@ public interface IoTDBDao {
      * @return 查询结果
      */
     DeviceTable queryRecords(String devicePath, Long startTime, Long endTime, List<String> selectFields);
+
+
+    /**
+     * 查询聚合数据，按给定时间窗口聚合，
+     * 仅支持数值字段。
+     *
+     * @param devicePath         设备路径
+     * @param startTime          起始时间戳（可为 null，表示不限）
+     * @param endTime            结束时间戳（可为 null，表示不限）
+     * @param selectFields       需要查询的字段（只取数值类型字段）
+     * @param aggregationTime    聚合窗口大小（毫秒）
+     * @param queryAggregateFunc 聚合函数类型，支持部分函数。
+     * @return 聚合结果表
+     */
+    DeviceTable queryAggregatedRecords(String devicePath, Long startTime, Long endTime,
+                                       List<String> selectFields,
+                                       Integer aggregationTime,
+                                       QueryAggregateFunc queryAggregateFunc);
+
 
     /**
      * 查询指定设备指定时间范围内的记录数。时间范围为左闭右开区间。

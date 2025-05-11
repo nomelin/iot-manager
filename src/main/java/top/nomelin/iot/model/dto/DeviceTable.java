@@ -6,10 +6,7 @@ import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.rpc.StatementExecutionException;
 import org.apache.tsfile.read.common.RowRecord;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 一个设备的查询结果
@@ -50,6 +47,53 @@ public class DeviceTable {
         }
         return deviceTable;
     }
+
+    /**
+     * 将IoTDB定义的聚合查询的SessionDataSet转换为DeviceTable
+     * 这个方法会过滤掉所有字段全为null的Record。
+     * 如果一个Record有字段是null，有字段不是null，则会保留。
+     *
+     * @param dataSet    查询结果
+     * @param devicePath 设备路径
+     * @return DeviceTable
+     */
+    public static DeviceTable convertAggregatedDataToDeviceTable(SessionDataSet dataSet, String devicePath)
+            throws IoTDBConnectionException, StatementExecutionException {
+        DeviceTable deviceTable = new DeviceTable();
+        deviceTable.devicePath = devicePath;
+        deviceTable.types = dataSet.getColumnTypes().subList(1, dataSet.getColumnTypes().size()); // 去掉时间列
+
+        // 提取字段名称，例如从 AVG(root.x.y.z) 提取 z
+        List<String> columnNames = dataSet.getColumnNames().subList(1, dataSet.getColumnNames().size());
+        for (int i = 0; i < columnNames.size(); i++) {
+            String col = columnNames.get(i);
+            int lastDotIndex = col.lastIndexOf('.');
+            int parenIndex = col.indexOf('(');
+            int endParenIndex = col.indexOf(')');
+            // 截取 AVG(root.x.y.z) → z
+            if (parenIndex >= 0 && lastDotIndex > parenIndex && endParenIndex > lastDotIndex) {
+                columnNames.set(i, col.substring(lastDotIndex + 1, endParenIndex));
+            } else {
+                // 兜底，尝试提取最后一段
+                columnNames.set(i, col.substring(lastDotIndex + 1));
+            }
+        }
+
+        // 转换为 Record
+        // 并过滤全 null 行
+        while (dataSet.hasNext()) {
+            RowRecord rowRecord = dataSet.next();
+            Record record = Record.convertToRowRecord(rowRecord, columnNames);
+            // 判断是否所有字段都是 null
+            boolean allNull = record.getFields().values().stream().allMatch(Objects::isNull);
+            if (!allNull) {
+                deviceTable.addRecord(rowRecord.getTimestamp(), record);
+            }
+        }
+
+        return deviceTable;
+    }
+
 
     /**
      * 添加记录到指定时间戳

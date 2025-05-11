@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import top.nomelin.iot.model.dto.DeviceTable;
+import top.nomelin.iot.model.enums.QueryAggregateFunc;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -124,6 +125,17 @@ class IoTDBDaoTest {
         System.out.println("Records Count: " + count3);
         long count2 = dao.querySensorsCount(device, null, null);
         System.out.println("Count: " + count2);
+    }
+
+    @Test
+    void testQueryAggregate() {
+        String device = "root.data.user_1.device_61";
+        long startTime = 1741881600000L;
+        long endTime = 1742054400000L;
+        List<String> measurements = Arrays.asList("cpu", "temp");
+        DeviceTable deviceTable = dao.queryAggregatedRecords(device, startTime, endTime, measurements,
+                3600000, QueryAggregateFunc.FIRST);
+        System.out.println("Query results: " + formatJson(deviceTable));
     }
 
     // 格式化查询结果为 JSON 字符串
