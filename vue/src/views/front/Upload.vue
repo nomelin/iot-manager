@@ -883,7 +883,7 @@ export default {
         PROCESSING: '处理中',
         COMPLETED: '已完成',
         FAILED: '失败',
-        QUEUE: '等待中',
+        QUEUED: '等待中',
         PAUSED: '已暂停',
         CANCELLED: '已取消'
       }
