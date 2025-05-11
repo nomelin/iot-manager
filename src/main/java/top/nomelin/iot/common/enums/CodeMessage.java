@@ -67,6 +67,10 @@ public enum CodeMessage {
     DATA_CONVERSION_ERROR("851", "数据转换异常"),
     DATA_AGGREGATION_ERROR("852", "数据聚合异常"),
 
+    AGGREGATE_QUERY_LIMIT_ERROR("860",
+            "未使用快速聚合查询时，聚合查询的数据点超过配置的限制" +
+                    "（请使用支持快速聚合查询的存储策略，或减少查询的数据点数，或增大配置文件中的限制）"),
+
     CONFIG_ERROR("870", "配置异常，请检查各个配置项，配置文件"),
 
     UNKNOWN_ERROR("900", "未知异常");

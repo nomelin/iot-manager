@@ -255,6 +255,14 @@ public class DataServiceImpl implements DataService {
                 );
             }
         } else {
+            if (aggregationTime > 0 && queryAggregateFunc != null) {
+                log.info("queryRecord 存储策略不支持快速聚合查询，降级为普通查询");
+                long count = iotDBDao.querySensorsCount(devicePath, alignedTimeRange[0], alignedTimeRange[1]);
+                if (count > globalConfig.getAggregateQueryLimitSize()) {
+                    throw new BusinessException(CodeMessage.AGGREGATE_QUERY_LIMIT_ERROR,
+                            "数据点数量为" + count + "，超过限制" + globalConfig.getAggregateQueryLimitSize());
+                }
+            }
             selectMeasurementsCopy.add(Constants.TAG);//添加TAG列
             rawTable = strategy.retrieveData(
                     devicePath, alignedTimeRange[0], alignedTimeRange[1], selectMeasurementsCopy, aggregationTime

@@ -20,11 +20,15 @@ public class GlobalConfig {
     @Value("${iotdb.query.fast-aggregate-error-send-message:false}")
     private boolean fastAggregateErrorMessage;
 
+    @Value("${iotdb.query.aggregate-query-limit-size:10000000}")
+    private int aggregateQueryLimitSize;
+
     @PostConstruct
     public void init() {
         log.info("全局配置 initialized");
         log.info("tryFastAggregate: " + tryFastAggregate);
         log.info("fastAggregateErrorMessage: " + fastAggregateErrorMessage);
+        log.info("aggregateQueryLimitSize: " + aggregateQueryLimitSize);
     }
 
     public boolean isTryFastAggregate() {
@@ -41,6 +45,14 @@ public class GlobalConfig {
 
     public void setFastAggregateErrorMessage(boolean fastAggregateErrorMessage) {
         this.fastAggregateErrorMessage = fastAggregateErrorMessage;
+    }
+
+    public int getAggregateQueryLimitSize() {
+        return aggregateQueryLimitSize;
+    }
+
+    public void setAggregateQueryLimitSize(int aggregateQueryLimitSize) {
+        this.aggregateQueryLimitSize = aggregateQueryLimitSize;
     }
 
 

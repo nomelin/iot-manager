@@ -54,6 +54,7 @@ iotdb:
     timeout: 60000 # iotdb查询超时时间，单位毫秒
     try-fast-aggregate: true # 是否尝试使用快速聚合查询，建议保持开启。失败会自动降级到传统查询。
     fast-aggregate-error-send-message: true # 是否快速聚合查询失败时发送消息
+    aggregate-query-limit-size: 3000000 # 如果不使用快速聚合查询时，聚合查询限制的数据点数量，避免系统压力过大。
   retry:
     max: 3 # 最大重试次数
     initial-interval: 100 # 单位毫秒，首次重试间隔
