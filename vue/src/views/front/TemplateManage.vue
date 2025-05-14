@@ -148,7 +148,7 @@
         </el-form-item>
 
         <!-- 存储模式 -->
-        <el-form-item :rules="{ required: true, message: '请选择存储模式', trigger: 'change' }" label="存储模式"
+        <el-form-item :rules="{ required: true, message: '请选择存储策略模式', trigger: 'change' }" label="存储策略"
                       prop="config.storageMode">
           <el-select v-model="newTemplate.config.storageMode" placeholder="请选择">
             <el-option
@@ -156,6 +156,18 @@
                 :key="mode.code"
                 :label="`${mode.code} (${mode.name})`"
                 :value="mode.code">
+              <el-tooltip
+                  :content="mode.desc"
+                  :disabled="!mode.desc"
+                  placement="top">
+        <span>
+          {{ mode.code }} ({{ mode.name }})
+          <i
+              v-if="mode.desc"
+              class="el-icon-info"
+              style="margin-left: 8px; color: #909399"/>
+        </span>
+              </el-tooltip>
             </el-option>
           </el-select>
         </el-form-item>
