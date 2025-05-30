@@ -278,7 +278,7 @@
               width="180"
           >
             <template #default="{ row }">
-              {{ new Date(row.timestamp).toLocaleString() }}
+              {{ showMilliseconds ? formatTimeWithMilliseconds(row.timestamp) : new Date(row.timestamp).toLocaleString() }}
             </template>
           </el-table-column>
           <!-- 根据选中的传感器生成列 -->
@@ -300,6 +300,9 @@
       </div>
       <!-- 分页控制 -->
       <div class="pagination-container">
+        <el-button @click="toggleMilliseconds" type="primary" size="small">
+          {{ showMilliseconds ? '隐藏毫秒' : '显示毫秒' }}
+        </el-button>
         <el-pagination
             :current-page.sync="currentPage"
             :page-size="pageSize"
@@ -361,6 +364,8 @@ export default {
 
       startTimeUnlimited: true,
       endTimeUnlimited: true,
+
+      showMilliseconds: false,
 
     };
   },
@@ -702,6 +707,21 @@ export default {
         return a.localeCompare(b)
       })
     },
+
+    toggleMilliseconds() {
+      this.showMilliseconds = !this.showMilliseconds;
+    },
+    formatTimeWithMilliseconds(timestamp) {
+      const date = new Date(timestamp);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      const milliseconds = String(date.getMilliseconds()).padStart(3, '0');
+      return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+    },
   }
 }
 </script>
@@ -729,6 +749,13 @@ export default {
   max-height: 500px;
   /*overflow-y: auto;*/
   padding: 10px;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
 }
 
 ::v-deep .el-collapse-item__header {
